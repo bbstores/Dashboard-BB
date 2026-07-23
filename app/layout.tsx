@@ -7,8 +7,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
   const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
   const origin = host ? `${protocol}://${host}` : "http://localhost:3000";
-  const title = "BB Store Operations Dashboard";
-  const description = "Nền tảng quản lý task và lịch đăng bài của BB Store.";
+  const title = "BB Store Task Performance Dashboard";
+  const description =
+    "Dashboard hiệu suất nhân sự, tiến độ task và chất lượng bàn giao của BB Store.";
 
   return {
     title,
