@@ -1,0 +1,61 @@
+SẼ LÀM SAU — THỜI GIAN THỰC TẾ VÀ ĐỊNH MỨC
+================================================
+
+Vấn đề hiện tại
+---------------
+- Tasklist chỉ có Ngày Bắt Đầu dạng ngày dd/mm/yyyy, không có giờ bắt đầu thực tế.
+- Ngày Hoàn Thành có timestamp nhưng không đủ để suy ra số phút thực sự làm task.
+- Khoảng thời gian giữa hai ngày có thể bao gồm nghỉ, chờ duyệt, làm task khác,
+  feedback, OT hoặc nhiều người cùng tham gia.
+- Task quay/chụp không phù hợp với việc bắt buộc đổi trạng thái ngay khi bắt đầu
+  và kết thúc tại hiện trường.
+
+Ý nghĩa đúng của dashboard định mức hiện tại
+--------------------------------------------
+Dashboard hiện chỉ so sánh:
+
+  Số phút dự kiến trong Tasklist
+  với
+  Số phút chuẩn trong sheet 1.7 Định Mức
+
+Đây là kiểm tra phút kế hoạch, không phải hiệu suất thực tế của nhân sự.
+
+Tên gọi cần sử dụng
+-------------------
+- Phút dự kiến bằng định mức.
+- Phút dự kiến cao hơn định mức.
+- Phút dự kiến thấp hơn định mức.
+- Chưa có định mức.
+
+Không được sử dụng kết quả hiện tại để kết luận
+-----------------------------------------------
+- Nhân sự làm nhanh hay chậm.
+- Task thực tế đạt hay vượt định mức.
+- Hiệu suất thực tế theo giờ.
+- Tỷ lệ SLA sản xuất theo phút.
+
+Dữ liệu cần bổ sung trong phase sau
+-----------------------------------
+Một trong các phương án:
+
+1. Ghi nhận timestamp bắt đầu và kết thúc thực tế.
+2. Timer theo phiên: Bắt đầu / Tạm dừng / Tiếp tục / Hoàn thành.
+3. Timesheet nhập số phút thực tế sau khi hoàn thành.
+
+Các case bắt buộc phải xử lý
+----------------------------
+- Làm nhiều task đồng thời.
+- Nghỉ trưa và ngoài giờ.
+- OT.
+- Feedback và rework.
+- Task nhiều người.
+- Task quay/chụp theo ca.
+- Thời gian chờ Checking/Reviewing không được tính vào thời gian sản xuất.
+
+Mục tiêu phase sau
+------------------
+- Actual Minutes cho từng task và từng người.
+- So sánh Actual Minutes với định mức 1.7.
+- Tách thời gian sản xuất, chờ duyệt và sửa lỗi.
+- Đo hiệu suất thực tế mà không gây bất tiện cho quy trình quay/chụp.
+- Có coverage và cảnh báo dữ liệu thiếu trước khi dùng để chấm KPI.
