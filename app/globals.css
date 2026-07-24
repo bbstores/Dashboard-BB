@@ -699,6 +699,14 @@ code { color: var(--green); background: #e4e3da; padding: 2px 6px; border-radius
 .detailTable td:nth-child(2) {
   min-width: 240px; max-width: 360px; white-space: normal; line-height: 1.4;
 }
+.calculatedMetricCell { min-width: 145px; }
+.calculatedMetricCell strong {
+  display: block; color: var(--green); font-size: 13px;
+}
+.calculatedMetricCell small {
+  display: block; margin-top: 4px; color: var(--muted);
+  font-size: 8px; line-height: 1.35; white-space: normal;
+}
 .detailTable tbody tr:hover { background: rgba(217,255,114,.18); }
 .detailEmpty { padding: 30px; color: var(--muted); text-align: center; }
 

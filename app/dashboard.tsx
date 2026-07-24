@@ -93,6 +93,11 @@ type DetailView = {
   subtitle: string;
   tasks?: Task[];
   feedback?: Array<Feedback & { task?: Task }>;
+  taskMetric?: {
+    label: string;
+    value: (task: Task) => number;
+    format: (value: number) => string;
+  };
 };
 
 type DashboardHelp = {
@@ -1431,6 +1436,7 @@ function DetailDrawer({
                   <th>Trạng thái</th>
                   <th>Timeline công việc</th>
                   <th>Phút dự kiến</th>
+                  {detail.taskMetric && <th>{detail.taskMetric.label}</th>}
                 </tr>
               </thead>
               <tbody>
@@ -1469,6 +1475,21 @@ function DetailDrawer({
                       <strong>{formatNumber(task.expectedMinutes)}</strong>
                       <small>phút</small>
                     </td>
+                    {detail.taskMetric && (
+                      <td
+                        data-label={detail.taskMetric.label}
+                        className="calculatedMetricCell"
+                      >
+                        <strong>
+                          {detail.taskMetric.format(
+                            detail.taskMetric.value(task),
+                          )}
+                        </strong>
+                        <small>
+                          {lateMinuteBucket(detail.taskMetric.value(task))}
+                        </small>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -3010,6 +3031,11 @@ export function Dashboard() {
                         tasks: analytics.sla.lateHandoffs.map(
                           (row) => row.task,
                         ),
+                        taskMetric: {
+                          label: "Số phút trễ",
+                          value: handoffLateMinutes,
+                          format: formatSlaMinutes,
+                        },
                       })
                     }
                   />
@@ -3035,6 +3061,11 @@ export function Dashboard() {
                           (row) => lateMinuteBucket(row.minutes) === label,
                         )
                         .map((row) => row.task),
+                      taskMetric: {
+                        label: "Số phút trễ",
+                        value: handoffLateMinutes,
+                        format: formatSlaMinutes,
+                      },
                     })
                   }
                 />
