@@ -1678,16 +1678,16 @@ function PercentileDialog({
             className={`percentileRail ${hoveredMetric ? "isActive" : ""} ${hoveredMetric === "IQR" ? "showIqr" : ""}`}
             aria-label="Trục phân vị từ P1 đến P100"
           >
-            <div className="percentileRailTrack">
-              <i
-                className="percentileRailFill"
-                style={{
-                  left: `${railStart}%`,
-                  width: `${railWidth}%`,
-                }}
-              />
-              <i className="percentileIqrBand" />
-            </div>
+            <div className="percentileRailTrack" />
+            <div
+              className="percentileRailFill"
+              style={{
+                left: `${railStart}%`,
+                right: "auto",
+                width: `${railWidth}%`,
+              }}
+            />
+            <div className="percentileIqrBand" />
             {railMarkers.map((marker) => (
               <span
                 key={marker.label}

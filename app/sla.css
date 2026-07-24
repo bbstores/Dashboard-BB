@@ -348,17 +348,21 @@
   top: 41px;
   height: 3px;
   border-radius: 999px;
-  background: #ccd2cc;
+  overflow: hidden;
+  background: #d8ddd8;
 }
 
 .percentileRailFill {
   position: absolute;
   left: 0;
-  top: 0;
-  bottom: 0;
+  right: auto;
+  top: 41px;
+  bottom: auto;
+  height: 3px;
   width: 0;
-  border-radius: inherit;
+  border-radius: 999px;
   background: var(--green);
+  z-index: 1;
   transition:
     left .55s cubic-bezier(.2,.8,.2,1),
     width .55s cubic-bezier(.2,.8,.2,1);
@@ -367,11 +371,12 @@
 .percentileIqrBand {
   position: absolute;
   left: 25%;
-  top: -4px;
+  top: 37px;
   width: 50%;
   height: 11px;
   border-radius: 999px;
   background: var(--lime);
+  z-index: 2;
   opacity: 0;
   transform: scaleX(.15);
   transition: opacity .2s ease, transform .45s cubic-bezier(.2,.8,.2,1);
@@ -384,6 +389,7 @@
 
 .percentileRailMarker {
   position: absolute;
+  z-index: 3;
   top: 0;
   width: 76px;
   height: 78px;
@@ -422,7 +428,7 @@
 .percentileRail.isActive .percentileRailMarker:not(.active) { opacity: .42; }
 
 .percentileRailMarker.active {
-  z-index: 2;
+  z-index: 4;
   color: var(--green);
   transform: translateX(-50%) translateY(-3px) scale(1.12);
 }
