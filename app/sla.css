@@ -1131,9 +1131,12 @@
   position: relative;
 }
 
-.taskTimeline::before {
-  background: #d9ddd4;
-  content: "";
+.taskTimeline.stages4 {
+  grid-template-columns: repeat(4, minmax(105px, 1fr));
+  min-width: 520px;
+}
+
+.taskTimelineTrack {
   height: 2px;
   left: 31px;
   position: absolute;
@@ -1149,11 +1152,11 @@
   z-index: 1;
 }
 
-.taskTimeline > span:nth-child(2) {
+.taskTimeline > span:not(:first-of-type):not(:last-of-type) {
   justify-items: center;
 }
 
-.taskTimeline > span:nth-child(3) {
+.taskTimeline > span:last-of-type {
   justify-items: end;
 }
 
@@ -1172,9 +1175,10 @@
   width: 22px;
 }
 
-.taskTimeline .inspectionMilestone i {
+.taskTimeline .reachedMilestone i {
   background: #d9ff72;
   color: #174f3d;
+  box-shadow: 0 0 0 2px rgba(217, 255, 114, .28);
 }
 
 .taskTimeline small {
@@ -1188,7 +1192,7 @@
   white-space: nowrap;
 }
 
-.inspectionMilestone strong {
+.reachedMilestone strong {
   color: #174f3d;
 }
 
@@ -1262,17 +1266,17 @@
     padding: 16px 14px !important;
   }
 
-  .taskTimeline::before {
+  .taskTimeline.stages4 {
+    grid-template-columns: 94px repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .taskTimelineTrack {
     display: none;
   }
 
-  .taskTimeline::before {
-    content: none;
-  }
-
   .taskTimeline > span,
-  .taskTimeline > span:nth-child(2),
-  .taskTimeline > span:nth-child(3) {
+  .taskTimeline > span:not(:first-of-type):not(:last-of-type),
+  .taskTimeline > span:last-of-type {
     justify-items: start;
   }
 
@@ -1296,6 +1300,191 @@
   right: 22px;
   top: 22px;
   width: 36px;
+}
+
+.dailyTaskHeader {
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.dailyTaskControls,
+.dailyTaskControls label,
+.dailyLegend,
+.dailyLegend span {
+  align-items: center;
+  display: flex;
+}
+
+.dailyTaskControls {
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  justify-content: flex-end;
+}
+
+.dailyTaskControls label {
+  gap: 9px;
+}
+
+.dailyTaskControls label > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.dailyTaskControls select {
+  background: #fbfaf5;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  min-width: 190px;
+  padding: 9px 34px 9px 14px;
+}
+
+.dailyLegend {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.dailyLegend span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.dailyLegend i {
+  border-radius: 999px;
+  display: inline-block;
+  height: 4px;
+  width: 18px;
+}
+
+.dailyLegend .assigned,
+.dailyLine.assigned,
+.dailyPoint.assigned {
+  color: #8fbf45;
+  stroke: #8fbf45;
+}
+
+.dailyLegend .handedSameDay,
+.dailyHandoffBar.handedSameDay {
+  color: #d9ff72;
+  fill: #d9ff72;
+}
+
+.dailyLegend .handedBacklog,
+.dailyHandoffBar.handedBacklog {
+  color: #d46b5f;
+  fill: #d46b5f;
+}
+
+.dailyLegend .backlog,
+.dailyLine.backlog,
+.dailyPoint.backlog {
+  color: #174f3d;
+  stroke: #174f3d;
+}
+
+.dailyLegend i.assigned {
+  background: #8fbf45;
+}
+
+.dailyLegend i.handedSameDay {
+  background: #d9ff72;
+}
+
+.dailyLegend i.handedBacklog {
+  background: #d46b5f;
+}
+
+.dailyLegend i.backlog {
+  background: #174f3d;
+}
+
+.dailyChartScroller {
+  margin-top: 18px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.dailyChartSvg {
+  display: block;
+  height: 310px;
+  overflow: visible;
+  width: 100%;
+}
+
+.dailyGridLine {
+  stroke: rgba(23, 79, 61, .12);
+  stroke-dasharray: 4 7;
+  stroke-width: 1;
+}
+
+.dailyAxisText {
+  fill: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.dailyLine {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.dailyLine.backlog {
+  stroke-width: 4;
+}
+
+.dailyPoint {
+  fill: #fbfaf5;
+  stroke-width: 2.5;
+}
+
+.dailyHandoffBar {
+  opacity: .9;
+  transition: opacity .18s ease, filter .18s ease;
+}
+
+.dailyHoverGuide {
+  opacity: 0;
+  stroke: rgba(23, 79, 61, .2);
+  stroke-dasharray: 3 4;
+}
+
+.dailyPointGroup:hover .dailyHoverGuide {
+  opacity: 1;
+}
+
+.dailyPointGroup:hover .dailyPoint {
+  fill: #d9ff72;
+  r: 6px;
+}
+
+.dailyPointGroup:hover .dailyHandoffBar {
+  filter: saturate(1.25);
+  opacity: 1;
+}
+
+@media (max-width: 760px) {
+  .dailyTaskHeader,
+  .dailyTaskControls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dailyTaskControls {
+    justify-content: flex-start;
+  }
+
+  .dailyTaskControls label {
+    justify-content: space-between;
+  }
 }
 
 @media (max-width: 640px) {

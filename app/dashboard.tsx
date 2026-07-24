@@ -25,6 +25,7 @@ type Task = {
   startDate: Date | null;
   completedDate: Date | null;
   inspectionDate: Date | null;
+  businessApprovalDate: Date | null;
   handoffRating: string;
   overallRating: string;
   type: string;
@@ -61,6 +62,13 @@ type DateWindow = {
 type PieDatum = { label: string; value: number };
 type PieScope = "started" | "inspectionCarry" | "completionCarry" | "combined";
 type ReportDepartment = "media" | "business";
+type DailyTaskDatum = {
+  date: Date;
+  assigned: number;
+  handedSameDay: number;
+  handedBacklog: number;
+  backlog: number;
+};
 
 type SavedReport = {
   id: string;
@@ -1371,6 +1379,155 @@ function StaffColumns({
   );
 }
 
+function DailyTaskChart({
+  rows,
+  assignees,
+  assignee,
+  onAssigneeChange,
+}: {
+  rows: DailyTaskDatum[];
+  assignees: string[];
+  assignee: string;
+  onAssigneeChange: (value: string) => void;
+}) {
+  const width = Math.max(860, rows.length * 42);
+  const height = 310;
+  const left = 48;
+  const right = 24;
+  const top = 28;
+  const bottom = 52;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const max = Math.max(
+    1,
+    ...rows.flatMap((row) => [
+      row.assigned,
+      row.handedSameDay + row.handedBacklog,
+      row.backlog,
+    ]),
+  );
+  const point = (value: number, index: number) => ({
+    x: left + (rows.length <= 1 ? plotWidth / 2 : (index / (rows.length - 1)) * plotWidth),
+    y: top + plotHeight - (value / max) * plotHeight,
+  });
+  const pointsFor = (key: "assigned" | "backlog") =>
+    rows
+      .map((row, index) => {
+        const position = point(row[key], index);
+        return `${position.x},${position.y}`;
+      })
+      .join(" ");
+  const labelStep = Math.max(1, Math.ceil(rows.length / 12));
+
+  return (
+    <article className="chartCard fullWidth groupPeople dailyTaskCard">
+      <div className="chartTitle dailyTaskHeader">
+        <div>
+          <span className="chartKicker">NHỊP CÔNG VIỆC THEO NGÀY</span>
+          <h3>Task được giao, bàn giao &amp; tồn cuối ngày</h3>
+        </div>
+        <div className="dailyTaskControls">
+          <label>
+            <span>Nhân sự</span>
+            <select
+              value={assignee}
+              onChange={(event) => onAssigneeChange(event.target.value)}
+              aria-label="Lọc biểu đồ task theo nhân sự"
+            >
+              <option value="">Tất cả nhân sự</option>
+              {assignees.map((name) => (
+                <option value={name} key={name}>{name}</option>
+              ))}
+            </select>
+          </label>
+          <div className="dailyLegend">
+            <span><i className="assigned" />Được giao</span>
+            <span><i className="handedSameDay" />Bàn giao · Task trong ngày</span>
+            <span><i className="handedBacklog" />Bàn giao · Xử lý task tồn</span>
+            <span><i className="backlog" />Tồn cuối ngày</span>
+          </div>
+          <HelpButton
+            help={{
+              title: "Task theo ngày",
+              purpose: "Theo dõi đồng thời lượng việc đi vào, lượng việc thoát ra và backlog cuối từng ngày.",
+              objective: "Nếu đường tồn tăng liên tục trong khi số bàn giao thấp hơn số được giao, nhóm đang tích lũy quá tải.",
+              calculation: "Được giao theo Ngày Bắt Đầu; bàn giao theo Ngày Kiểm Duyệt. Cột bàn giao tách Task trong ngày khi hai mốc cùng ngày và Xử lý task tồn khi Ngày Bắt Đầu trước Ngày Kiểm Duyệt. Tồn cuối ngày là task đã bắt đầu nhưng chưa bàn giao tại 23:59 ngày đó. Archived và Pending/Cancel không tính vào tồn.",
+              example: "Ngày có 8 task bàn giao, trong đó 5 task bắt đầu cùng ngày và 3 task bắt đầu từ ngày trước → cột chồng gồm 5 Task trong ngày và 3 Xử lý task tồn.",
+            }}
+          />
+        </div>
+      </div>
+      <div className="dailyChartScroller">
+        {rows.length ? (
+          <svg
+            className="dailyChartSvg"
+            viewBox={`0 0 ${width} ${height}`}
+            style={{ minWidth: `${width}px` }}
+            role="img"
+            aria-label="Biểu đồ số task được giao, bàn giao và tồn cuối ngày"
+          >
+            {[0, 0.5, 1].map((ratio) => {
+              const y = top + plotHeight - ratio * plotHeight;
+              return (
+                <g key={ratio}>
+                  <line className="dailyGridLine" x1={left} x2={width - right} y1={y} y2={y} />
+                  <text className="dailyAxisText" x={left - 10} y={y + 4} textAnchor="end">
+                    {Math.round(max * ratio)}
+                  </text>
+                </g>
+              );
+            })}
+            <polyline className="dailyLine backlog" points={pointsFor("backlog")} />
+            <polyline className="dailyLine assigned" points={pointsFor("assigned")} />
+            {rows.map((row, index) => {
+              const x = point(0, index).x;
+              const barWidth = Math.min(18, Math.max(8, plotWidth / Math.max(rows.length, 1) / 2));
+              const sameDayHeight = (row.handedSameDay / max) * plotHeight;
+              const backlogHeight = (row.handedBacklog / max) * plotHeight;
+              const baseline = top + plotHeight;
+              return (
+                <g className="dailyPointGroup" key={dateKey(row.date)}>
+                  <line className="dailyHoverGuide" x1={x} x2={x} y1={top} y2={top + plotHeight} />
+                  <rect
+                    className="dailyHandoffBar handedSameDay"
+                    x={x - barWidth / 2}
+                    y={baseline - sameDayHeight}
+                    width={barWidth}
+                    height={sameDayHeight}
+                    rx="3"
+                  />
+                  <rect
+                    className="dailyHandoffBar handedBacklog"
+                    x={x - barWidth / 2}
+                    y={baseline - sameDayHeight - backlogHeight}
+                    width={barWidth}
+                    height={backlogHeight}
+                    rx="3"
+                  />
+                  {(["backlog", "assigned"] as const).map((key) => {
+                    const position = point(row[key], index);
+                    return <circle className={`dailyPoint ${key}`} key={key} cx={position.x} cy={position.y} r="4" />;
+                  })}
+                  <title>
+                    {formatDate(row.date)} · Được giao: {row.assigned} · Bàn giao: {row.handedSameDay + row.handedBacklog} (Task trong ngày: {row.handedSameDay}, Xử lý task tồn: {row.handedBacklog}) · Tồn cuối ngày: {row.backlog}
+                  </title>
+                  {(index % labelStep === 0 || index === rows.length - 1) && (
+                    <text className="dailyAxisText" x={x} y={height - 18} textAnchor="middle">
+                      {String(row.date.getDate()).padStart(2, "0")}/{String(row.date.getMonth() + 1).padStart(2, "0")}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+        ) : (
+          <p className="emptyText">Chưa có dữ liệu ngày phù hợp.</p>
+        )}
+      </div>
+    </article>
+  );
+}
+
 function DetailDrawer({
   detail,
   onClose,
@@ -1448,7 +1605,48 @@ function DetailDrawer({
                 </tr>
               </thead>
               <tbody>
-                {(detail.tasks ?? []).map((task, index) => (
+                {(detail.tasks ?? []).map((task, index) => {
+                  const hasBusinessApproval = Boolean(task.businessApprovalDate);
+                  const milestones = [
+                    {
+                      label: "Bắt đầu",
+                      date: formatDate(task.startDate),
+                      reached: Boolean(task.startDate),
+                    },
+                    {
+                      label: "Kiểm duyệt",
+                      date: formatDateTime(task.inspectionDate),
+                      reached: Boolean(task.inspectionDate),
+                    },
+                    {
+                      label: "Hoàn thành",
+                      date: formatDate(task.completedDate),
+                      reached:
+                        Boolean(task.completedDate) ||
+                        ["done", "kinh doanh done"].includes(
+                          normalizedKey(task.status),
+                        ),
+                    },
+                    ...(hasBusinessApproval
+                      ? [
+                          {
+                            label: "Kinh doanh duyệt",
+                            date: formatDateTime(task.businessApprovalDate),
+                            reached: true,
+                          },
+                        ]
+                      : []),
+                  ];
+                  const reachedIndex = milestones.reduce(
+                    (last, milestone, milestoneIndex) =>
+                      milestone.reached ? milestoneIndex : last,
+                    -1,
+                  );
+                  const progress =
+                    milestones.length > 1 && reachedIndex >= 0
+                      ? (reachedIndex / (milestones.length - 1)) * 100
+                      : 0;
+                  return (
                   <tr key={`${task.code}-${index}`}>
                     <td data-label="STT" className="detailRowNumber">
                       {index + 1}
@@ -1465,22 +1663,27 @@ function DetailDrawer({
                         {task.status || "Chưa xác định"}
                       </span>
                     </td>
-                    <td data-label="Timeline" className="taskTimeline">
-                      <span>
-                        <i>01</i>
-                        <small>Bắt đầu</small>
-                        <strong>{formatDate(task.startDate)}</strong>
-                      </span>
-                      <span className="inspectionMilestone">
-                        <i>02</i>
-                        <small>Kiểm duyệt</small>
-                        <strong>{formatDateTime(task.inspectionDate)}</strong>
-                      </span>
-                      <span>
-                        <i>03</i>
-                        <small>Hoàn thành</small>
-                        <strong>{formatDate(task.completedDate)}</strong>
-                      </span>
+                    <td
+                      data-label="Timeline"
+                      className={`taskTimeline stages${milestones.length}`}
+                    >
+                      <b
+                        className="taskTimelineTrack"
+                        aria-hidden="true"
+                        style={{
+                          background: `linear-gradient(to right, #174f3d 0 ${progress}%, #d9ddd4 ${progress}% 100%)`,
+                        }}
+                      />
+                      {milestones.map((milestone, milestoneIndex) => (
+                        <span
+                          className={milestone.reached ? "reachedMilestone" : ""}
+                          key={milestone.label}
+                        >
+                          <i>{String(milestoneIndex + 1).padStart(2, "0")}</i>
+                          <small>{milestone.label}</small>
+                          <strong>{milestone.date}</strong>
+                        </span>
+                      ))}
                     </td>
                     <td data-label="Phút dự kiến" className="minutesCell">
                       <strong>{formatNumber(task.expectedMinutes)}</strong>
@@ -1506,7 +1709,8 @@ function DetailDrawer({
                       </td>
                     )}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           )}
@@ -1764,6 +1968,7 @@ export function Dashboard() {
   const [error, setError] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [dailyAssignee, setDailyAssignee] = useState("");
   const [collectionMonth, setCollectionMonth] = useState("");
   const [leaderboardUnit, setLeaderboardUnit] = useState<
     "minutes" | "hours" | "days"
@@ -1911,6 +2116,9 @@ export function Dashboard() {
           inspectionDate: excelDate(
             valueAt(row, taskHeaders, "Ngày Kiểm Duyệt"),
           ),
+          businessApprovalDate: excelDate(
+            valueAt(row, taskHeaders, "Ngày Kinh Doanh Duyệt"),
+          ),
           handoffRating: normalize(
             valueAt(row, taskHeaders, "Đánh Giá Bàn Giao"),
           ),
@@ -1966,6 +2174,7 @@ export function Dashboard() {
 
       setData({ tasks, feedback, norms, fileName: file.name });
       setCollectionMonth("");
+      setDailyAssignee("");
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -2375,6 +2584,73 @@ export function Dashboard() {
     };
   }, [data, dateWindow, collectionMonth, backlogDate]);
 
+  const dailyTaskChart = useMemo(() => {
+    if (!data) return { rows: [] as DailyTaskDatum[], assignees: [] as string[] };
+    const assignees = [
+      ...new Set(data.tasks.flatMap((task) => assigneeNames(task.assignee))),
+    ].sort((a, b) => a.localeCompare(b, "vi"));
+    const tasks = dailyAssignee
+      ? data.tasks.filter((task) =>
+          assigneeNames(task.assignee).includes(dailyAssignee),
+        )
+      : data.tasks;
+    const relevantDates = tasks
+      .flatMap((task) => [task.startDate, task.inspectionDate])
+      .filter((value): value is Date => Boolean(value));
+    if (!relevantDates.length) return { rows: [] as DailyTaskDatum[], assignees };
+
+    const latestDate = startOfDay(
+      new Date(Math.max(...relevantDates.map((value) => value.getTime()))),
+    );
+    const rangeEnd = dateWindow.to ? startOfDay(dateWindow.to) : latestDate;
+    const rangeStart = dateWindow.from
+      ? startOfDay(dateWindow.from)
+      : new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), rangeEnd.getDate() - 29);
+    const cancelledStatuses = new Set([
+      "archived",
+      "pending / cancel",
+      "pending/cancel",
+    ]);
+    const rows: DailyTaskDatum[] = [];
+    for (
+      let cursor = startOfDay(rangeStart);
+      cursor <= rangeEnd;
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1)
+    ) {
+      const day = new Date(cursor);
+      const key = dateKey(day);
+      const cutoff = endOfDay(day);
+      rows.push({
+        date: day,
+        assigned: tasks.filter(
+          (task) => task.startDate && dateKey(task.startDate) === key,
+        ).length,
+        handedSameDay: tasks.filter(
+          (task) =>
+            task.startDate &&
+            task.inspectionDate &&
+            dateKey(task.inspectionDate) === key &&
+            dateKey(task.startDate) === key,
+        ).length,
+        handedBacklog: tasks.filter(
+          (task) =>
+            task.startDate &&
+            task.inspectionDate &&
+            dateKey(task.inspectionDate) === key &&
+            startOfDay(task.startDate) < startOfDay(task.inspectionDate),
+        ).length,
+        backlog: tasks.filter(
+          (task) =>
+            task.startDate &&
+            task.startDate <= cutoff &&
+            (!task.inspectionDate || task.inspectionDate > cutoff) &&
+            !cancelledStatuses.has(normalizedKey(task.status)),
+        ).length,
+      });
+    }
+    return { rows, assignees };
+  }, [data, dailyAssignee, dateWindow]);
+
   function chartScope(key: string): PieScope {
     return pieScopes[key] ?? "combined";
   }
@@ -2729,6 +3005,13 @@ export function Dashboard() {
                 </div>
               )}
             </article>
+
+            <DailyTaskChart
+              rows={dailyTaskChart.rows}
+              assignees={dailyTaskChart.assignees}
+              assignee={dailyAssignee}
+              onAssigneeChange={setDailyAssignee}
+            />
 
             <StaffColumns
               rows={analytics.staffRows}
