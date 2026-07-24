@@ -6,6 +6,7 @@ import {
   type MouseEvent,
   type ReactNode,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -59,7 +60,26 @@ type DateWindow = {
 };
 
 type PieDatum = { label: string; value: number };
-type PieScope = "started" | "carried" | "combined";
+type PieScope = "started" | "inspectionCarry" | "completionCarry" | "combined";
+type ReportDepartment = "media" | "business";
+
+type SavedReport = {
+  id: string;
+  name: string;
+  department: ReportDepartment;
+  createdAt: string;
+  filters: {
+    dateFrom: string;
+    dateTo: string;
+    backlogDate: string;
+    collectionMonth: string;
+    leaderboardUnit: "minutes" | "hours" | "days";
+    pieScopes: Record<string, PieScope>;
+    pieExcludeOutsource: Record<string, boolean>;
+  };
+};
+
+const SAVED_REPORTS_KEY = "bb-dashboard-saved-reports-v1";
 
 type DetailView = {
   title: string;
@@ -90,6 +110,8 @@ function dashboardObjective(title: string) {
     "Tình trạng task": "Nhìn nhanh cơ cấu tiến độ để phát hiện task đang dồn ở một trạng thái và điều phối bước xử lý tiếp theo.",
     "Đánh giá bàn giao": "Theo dõi chất lượng đầu ra tại thời điểm bàn giao và xác định nhóm task cần cải thiện tiêu chuẩn bàn giao.",
     "Đánh giá tổng": "Đánh giá chất lượng tổng thể của task sau toàn bộ quy trình, phục vụ nhìn nhận hiệu quả cuối cùng.",
+    "Tuân thủ ngày bàn giao": "Đo tỷ lệ người thực hiện bàn giao task trong đúng ngày bắt đầu, đồng thời tách task trễ ngày và quá hạn chưa bàn giao.",
+    "Tuân thủ hạn hoàn thành": "Theo dõi task có hoàn thành trước cuối ngày làm việc kế tiếp hay không và nhận diện phần trễ của toàn quy trình.",
     "Trạng thái task tồn": "Cho biết backlog đang mắc ở trạng thái nào để giao đúng người tháo gỡ thay vì chỉ biết tổng số task tồn.",
     "Task theo Type": "Hiểu cơ cấu loại công việc để phân bổ nguồn lực, kỹ năng và định mức phù hợp.",
     "Task theo công đoạn": "Phát hiện công đoạn đang tập trung nhiều đầu việc hoặc có nguy cơ trở thành nút thắt.",
@@ -118,13 +140,13 @@ function dashboardHelp(title: string): DashboardHelp {
   const exact: Record<string, Omit<DashboardHelp, "title">> = {
     "Task trong kỳ": {
       purpose: "Cho biết tổng khối lượng task thuộc khoảng ngày đang lọc.",
-      calculation: "Task bắt đầu trong kỳ + carry-in. Carry-in là task bắt đầu ngoài kỳ nhưng hoàn thành trong kỳ. Không chọn ngày thì lấy toàn bộ task.",
-      example: "Lọc 01–07/08: có 200 task bắt đầu trong kỳ và 15 task cũ hoàn thành trong kỳ → tổng 215 task.",
+      calculation: "Hợp của task bắt đầu trong kỳ, carry-in bàn giao theo Ngày Kiểm Duyệt và carry-in hoàn thành theo Ngày Hoàn Thành. Một task chạm cả hai mốc trong kỳ chỉ được tính một lần vào tổng.",
+      example: "Có 200 task bắt đầu, 15 task cũ bàn giao và 12 task cũ hoàn thành; 5 task nằm trong cả hai nhóm carry-in → tổng duy nhất là 222 task.",
     },
     "Task thiếu thông tin": {
       purpose: "Phát hiện task chưa đủ dữ liệu để giao việc và theo dõi.",
-      calculation: "Đếm hợp của hai nhóm: chưa có Ngày Bắt Đầu hoặc chưa có Assignee. Một task thiếu cả hai chỉ được tính một lần.",
-      example: "10 task thiếu ngày, 6 task thiếu người và 2 task thiếu cả hai → card hiển thị 14.",
+      calculation: "Chia thành ba nhóm loại trừ nhau: chỉ thiếu Ngày Bắt Đầu, chỉ thiếu Assignee và thiếu cả hai. Tổng lớn bằng tổng của đúng ba nhóm này.",
+      example: "200 task chỉ thiếu ngày, 0 task chỉ thiếu assignee và 92 task thiếu cả hai → tổng 292.",
     },
     "Task tồn tại mốc chọn": {
       purpose: "Cho biết lượng task còn tồn trước ngày mốc độc lập.",
@@ -134,8 +156,8 @@ function dashboardHelp(title: string): DashboardHelp {
     },
     "Leaderboard thời gian": {
       purpose: "Xếp hạng tải công việc dự kiến theo nhân sự.",
-      calculation: "Cộng toàn bộ Số phút dự kiến của task vào từng Assignee. Task nhiều người được cộng nguyên số phút cho từng người; có thể quy đổi 60 phút = 1 giờ, 480 phút = 1 ngày.",
-      example: "Bảo Ngân 300 phút; task Bảo Ngân, Hiếu 150 phút → Bảo Ngân 450, Hiếu 150.",
+      calculation: "Cộng toàn bộ Số phút dự kiến của task vào từng Assignee. Thanh được tách thành task trong kỳ đang hoạt động, carry-in và nhóm To Do/Pending-Cancel; ba nhóm không đếm trùng. Task nhiều người được cộng nguyên số phút cho từng người.",
+      example: "Một người có tổng 4.000 phút gồm 2.500 phút task trong kỳ, 1.000 phút carry-in và 500 phút To Do/Pending-Cancel → lần lượt 62,5%, 25% và 12,5%.",
     },
     "Tiến độ hoàn thành": {
       purpose: "Theo dõi tiến độ từng Bộ Sưu Tập của tháng đã chọn.",
@@ -145,12 +167,12 @@ function dashboardHelp(title: string): DashboardHelp {
     },
     "Số task thực hiện & số lần trả về": {
       purpose: "So sánh khối lượng thực hiện và phản hồi theo từng nhân sự.",
-      calculation: "Tổng task = bắt đầu trong kỳ + carry-in. Task nhiều assignee được tính cho từng người. Lần trả về là số dòng lịch sử phản hồi nằm trong kỳ gắn với người đó.",
-      example: "Một task của An và Bình được tính 1 cho An và 1 cho Bình; task có 3 dòng phản hồi thì cộng 3 lần trả về.",
+      calculation: "Tổng task là hợp khử trùng của task bắt đầu, carry-in bàn giao theo Ngày Kiểm Duyệt và carry-in hoàn thành theo Ngày Hoàn Thành. Hai cột carry-in là các mốc riêng nên có thể cùng ghi nhận một task. Task nhiều assignee được tính cho từng người.",
+      example: "Task cũ của An kiểm duyệt và hoàn thành cùng trong kỳ: Tổng task của An tăng 1, cột Carry-in bàn giao tăng 1 và Carry-in hoàn thành tăng 1.",
     },
     "Tình trạng task": {
       purpose: "Biểu đồ cơ cấu task theo trạng thái hiện tại như In Progress, Checking, Reviewing hoặc Done.",
-      calculation: "Chọn một trong ba phạm vi Bắt đầu trong kỳ, Carry-in hoặc cả hai; tùy chọn Trừ Outsource áp dụng độc lập. Mỗi task được đếm một lần theo trạng thái hiện tại.",
+      calculation: "Chọn Bắt đầu trong kỳ, Carry-in bàn giao, Carry-in hoàn thành hoặc Tổng hợp khử trùng. Tùy chọn Trừ Outsource áp dụng độc lập.",
       example: "Trong 200 task của phạm vi chọn có 80 Done → lát Done là 80 task, tương đương 40%.",
     },
     "Đánh giá bàn giao": {
@@ -162,6 +184,18 @@ function dashboardHelp(title: string): DashboardHelp {
       purpose: "Biểu đồ phân bổ kết quả ở cột Đánh giá tổng sau khi task đi qua toàn bộ quy trình.",
       calculation: "Nhóm mỗi task theo Đánh giá tổng; ô rỗng được gom thành Chưa xác định. Phạm vi task và Trừ Outsource được chọn độc lập.",
       example: "Có 75 Tốt trên tổng 120 task → lát Tốt hiển thị 75 và 62,5%.",
+    },
+    "Tuân thủ ngày bàn giao": {
+      purpose: "Đánh giá task có được chuyển sang kiểm duyệt trong cùng ngày bắt đầu hay không.",
+      calculation: "Cohort ban đầu là tổng task thuộc bộ lọc chung đã khử trùng. Mẫu số của tỷ lệ chỉ gồm task đã bàn giao hợp lệ: có Ngày Bắt Đầu từ 15/06/2026, có Ngày Kiểm Duyệt và thứ tự ngày hợp lệ. Tử số là các task có Ngày Kiểm Duyệt cùng ngày Ngày Bắt Đầu, bất kể giờ.",
+      example: "Có 371 task trong cohort nhưng chỉ 286 task đã bàn giao hợp lệ; 145 task bàn giao cùng ngày → tỷ lệ đúng ngày = 145 / 286 ≈ 51%. 85 task còn lại vẫn được giữ trong các nhóm chưa bàn giao, chưa bắt đầu, không tính KPI hoặc sai dữ liệu.",
+      note: "Mẫu số không phải tổng task trong kỳ. Task chưa có Ngày Kiểm Duyệt, quá hạn chưa bàn giao, đang thực hiện, bắt đầu trước 15/06/2026 hoặc thiếu/sai dữ liệu không được đưa vào tỷ lệ đúng/trễ. Đây là tuân thủ milestone bàn giao, không phải thời gian người thực hiện thực sự làm task.",
+    },
+    "Tuân thủ hạn hoàn thành": {
+      purpose: "Đánh giá toàn bộ task có hoàn thành trước hạn quy trình hay không.",
+      calculation: "Hạn hoàn thành là cuối ngày làm việc kế tiếp sau Ngày Bắt Đầu. Chủ nhật và ngày lễ được bỏ qua. Done/Kinh Doanh Done được so với Ngày Hoàn Thành.",
+      example: "Bắt đầu thứ Bảy → hạn là cuối thứ Hai nếu Chủ nhật không làm việc.",
+      note: "Kết quả toàn quy trình còn chịu ảnh hưởng của người kiểm duyệt; không dùng riêng để quy trách nhiệm cho người thực hiện.",
     },
     "Trạng thái task tồn": {
       purpose: "Cơ cấu các task tồn tại mốc theo trạng thái hiện tại.",
@@ -190,10 +224,10 @@ function dashboardHelp(title: string): DashboardHelp {
       example: "Bắt đầu 01/08, hoàn thành 04/08 → cycle time 3 ngày.",
     },
     "Aging task đang mở": {
-      purpose: "Nhận diện task mở lâu tính đến hôm nay.",
-      calculation: "Task có ngày bắt đầu, trạng thái hiện tại chưa hoàn tất; aging = hôm nay − ngày bắt đầu.",
-      example: "Task bắt đầu 01/08, đến 11/08 vẫn In Progress → aging 10 ngày.",
-      note: "Đây là tuổi task đang mở, không phải thời gian thực tế nhân sự thao tác.",
+      purpose: "Nhận diện task mở lâu tính đến Mốc task tồn đang chọn.",
+      calculation: "Task có ngày bắt đầu không sau mốc, trạng thái hiện tại chưa hoàn tất; Aging = Mốc task tồn − Ngày Bắt Đầu.",
+      example: "Chọn mốc 11/08, task bắt đầu 01/08 và hiện vẫn In Progress → Aging 10 ngày.",
+      note: "Đây là tuổi task theo trạng thái hiện tại, không phải thời gian thực tế nhân sự thao tác và không tái dựng trạng thái lịch sử.",
     },
     "Đối chiếu kế hoạch với định mức 1.7": {
       purpose: "Đối chiếu Số phút dự kiến được nhập trên Tasklist với số phút chuẩn tham chiếu trong bảng 1.7.",
@@ -444,6 +478,125 @@ function formatSlaMinutes(minutes: number) {
   return `${formatNumber(Math.round(minutes))} phút`;
 }
 
+const KPI_START_DATE = new Date(2026, 5, 15);
+
+function isWorkingDay(date: Date) {
+  return (
+    date.getDay() !== 0 && !VIETNAM_HOLIDAYS_2026.has(dateKey(date))
+  );
+}
+
+function nextWorkingDay(value: Date) {
+  const date = startOfDay(value);
+  date.setDate(date.getDate() + 1);
+  while (!isWorkingDay(date)) date.setDate(date.getDate() + 1);
+  return date;
+}
+
+function sameCalendarDay(a: Date, b: Date) {
+  return dateKey(a) === dateKey(b);
+}
+
+type MilestoneEvaluation = {
+  label: string;
+  code:
+    | "onTime"
+    | "late"
+    | "overdue"
+    | "ongoing"
+    | "notStarted"
+    | "excluded"
+    | "invalid";
+};
+
+function evaluateHandoff(task: Task, asOf: Date): MilestoneEvaluation {
+  if (!task.startDate) {
+    return { label: "⚪ Thiếu ngày bắt đầu", code: "invalid" };
+  }
+  if (task.startDate < KPI_START_DATE) {
+    return { label: "📜 Không tính KPI", code: "excluded" };
+  }
+  if (["to do", "todo"].includes(normalizedKey(task.status))) {
+    return { label: "⚪ Chưa bắt đầu", code: "notStarted" };
+  }
+  if (task.inspectionDate) {
+    if (task.inspectionDate < startOfDay(task.startDate)) {
+      return { label: "⚠️ Sai thứ tự ngày", code: "invalid" };
+    }
+    return sameCalendarDay(task.inspectionDate, task.startDate)
+      ? { label: "✅ Bàn giao đúng ngày", code: "onTime" }
+      : { label: "🔥 Bàn giao trễ ngày", code: "late" };
+  }
+  if (
+    ["done", "kinh doanh done"].includes(normalizedKey(task.status))
+  ) {
+    return { label: "⚠️ Done nhưng thiếu ngày kiểm duyệt", code: "invalid" };
+  }
+  return startOfDay(asOf) > startOfDay(task.startDate)
+    ? { label: "❌ Quá hạn chưa bàn giao", code: "overdue" }
+    : { label: "🟢 Đang thực hiện trong ngày", code: "ongoing" };
+}
+
+function evaluateOverall(task: Task, asOf: Date): MilestoneEvaluation {
+  if (!task.startDate) {
+    return { label: "⚪ Thiếu ngày bắt đầu", code: "invalid" };
+  }
+  if (task.startDate < KPI_START_DATE) {
+    return { label: "📜 Không tính KPI", code: "excluded" };
+  }
+  const status = normalizedKey(task.status);
+  if (
+    ["archived", "pending / cancel", "pending/cancel"].includes(status)
+  ) {
+    return { label: "⏸ Không tính / Đã dừng", code: "excluded" };
+  }
+  const dueDate = endOfDay(nextWorkingDay(task.startDate));
+  if (["done", "kinh doanh done"].includes(status)) {
+    if (!task.completedDate) {
+      return {
+        label: "⚠️ Done nhưng thiếu ngày hoàn thành",
+        code: "invalid",
+      };
+    }
+    if (task.completedDate < startOfDay(task.startDate)) {
+      return { label: "⚠️ Sai thứ tự ngày", code: "invalid" };
+    }
+    return task.completedDate <= dueDate
+      ? { label: "✅ Hoàn thành đúng hạn", code: "onTime" }
+      : { label: "🔥 Hoàn thành trễ hạn", code: "late" };
+  }
+  if (asOf > dueDate) {
+    return { label: "❌ Quá hạn hoàn thành", code: "overdue" };
+  }
+  if (status === "reviewing") {
+    return { label: "🟠 Đang reviewing", code: "ongoing" };
+  }
+  if (status === "checking") {
+    return { label: "🟡 Đang kiểm duyệt", code: "ongoing" };
+  }
+  if (status === "in progress") {
+    return { label: "🟢 Đang thực hiện", code: "ongoing" };
+  }
+  return { label: "⚪ Chưa bắt đầu", code: "notStarted" };
+}
+
+function handoffLateMinutes(task: Task) {
+  if (!task.startDate || !task.inspectionDate) return 0;
+  const anchor = nextWorkingDay(task.startDate);
+  anchor.setHours(8, 30, 0, 0);
+  if (task.inspectionDate <= anchor) return 0;
+  return businessMinutesBetween(anchor, task.inspectionDate) ?? 0;
+}
+
+function lateMinuteBucket(minutes: number) {
+  if (minutes === 0) return "Trễ ngày · 0 phút làm việc";
+  if (minutes <= 60) return "1–60 phút";
+  if (minutes <= 120) return "61–120 phút";
+  if (minutes <= 240) return "121–240 phút";
+  if (minutes <= 480) return "241–480 phút";
+  return "Trên 480 phút";
+}
+
 function excelDate(value: unknown): Date | null {
   if (!value) return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
@@ -512,17 +665,28 @@ function classifyTask(task: Task, window: DateWindow) {
   if (!window.hasFilter) {
     return {
       included: true,
-      started: Boolean(task.startDate),
-      carried: false,
+      started: true,
+      inspectionCarry: false,
+      completionCarry: false,
     };
   }
   const started = inWindow(task.startDate, window);
-  const carried =
+  const startsOutside =
+    Boolean(task.startDate) && !inWindow(task.startDate, window);
+  const inspectionCarry =
+    startsOutside &&
+    Boolean(task.inspectionDate) &&
+    inWindow(task.inspectionDate, window);
+  const completionCarry =
+    startsOutside &&
     Boolean(task.completedDate) &&
-    inWindow(task.completedDate, window) &&
-    Boolean(task.startDate) &&
-    !inWindow(task.startDate, window);
-  return { included: started || carried, started, carried };
+    inWindow(task.completedDate, window);
+  return {
+    included: started || inspectionCarry || completionCarry,
+    started,
+    inspectionCarry,
+    completionCarry,
+  };
 }
 
 function formatNumber(value: number) {
@@ -555,6 +719,17 @@ function formatPercent(value: number, total: number) {
 function formatDate(value: Date | null) {
   if (!value) return "—";
   return new Intl.DateTimeFormat("vi-VN").format(value);
+}
+
+function formatDateTime(value: Date | null) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(value);
 }
 
 function matchesGroup(value: string, label: string) {
@@ -729,8 +904,9 @@ function PieChart({
               aria-label={`Phạm vi ${title}`}
             >
               <option value="started">Task trong tuần</option>
-              <option value="carried">Carry-in</option>
-              <option value="combined">Task trong tuần + Carry-in</option>
+              <option value="inspectionCarry">Carry-in bàn giao</option>
+              <option value="completionCarry">Carry-in hoàn thành</option>
+              <option value="combined">Tổng hợp (khử trùng task)</option>
             </select>
           )}
           {scope && onExcludeOutsourceChange && (
@@ -957,7 +1133,9 @@ function HorizontalBars({
 }: {
   title: string;
   subtitle: string;
-  rows: PieDatum[];
+  rows: Array<
+    PieDatum & { started?: number; carried?: number; waiting?: number }
+  >;
   format?: (value: number) => string;
   onSelect?: (label: string) => void;
   tooltip?: (value: number) => string;
@@ -978,6 +1156,18 @@ function HorizontalBars({
           <HelpButton help={help ?? dashboardHelp(title)} />
         </div>
       </div>
+      {rows.some(
+        (row) =>
+          row.started !== undefined ||
+          row.carried !== undefined ||
+          row.waiting !== undefined,
+      ) && (
+        <div className="stackedLegend">
+          <span><i className="startedSegment" />Task trong kỳ</span>
+          <span><i className="carriedSegment" />Carry-in bàn giao trong kỳ</span>
+          <span><i className="waitingSegment" />To Do / Pending-Cancel</span>
+        </div>
+      )}
       <div className="horizontalBars">
         {rows.slice(0, 15).map((row, index) => (
           <button
@@ -989,7 +1179,35 @@ function HorizontalBars({
             <span className="rank">{String(index + 1).padStart(2, "0")}</span>
             <span className="barLabel" title={row.label}>{row.label}</span>
             <div className="barTrack">
-              <i style={{ width: `${Math.max(2, (row.value / max) * 100)}%` }} />
+              {row.started !== undefined ||
+              row.carried !== undefined ||
+              row.waiting !== undefined ? (
+                <span
+                  className="stackedBar"
+                  style={{ width: `${Math.max(2, (row.value / max) * 100)}%` }}
+                >
+                  <i
+                    className="startedSegment"
+                    style={{
+                      width: `${row.value ? ((row.started ?? 0) / row.value) * 100 : 0}%`,
+                    }}
+                  />
+                  <i
+                    className="carriedSegment"
+                    style={{
+                      width: `${row.value ? ((row.carried ?? 0) / row.value) * 100 : 0}%`,
+                    }}
+                  />
+                  <i
+                    className="waitingSegment"
+                    style={{
+                      width: `${row.value ? ((row.waiting ?? 0) / row.value) * 100 : 0}%`,
+                    }}
+                  />
+                </span>
+              ) : (
+                <i style={{ width: `${Math.max(2, (row.value / max) * 100)}%` }} />
+              )}
             </div>
             <strong
               className={tooltip ? "valueTooltip" : undefined}
@@ -998,6 +1216,31 @@ function HorizontalBars({
             >
               {format(row.value)}
             </strong>
+            {(row.started !== undefined ||
+              row.carried !== undefined ||
+              row.waiting !== undefined) && (
+              <span className="barBreakdown" role="tooltip">
+                <b>{row.label}</b>
+                <span>
+                  <i className="startedSegment" />
+                  Task trong kỳ
+                  <strong>{format(row.started ?? 0)}</strong>
+                  <small>{formatPercent(row.started ?? 0, row.value)}</small>
+                </span>
+                <span>
+                  <i className="carriedSegment" />
+                  Carry-in bàn giao
+                  <strong>{format(row.carried ?? 0)}</strong>
+                  <small>{formatPercent(row.carried ?? 0, row.value)}</small>
+                </span>
+                <span>
+                  <i className="waitingSegment" />
+                  To Do / Pending-Cancel
+                  <strong>{format(row.waiting ?? 0)}</strong>
+                  <small>{formatPercent(row.waiting ?? 0, row.value)}</small>
+                </span>
+              </span>
+            )}
           </button>
         ))}
         {!rows.length && <p className="emptyText">Chưa có dữ liệu phù hợp.</p>}
@@ -1015,14 +1258,29 @@ function StaffColumns({
     name: string;
     total: number;
     started: number;
-    carried: number;
+    inspectionCarry: number;
+    completionCarry: number;
     feedback: number;
   }>;
-  onSelect?: (name: string, metric: "total" | "started" | "carried" | "feedback") => void;
+  onSelect?: (
+    name: string,
+    metric:
+      | "total"
+      | "started"
+      | "inspectionCarry"
+      | "completionCarry"
+      | "feedback",
+  ) => void;
   className?: string;
 }) {
   const max = Math.max(
-    ...rows.flatMap((row) => [row.total, row.started, row.carried, row.feedback]),
+    ...rows.flatMap((row) => [
+      row.total,
+      row.started,
+      row.inspectionCarry,
+      row.completionCarry,
+      row.feedback,
+    ]),
     1,
   );
   return (
@@ -1035,8 +1293,9 @@ function StaffColumns({
         <div className="columnLegend">
           <span><i className="c1" />Tổng task</span>
           <span><i className="c2" />Bắt đầu trong kỳ</span>
-          <span><i className="c3" />Carry-in hoàn thành</span>
-          <span><i className="c4" />Lần trả về</span>
+          <span><i className="c3" />Carry-in bàn giao</span>
+          <span><i className="c4" />Carry-in hoàn thành</span>
+          <span><i className="c5" />Lần trả về</span>
           <HelpButton help={dashboardHelp("Số task thực hiện & số lần trả về")} />
         </div>
       </div>
@@ -1048,7 +1307,8 @@ function StaffColumns({
                 {([
                   ["total", row.total],
                   ["started", row.started],
-                  ["carried", row.carried],
+                  ["inspectionCarry", row.inspectionCarry],
+                  ["completionCarry", row.completionCarry],
                   ["feedback", row.feedback],
                 ] as const).map(([metric, value], index) => (
                   <button
@@ -1103,7 +1363,7 @@ function DetailDrawer({
         </div>
         <div className="detailTableWrap">
           {detail.feedback ? (
-            <table className="detailTable">
+            <table className="detailTable feedbackDetailTable">
               <thead>
                 <tr>
                   <th>Task</th>
@@ -1116,38 +1376,66 @@ function DetailDrawer({
               <tbody>
                 {detail.feedback.map((item, index) => (
                   <tr key={`${item.taskCode}-${item.at?.getTime() ?? "none"}-${index}`}>
-                    <td><strong>{item.taskCode}</strong></td>
-                    <td>{item.task?.title || "—"}</td>
-                    <td>{item.assignee || item.task?.assignee || "—"}</td>
-                    <td>{formatDate(item.at)}</td>
-                    <td>{item.task?.status || "—"}</td>
+                    <td data-label="Task"><strong>{item.taskCode}</strong></td>
+                    <td data-label="Tên task">{item.task?.title || "—"}</td>
+                    <td data-label="Người làm">{item.assignee || item.task?.assignee || "—"}</td>
+                    <td data-label="Thời điểm">{formatDateTime(item.at)}</td>
+                    <td data-label="Trạng thái">
+                      <span className="statusPill">
+                        {item.task?.status || "Chưa xác định"}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           ) : (
-            <table className="detailTable">
+            <table className="detailTable taskDetailTable">
               <thead>
                 <tr>
-                  <th>Công việc</th>
-                  <th>Tên task</th>
+                  <th>Task</th>
                   <th>Assignee</th>
                   <th>Trạng thái</th>
-                  <th>Bắt đầu</th>
-                  <th>Hoàn thành</th>
-                  <th>Phút</th>
+                  <th>Timeline công việc</th>
+                  <th>Phút dự kiến</th>
                 </tr>
               </thead>
               <tbody>
                 {(detail.tasks ?? []).map((task, index) => (
                   <tr key={`${task.code}-${index}`}>
-                    <td><strong>{task.code}</strong></td>
-                    <td>{task.title || "—"}</td>
-                    <td>{task.assignee || "Chưa có assignee"}</td>
-                    <td>{task.status || "Chưa xác định"}</td>
-                    <td>{formatDate(task.startDate)}</td>
-                    <td>{formatDate(task.completedDate)}</td>
-                    <td>{formatNumber(task.expectedMinutes)}</td>
+                    <td data-label="Task" className="taskIdentity">
+                      <strong>{task.code}</strong>
+                      <span>{task.title || "Chưa có tên task"}</span>
+                    </td>
+                    <td data-label="Assignee" className="assigneeCell">
+                      {task.assignee || "Chưa có assignee"}
+                    </td>
+                    <td data-label="Trạng thái">
+                      <span className="statusPill">
+                        {task.status || "Chưa xác định"}
+                      </span>
+                    </td>
+                    <td data-label="Timeline" className="taskTimeline">
+                      <span>
+                        <i>01</i>
+                        <small>Bắt đầu</small>
+                        <strong>{formatDate(task.startDate)}</strong>
+                      </span>
+                      <span className="inspectionMilestone">
+                        <i>02</i>
+                        <small>Kiểm duyệt</small>
+                        <strong>{formatDateTime(task.inspectionDate)}</strong>
+                      </span>
+                      <span>
+                        <i>03</i>
+                        <small>Hoàn thành</small>
+                        <strong>{formatDate(task.completedDate)}</strong>
+                      </span>
+                    </td>
+                    <td data-label="Phút dự kiến" className="minutesCell">
+                      <strong>{formatNumber(task.expectedMinutes)}</strong>
+                      <small>phút</small>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1210,6 +1498,70 @@ export function Dashboard() {
   );
   const [detail, setDetail] = useState<DetailView | null>(null);
   const [activeHelp, setActiveHelp] = useState<DashboardHelp | null>(null);
+  const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
+  const [reportDepartment, setReportDepartment] =
+    useState<ReportDepartment | null>(null);
+  const [saveReportOpen, setSaveReportOpen] = useState(false);
+  const [reportName, setReportName] = useState("");
+  const [saveDepartment, setSaveDepartment] =
+    useState<ReportDepartment>("media");
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        const stored = window.localStorage.getItem(SAVED_REPORTS_KEY);
+        if (stored) setSavedReports(JSON.parse(stored) as SavedReport[]);
+      } catch {
+        // Dữ liệu cũ/hỏng không được phép làm gián đoạn dashboard.
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  function persistReports(reports: SavedReport[]) {
+    setSavedReports(reports);
+    window.localStorage.setItem(SAVED_REPORTS_KEY, JSON.stringify(reports));
+  }
+
+  function saveCurrentReport() {
+    const name = reportName.trim();
+    if (!name) return;
+    const report: SavedReport = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name,
+      department: saveDepartment,
+      createdAt: new Date().toISOString(),
+      filters: {
+        dateFrom,
+        dateTo,
+        backlogDate,
+        collectionMonth,
+        leaderboardUnit,
+        pieScopes,
+        pieExcludeOutsource,
+      },
+    };
+    persistReports([report, ...savedReports]);
+    setReportName("");
+    setSaveReportOpen(false);
+    setReportDepartment(saveDepartment);
+  }
+
+  function applySavedReport(report: SavedReport) {
+    setDateFrom(report.filters.dateFrom);
+    setDateTo(report.filters.dateTo);
+    setBacklogDate(report.filters.backlogDate);
+    setCollectionMonth(report.filters.collectionMonth);
+    setLeaderboardUnit(report.filters.leaderboardUnit);
+    setPieScopes(report.filters.pieScopes);
+    setPieExcludeOutsource(report.filters.pieExcludeOutsource);
+    setReportDepartment(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function deleteSavedReport(id: string) {
+    persistReports(savedReports.filter((report) => report.id !== id));
+  }
 
   const dateWindow = useMemo<DateWindow>(
     () => ({
@@ -1358,15 +1710,40 @@ export function Dashboard() {
       .filter((item) => item.included)
       .map((item) => item.task);
     const startedInWindow = classified.filter((item) => item.started);
-    const carriedIntoWindow = classified.filter((item) => item.carried);
+    const inspectionCarryIntoWindow = classified.filter(
+      (item) => item.inspectionCarry,
+    );
+    const completionCarryIntoWindow = classified.filter(
+      (item) => item.completionCarry,
+    );
 
-    const leaderboard = new Map<string, number>();
-    for (const task of selectedTasks) {
-      for (const name of assigneeNames(task.assignee)) {
-        leaderboard.set(
-          name,
-          (leaderboard.get(name) ?? 0) + task.expectedMinutes,
-        );
+    const leaderboard = new Map<
+      string,
+      { value: number; started: number; carried: number; waiting: number }
+    >();
+    for (const item of classified.filter(
+      (row) => row.started || row.inspectionCarry,
+    )) {
+      for (const name of assigneeNames(item.task.assignee)) {
+        const current = leaderboard.get(name) ?? {
+          value: 0,
+          started: 0,
+          carried: 0,
+          waiting: 0,
+        };
+        current.value += item.task.expectedMinutes;
+        const status = normalizedKey(item.task.status);
+        const isWaiting =
+          status === "to do" ||
+          status === "todo" ||
+          status === "pending / cancel" ||
+          status === "pending/cancel";
+        if (isWaiting) current.waiting += item.task.expectedMinutes;
+        else if (item.inspectionCarry) {
+          current.carried += item.task.expectedMinutes;
+        }
+        else current.started += item.task.expectedMinutes;
+        leaderboard.set(name, current);
       }
     }
 
@@ -1401,7 +1778,8 @@ export function Dashboard() {
           name,
           total: rows.length,
           started: rows.filter((item) => item.started).length,
-          carried: rows.filter((item) => item.carried).length,
+          inspectionCarry: rows.filter((item) => item.inspectionCarry).length,
+          completionCarry: rows.filter((item) => item.completionCarry).length,
           feedback: feedbackCount.get(name) ?? 0,
         };
       })
@@ -1455,16 +1833,24 @@ export function Dashboard() {
       if (!task.startDate || task.startDate > backlogCutoff) return false;
       return !EXCLUDED_BACKLOG_STATUSES.has(normalizedKey(task.status));
     });
+    const reportingDate = dateWindow.to ?? endOfDay(new Date());
     const pieTaskSets: Record<PieScope, Task[]> = {
       started: startedInWindow.map((item) => item.task),
-      carried: carriedIntoWindow.map((item) => item.task),
+      inspectionCarry: inspectionCarryIntoWindow.map((item) => item.task),
+      completionCarry: completionCarryIntoWindow.map((item) => item.task),
       combined: selectedTasks,
     };
     const metricsFor = (tasks: Task[]) => ({
       tasks,
       status: groupCount(tasks, (task) => task.status),
-      handoff: groupCount(tasks, (task) => task.handoffRating),
-      overall: groupCount(tasks, (task) => task.overallRating),
+      handoff: groupCount(
+        tasks,
+        (task) => evaluateHandoff(task, reportingDate).label,
+      ),
+      overall: groupCount(
+        tasks,
+        (task) => evaluateOverall(task, reportingDate).label,
+      ),
       stages: groupCount(tasks, (task) => task.stage),
       outsource: groupCount(
         tasks.filter((task) => Boolean(task.outsource)),
@@ -1520,11 +1906,12 @@ export function Dashboard() {
       .filter(
         (task) =>
           task.startDate &&
+          task.startDate <= backlogCutoff &&
           !EXCLUDED_BACKLOG_STATUSES.has(normalizedKey(task.status)),
       )
       .map((task) => ({
         task,
-        days: calendarDaysBetween(task.startDate, new Date()),
+        days: calendarDaysBetween(task.startDate, backlogCutoff),
       }))
       .filter(
         (row): row is { task: Task; days: number } =>
@@ -1596,11 +1983,31 @@ export function Dashboard() {
         label: string;
       } => row.normMinutes !== null,
     );
-
+    const handoffEvaluations = selectedTasks.map((task) => ({
+      task,
+      evaluation: evaluateHandoff(task, reportingDate),
+    }));
+    const handedForKpi = handoffEvaluations.filter((row) =>
+      ["onTime", "late"].includes(row.evaluation.code),
+    );
+    const onTimeHandoffs = handedForKpi.filter(
+      (row) => row.evaluation.code === "onTime",
+    );
+    const overdueHandoffs = handoffEvaluations.filter(
+      (row) => row.evaluation.code === "overdue",
+    );
+    const lateHandoffs = handedForKpi
+      .filter((row) => row.evaluation.code === "late")
+      .map((row) => ({
+        task: row.task,
+        minutes: handoffLateMinutes(row.task),
+      }));
     return {
       selectedTasks,
+      reportingDate,
       startedInWindow,
-      carriedIntoWindow,
+      inspectionCarryIntoWindow,
+      completionCarryIntoWindow,
       classified,
       selectedFeedback,
       taskByCode,
@@ -1610,6 +2017,22 @@ export function Dashboard() {
       backlogTasks: backlog,
       pieMetrics,
       sla: {
+        handoffEvaluations,
+        handedForKpi,
+        onTimeHandoffs,
+        overdueHandoffs,
+        lateHandoffs,
+        handoffOnTimeRate: handedForKpi.length
+          ? (onTimeHandoffs.length / handedForKpi.length) * 100
+          : 0,
+        handoffLateP50: percentile(
+          lateHandoffs.map((row) => row.minutes),
+          0.5,
+        ),
+        handoffLateDistribution: groupCount(
+          lateHandoffs,
+          (row) => lateMinuteBucket(row.minutes),
+        ),
         completedCohort,
         cycleRows,
         cycleDistribution: groupCount(cycleRows, (row) =>
@@ -1670,12 +2093,19 @@ export function Dashboard() {
         ),
       },
       leaderboard: [...leaderboard.entries()]
-        .map(([label, value]) => ({ label, value }))
+        .map(([label, values]) => ({ label, ...values }))
         .sort((a, b) => b.value - a.value),
       staffRows,
       months,
-      missingStart: data.tasks.filter((task) => !task.startDate).length,
-      missingAssignee: data.tasks.filter((task) => !task.assignee).length,
+      missingStartOnly: data.tasks.filter(
+        (task) => !task.startDate && Boolean(task.assignee),
+      ).length,
+      missingAssigneeOnly: data.tasks.filter(
+        (task) => Boolean(task.startDate) && !task.assignee,
+      ).length,
+      missingBoth: data.tasks.filter(
+        (task) => !task.startDate && !task.assignee,
+      ).length,
       missingEither: data.tasks.filter(
         (task) => !task.startDate || !task.assignee,
       ).length,
@@ -1734,6 +2164,29 @@ export function Dashboard() {
             <small>Task performance dashboard</small>
           </div>
         </div>
+        <nav className="reportNavigation" aria-label="Báo cáo theo phòng ban">
+          <span>Báo cáo theo phòng ban</span>
+          <button
+            type="button"
+            className={reportDepartment === "media" ? "active" : ""}
+            onClick={() =>
+              setReportDepartment(reportDepartment === "media" ? null : "media")
+            }
+          >
+            Media
+            <small>{savedReports.filter((report) => report.department === "media").length}</small>
+          </button>
+          <button
+            type="button"
+            className={reportDepartment === "business" ? "active" : ""}
+            onClick={() =>
+              setReportDepartment(reportDepartment === "business" ? null : "business")
+            }
+          >
+            Kinh doanh
+            <small>{savedReports.filter((report) => report.department === "business").length}</small>
+          </button>
+        </nav>
         <button className="uploadButton" onClick={() => fileRef.current?.click()}>
           {loading ? "Đang đọc dữ liệu…" : data ? "Đổi file Excel" : "Chọn file Excel"}
         </button>
@@ -1819,6 +2272,16 @@ export function Dashboard() {
             >
               Xóa lọc
             </button>
+            <button
+              type="button"
+              className="saveReportButton"
+              onClick={() => {
+                setSaveDepartment(reportDepartment ?? "media");
+                setSaveReportOpen(true);
+              }}
+            >
+              <span>＋</span> Lưu báo cáo
+            </button>
           </section>
 
           <section className="kpiGrid">
@@ -1827,7 +2290,7 @@ export function Dashboard() {
               className="kpiCard dark interactive"
               onClick={() => setDetail({
                 title: "Task trong kỳ",
-                subtitle: "Bắt đầu trong kỳ hoặc carry-in hoàn thành trong kỳ",
+                subtitle: "Hợp khử trùng của task bắt đầu, carry-in bàn giao và carry-in hoàn thành",
                 tasks: analytics.selectedTasks,
               })}
             >
@@ -1837,7 +2300,11 @@ export function Dashboard() {
               <small>
                 <b>{formatNumber(analytics.startedInWindow.length)}</b> bắt đầu trong kỳ
                 {" · "}
-                <b>{formatNumber(analytics.carriedIntoWindow.length)}</b> carry-in
+                <b>{formatNumber(analytics.inspectionCarryIntoWindow.length)}</b> carry-in bàn giao
+                {" · "}
+                <b>{formatNumber(analytics.completionCarryIntoWindow.length)}</b> carry-in hoàn thành
+                <br />
+                <em>Hai mốc carry-in có thể giao nhau; tổng đã khử trùng.</em>
               </small>
             </button>
             <button
@@ -1852,7 +2319,12 @@ export function Dashboard() {
               <HelpButton help={dashboardHelp("Task thiếu thông tin")} />
               <span>Thiếu ngày bắt đầu hoặc assignee</span>
               <strong>{formatNumber(analytics.missingEither)}</strong>
-              <small>{analytics.missingStart} thiếu ngày · {analytics.missingAssignee} thiếu assignee</small>
+              <small>
+                <b>{analytics.missingStartOnly}</b> chỉ thiếu ngày ·{" "}
+                <b>{analytics.missingAssigneeOnly}</b> chỉ thiếu assignee
+                <br />
+                <b>{analytics.missingBoth}</b> thiếu cả hai
+              </small>
             </button>
             <button
               type="button"
@@ -2047,7 +2519,8 @@ export function Dashboard() {
                 const labels = {
                   total: "Tổng task",
                   started: "Bắt đầu trong kỳ",
-                  carried: "Carry-in hoàn thành",
+                  inspectionCarry: "Carry-in bàn giao",
+                  completionCarry: "Carry-in hoàn thành",
                 };
                 setDetail({
                   title: `${labels[metric]} · ${name}`,
@@ -2077,7 +2550,7 @@ export function Dashboard() {
                 })}
               />
               <PieChart
-                title="Đánh giá bàn giao"
+                title="Tuân thủ ngày bàn giao"
                 data={chartMetrics("handoff").handoff}
                 compact
                 scope={chartScope("handoff")}
@@ -2087,15 +2560,17 @@ export function Dashboard() {
                   setChartExcludeOutsource("handoff", checked)
                 }
                 onSelect={(label) => setDetail({
-                  title: `Đánh giá bàn giao · ${label}`,
-                  subtitle: "Task trong bộ lọc có cùng đánh giá bàn giao",
+                  title: `Tuân thủ bàn giao · ${label}`,
+                  subtitle: `Đánh giá tại mốc ${formatDate(analytics.reportingDate)}`,
                   tasks: chartMetrics("handoff").tasks.filter(
-                    (task) => matchesGroup(task.handoffRating, label),
+                    (task) =>
+                      evaluateHandoff(task, analytics.reportingDate).label ===
+                      label,
                   ),
                 })}
               />
               <PieChart
-                title="Đánh giá tổng"
+                title="Tuân thủ hạn hoàn thành"
                 data={chartMetrics("overall").overall}
                 compact
                 scope={chartScope("overall")}
@@ -2105,10 +2580,12 @@ export function Dashboard() {
                   setChartExcludeOutsource("overall", checked)
                 }
                 onSelect={(label) => setDetail({
-                  title: `Đánh giá tổng · ${label}`,
-                  subtitle: "Task trong bộ lọc có cùng đánh giá tổng",
+                  title: `Tuân thủ hoàn thành · ${label}`,
+                  subtitle: `Hạn là cuối ngày làm việc kế tiếp · đánh giá tại ${formatDate(analytics.reportingDate)}`,
                   tasks: chartMetrics("overall").tasks.filter(
-                    (task) => matchesGroup(task.overallRating, label),
+                    (task) =>
+                      evaluateOverall(task, analytics.reportingDate).label ===
+                      label,
                   ),
                 })}
               />
@@ -2344,6 +2821,100 @@ export function Dashboard() {
                 <span className="slaMode">CHƯA GẮN NGƯỠNG ĐẠT / VI PHẠM</span>
               </div>
 
+              <section className="handoffSlaBlock">
+                <div className="handoffSlaHeader">
+                  <div>
+                    <span className="chartKicker">TUÂN THỦ MỐC BÀN GIAO</span>
+                    <h3>Bàn giao trong ngày &amp; mức độ trễ</h3>
+                    <p>
+                      Cùng ngày luôn được tính đúng hạn. Khi sang ngày khác,
+                      phút trễ chỉ tính từ 08:30 trong giờ làm việc.
+                    </p>
+                  </div>
+                  <HelpButton help={dashboardHelp("Tuân thủ ngày bàn giao")} />
+                </div>
+                <div className="handoffKpis">
+                  <SlaMetricCard
+                    kicker="TỶ LỆ ĐÚNG NGÀY"
+                    title="Task đã bàn giao đủ dữ liệu"
+                    value={`${Math.round(analytics.sla.handoffOnTimeRate)}%`}
+                    note={`${formatNumber(analytics.sla.onTimeHandoffs.length)} / ${formatNumber(analytics.sla.handedForKpi.length)} task bàn giao đúng ngày`}
+                    help={dashboardHelp("Tuân thủ ngày bàn giao")}
+                    onClick={() =>
+                      setDetail({
+                        title: "Bàn giao đúng ngày",
+                        subtitle: "Ngày Kiểm Duyệt cùng ngày Ngày Bắt Đầu",
+                        tasks: analytics.sla.onTimeHandoffs.map(
+                          (row) => row.task,
+                        ),
+                      })
+                    }
+                  />
+                  <SlaMetricCard
+                    kicker="CHƯA BÀN GIAO"
+                    title="Quá hạn tại ngày báo cáo"
+                    value={formatNumber(analytics.sla.overdueHandoffs.length)}
+                    note={`Đánh giá tại ${formatDate(analytics.reportingDate)}`}
+                    help={dashboardHelp("Tuân thủ ngày bàn giao")}
+                    onClick={() =>
+                      setDetail({
+                        title: "Quá hạn chưa bàn giao",
+                        subtitle: "Đã qua ngày bắt đầu nhưng chưa có Ngày Kiểm Duyệt",
+                        tasks: analytics.sla.overdueHandoffs.map(
+                          (row) => row.task,
+                        ),
+                      })
+                    }
+                  />
+                  <SlaMetricCard
+                    kicker="MỨC TRỄ ĐIỂN HÌNH"
+                    title="P50 của task bàn giao trễ ngày"
+                    value={formatSlaMinutes(analytics.sla.handoffLateP50)}
+                    note={`${formatNumber(analytics.sla.lateHandoffs.length)} task trễ ngày · chỉ tính giờ làm việc`}
+                    help={{
+                      title: "P50 phút trễ bàn giao",
+                      purpose: "Mức phút trễ điển hình của riêng các task đã bàn giao sang ngày khác.",
+                      objective: "Phân biệt task chỉ trễ qua ngày nhưng bàn giao trước ca với task chiếm nhiều giờ làm việc của ngày kế tiếp.",
+                      calculation: "Bắt đầu tính từ 08:30 của ngày làm việc kế tiếp; loại ngoài giờ, nghỉ trưa, Chủ nhật và ngày lễ. P50 là trung vị.",
+                      example: "Bàn giao 07:00 hôm sau → 0 phút làm việc. Bàn giao 09:30 → 60 phút.",
+                    }}
+                    onClick={() =>
+                      setDetail({
+                        title: "Task bàn giao trễ ngày",
+                        subtitle: "Các task tạo nên P50 và phân bổ mức độ trễ",
+                        tasks: analytics.sla.lateHandoffs.map(
+                          (row) => row.task,
+                        ),
+                      })
+                    }
+                  />
+                </div>
+                <HorizontalBars
+                  title="Mức độ trễ bàn giao"
+                  subtitle="PHÚT TRỄ TRONG GIỜ LÀM VIỆC"
+                  rows={analytics.sla.handoffLateDistribution}
+                  className="handoffLateChart"
+                  help={{
+                    title: "Mức độ trễ bàn giao",
+                    purpose: "Phân nhóm các task bàn giao sang ngày khác theo số phút làm việc bị trễ.",
+                    objective: "Nhận diện trễ chỉ mang tính qua ngày và các trường hợp thực sự chiếm thời gian của ca kế tiếp.",
+                    calculation: "Phút trễ tính từ 08:30 ngày làm việc kế tiếp, loại ngoài giờ, nghỉ trưa, Chủ nhật và ngày lễ.",
+                    example: "Task kiểm duyệt 07:00 hôm sau thuộc nhóm 0 phút; 10:00 thuộc nhóm 61–120 phút.",
+                  }}
+                  onSelect={(label) =>
+                    setDetail({
+                      title: `Mức trễ · ${label}`,
+                      subtitle: "Task bàn giao trễ ngày trong cùng khoảng phút",
+                      tasks: analytics.sla.lateHandoffs
+                        .filter(
+                          (row) => lateMinuteBucket(row.minutes) === label,
+                        )
+                        .map((row) => row.task),
+                    })
+                  }
+                />
+              </section>
+
               <div className="slaMetrics">
                 <SlaMetricCard
                   kicker="CYCLE TIME"
@@ -2402,7 +2973,7 @@ export function Dashboard() {
                   }}
                   onSelect={(label) => setDetail({
                     title: `Aging · ${label}`,
-                    subtitle: "Task đang mở tính đến hôm nay",
+                    subtitle: `Task đang mở tính đến mốc ${formatDate(inputDate(backlogDate))}`,
                     tasks: analytics.sla.openAgingRows
                       .filter((row) => agingBucket(row.days) === label)
                       .map((row) => row.task),
@@ -2557,15 +3128,130 @@ export function Dashboard() {
           <section className="logicNote">
             <span>LOGIC TEST V0.1</span>
             <p>
-              “Tổng task trong kỳ” = task có Ngày Bắt Đầu nằm trong bộ lọc +
-              task bắt đầu ngoài bộ lọc nhưng Ngày Hoàn Thành nằm trong bộ lọc.
-              Khi không chọn ngày, dashboard lấy toàn bộ dữ liệu.
+              “Tổng task trong kỳ” là hợp khử trùng của task có Ngày Bắt Đầu,
+              Ngày Kiểm Duyệt carry-in hoặc Ngày Hoàn Thành carry-in nằm trong
+              bộ lọc. Ngày Kiểm Duyệt phản ánh mốc người làm bàn giao; Ngày
+              Hoàn Thành phản ánh toàn quy trình và có ảnh hưởng của người
+              đánh giá.
             </p>
           </section>
         </>
       )}
       {detail && <DetailDrawer detail={detail} onClose={() => setDetail(null)} />}
       {activeHelp && <HelpDialog help={activeHelp} onClose={() => setActiveHelp(null)} />}
+      {reportDepartment && (
+        <div
+          className="reportPanelOverlay"
+          role="presentation"
+          onMouseDown={() => setReportDepartment(null)}
+        >
+          <aside
+            className="reportPanel"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Báo cáo ${reportDepartment === "media" ? "Media" : "Kinh doanh"}`}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <span className="chartKicker">BÁO CÁO THEO PHÒNG BAN</span>
+                <h2>{reportDepartment === "media" ? "Media" : "Kinh doanh"}</h2>
+              </div>
+              <button type="button" onClick={() => setReportDepartment(null)}>×</button>
+            </header>
+            <div className="savedReportList">
+              {savedReports.filter((report) => report.department === reportDepartment).length ? (
+                savedReports
+                  .filter((report) => report.department === reportDepartment)
+                  .map((report) => (
+                    <article className="savedReportItem" key={report.id}>
+                      <button type="button" onClick={() => applySavedReport(report)}>
+                        <strong>{report.name}</strong>
+                        <span>
+                          {report.filters.dateFrom || report.filters.dateTo
+                            ? `${report.filters.dateFrom || "Đầu kỳ"} → ${report.filters.dateTo || "Hiện tại"}`
+                            : "Toàn bộ thời gian"}
+                        </span>
+                        <small>
+                          Đã lưu {new Intl.DateTimeFormat("vi-VN", {
+                            dateStyle: "short",
+                            timeStyle: "short",
+                          }).format(new Date(report.createdAt))}
+                        </small>
+                      </button>
+                      <button
+                        type="button"
+                        className="deleteReportButton"
+                        aria-label={`Xóa báo cáo ${report.name}`}
+                        onClick={() => deleteSavedReport(report.id)}
+                      >
+                        ×
+                      </button>
+                    </article>
+                  ))
+              ) : (
+                <div className="savedReportEmpty">
+                  <span>◎</span>
+                  <strong>Chưa có báo cáo đã lưu</strong>
+                  <p>Thiết lập bộ lọc rồi chọn “Lưu báo cáo” để thêm vào đây.</p>
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
+      {saveReportOpen && (
+        <div
+          className="saveReportOverlay"
+          role="presentation"
+          onMouseDown={() => setSaveReportOpen(false)}
+        >
+          <form
+            className="saveReportModal"
+            onMouseDown={(event) => event.stopPropagation()}
+            onSubmit={(event) => {
+              event.preventDefault();
+              saveCurrentReport();
+            }}
+          >
+            <span className="chartKicker">LƯU CẤU HÌNH HIỆN TẠI</span>
+            <h2>Đặt tên báo cáo</h2>
+            <p>Bộ lọc và các tùy chọn biểu đồ hiện tại sẽ được lưu trên thiết bị này.</p>
+            <label>
+              Tên báo cáo
+              <input
+                autoFocus
+                required
+                maxLength={80}
+                value={reportName}
+                onChange={(event) => setReportName(event.target.value)}
+                placeholder="Ví dụ: Báo cáo Media tuần 30"
+              />
+            </label>
+            <fieldset>
+              <legend>Phòng ban</legend>
+              <button
+                type="button"
+                className={saveDepartment === "media" ? "active" : ""}
+                onClick={() => setSaveDepartment("media")}
+              >
+                Media
+              </button>
+              <button
+                type="button"
+                className={saveDepartment === "business" ? "active" : ""}
+                onClick={() => setSaveDepartment("business")}
+              >
+                Kinh doanh
+              </button>
+            </fieldset>
+            <div className="saveReportActions">
+              <button type="button" onClick={() => setSaveReportOpen(false)}>Hủy</button>
+              <button type="submit" disabled={!reportName.trim()}>Lưu báo cáo</button>
+            </div>
+          </form>
+        </div>
+      )}
     </main>
     </HelpContext.Provider>
   );

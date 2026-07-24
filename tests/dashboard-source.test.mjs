@@ -37,7 +37,9 @@ test("reads the workbook locally without embedding employee data", async () => {
   assert.match(dashboard, /"2\.6 Tasklist"/);
   assert.match(dashboard, /"2\.9 Lịch sử phản hồi Task"/);
   assert.doesNotMatch(dashboard, /\bfetch\s*\(/);
-  assert.doesNotMatch(dashboard, /localStorage|sessionStorage/);
+  assert.doesNotMatch(dashboard, /sessionStorage/);
+  assert.match(dashboard, /bb-dashboard-saved-reports-v1/);
+  assert.doesNotMatch(dashboard, /filters:\s*\{[^}]*tasks/s);
   assert.match(readme, /không được tải lên server/i);
 
   await assert.rejects(access(new URL("../.openai/hosting.json", import.meta.url)));

@@ -108,6 +108,48 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.handoffSlaBlock {
+  background: #edf8df;
+  border: 1px solid rgba(23, 79, 61, 0.16);
+  border-radius: 20px;
+  margin: 18px 0;
+  padding: 18px;
+}
+
+.handoffSlaHeader {
+  align-items: flex-start;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.handoffSlaHeader h3 {
+  font-size: 22px;
+  margin: 6px 0;
+}
+
+.handoffSlaHeader p {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.handoffKpis {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 16px;
+}
+
+.handoffKpis .slaMetric {
+  background: #fbfaf5;
+}
+
+.handoffLateChart {
+  margin-top: 12px;
+}
+
 .checkingMetrics {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -357,6 +399,10 @@
 }
 
 @media (max-width: 1100px) {
+  .handoffKpis {
+    grid-template-columns: 1fr;
+  }
+
   .slaMetrics,
   .checkingMetrics {
     grid-template-columns: 1fr;
@@ -542,6 +588,354 @@
   line-height: 1.5;
 }
 
+.kpiCard small em {
+  display: inline-block;
+  font-size: 9px;
+  font-style: normal;
+  margin-top: 5px;
+  opacity: 0.82;
+}
+
+.stackedLegend {
+  display: flex;
+  gap: 18px;
+  justify-content: flex-end;
+  margin: -8px 0 18px;
+}
+
+.stackedLegend span {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 11px;
+  gap: 6px;
+}
+
+.stackedLegend i,
+.barBreakdown i {
+  border-radius: 3px;
+  display: block;
+  height: 10px;
+  width: 10px;
+}
+
+.horizontalRow {
+  position: relative;
+}
+
+.barTrack .stackedBar {
+  border-radius: 99px;
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+.barTrack .stackedBar > i {
+  border-radius: 0;
+  height: 100%;
+}
+
+.startedSegment {
+  background: #174f3d !important;
+}
+
+.carriedSegment {
+  background: #d9ff72 !important;
+}
+
+.waitingSegment {
+  background: #f3b562 !important;
+}
+
+.barBreakdown {
+  background: rgba(23, 79, 61, 0.98);
+  border: 1px solid rgba(217, 255, 114, 0.5);
+  border-radius: 14px;
+  bottom: calc(100% + 8px);
+  box-shadow: 0 14px 38px rgba(8, 28, 22, 0.22);
+  color: #fff;
+  display: grid;
+  gap: 9px;
+  left: 50%;
+  min-width: 310px;
+  opacity: 0;
+  padding: 14px;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, 5px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  visibility: hidden;
+  z-index: 20;
+}
+
+.horizontalRow:hover .barBreakdown,
+.horizontalRow:focus-visible .barBreakdown {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  visibility: visible;
+}
+
+.barBreakdown > b {
+  color: #d9ff72;
+  font-size: 12px;
+}
+
+.barBreakdown > span {
+  align-items: center;
+  display: grid;
+  font-size: 11px;
+  gap: 7px;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+}
+
+.barBreakdown > span > strong {
+  font-size: 11px;
+  min-width: 68px;
+}
+
+.barBreakdown > span > small {
+  color: #d9ff72;
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Evidence drawer — management-friendly task table */
+.detailDrawer {
+  width: min(1180px, 94vw);
+}
+
+.detailTableWrap {
+  background: #f4f2ea;
+  border-radius: 20px;
+  max-height: calc(100vh - 190px);
+}
+
+.detailTable th {
+  background: #174f3d;
+  color: rgba(255, 255, 255, 0.72);
+  padding: 14px 16px;
+  top: 0;
+  z-index: 3;
+}
+
+.detailTable td {
+  background: #fbfaf5;
+  padding: 15px 16px;
+  vertical-align: middle;
+}
+
+.detailTable tbody tr:nth-child(even) td {
+  background: #f7f6ef;
+}
+
+.detailTable tbody tr:hover td {
+  background: #f0f8df;
+}
+
+.taskDetailTable .taskIdentity {
+  min-width: 260px;
+  white-space: normal;
+}
+
+.taskIdentity > strong {
+  color: #174f3d;
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  margin-bottom: 5px;
+}
+
+.taskIdentity > span {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  max-width: 360px;
+}
+
+.assigneeCell {
+  font-size: 11px;
+  line-height: 1.4;
+  max-width: 190px;
+  min-width: 130px;
+  white-space: normal !important;
+}
+
+.statusPill {
+  background: #e5eee8;
+  border: 1px solid rgba(23, 79, 61, 0.16);
+  border-radius: 999px;
+  color: #174f3d;
+  display: inline-flex;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 6px 9px;
+  white-space: nowrap;
+}
+
+.taskTimeline {
+  min-width: 430px;
+  white-space: normal !important;
+}
+
+.taskTimeline {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(115px, 1fr));
+  padding-bottom: 22px !important;
+  padding-top: 22px !important;
+  position: relative;
+}
+
+.taskTimeline::before {
+  background: #d9ddd4;
+  content: "";
+  height: 2px;
+  left: 31px;
+  position: absolute;
+  right: 31px;
+  top: 32px;
+}
+
+.taskTimeline > span {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  position: relative;
+  z-index: 1;
+}
+
+.taskTimeline > span:nth-child(2) {
+  justify-items: center;
+}
+
+.taskTimeline > span:nth-child(3) {
+  justify-items: end;
+}
+
+.taskTimeline i {
+  align-items: center;
+  background: #dfe5dc;
+  border: 3px solid #fbfaf5;
+  border-radius: 50%;
+  color: #66736d;
+  display: flex;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 900;
+  height: 22px;
+  justify-content: center;
+  width: 22px;
+}
+
+.taskTimeline .inspectionMilestone i {
+  background: #d9ff72;
+  color: #174f3d;
+}
+
+.taskTimeline small {
+  color: var(--muted);
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.taskTimeline strong {
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.inspectionMilestone strong {
+  color: #174f3d;
+}
+
+.minutesCell {
+  text-align: right;
+}
+
+.minutesCell > strong {
+  display: block;
+  font-size: 17px;
+}
+
+.minutesCell > small {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+@media (max-width: 760px) {
+  .detailTableWrap {
+    background: transparent;
+    border: 0;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .detailTable,
+  .detailTable tbody {
+    display: block;
+  }
+
+  .detailTable thead {
+    display: none;
+  }
+
+  .detailTable tr {
+    background: #fbfaf5;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    display: grid;
+    gap: 0;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .detailTable td,
+  .detailTable tbody tr:nth-child(even) td {
+    align-items: start;
+    background: transparent;
+    border: 0;
+    display: grid;
+    grid-template-columns: 94px minmax(0, 1fr);
+    max-width: none;
+    min-width: 0;
+    padding: 10px 14px;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .detailTable td::before {
+    color: var(--muted);
+    content: attr(data-label);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .taskTimeline {
+    display: grid !important;
+    grid-template-columns: 94px repeat(3, minmax(0, 1fr)) !important;
+    padding: 16px 14px !important;
+  }
+
+  .taskTimeline::before {
+    display: none;
+  }
+
+  .taskTimeline::before {
+    content: none;
+  }
+
+  .taskTimeline > span,
+  .taskTimeline > span:nth-child(2),
+  .taskTimeline > span:nth-child(3) {
+    justify-items: start;
+  }
+
+  .taskTimeline > span strong {
+    white-space: normal;
+  }
+}
+
 .helpClose {
   align-items: center;
   background: #174f3d;
@@ -571,4 +965,5 @@
     right: 14px;
     width: auto;
   }
+
 }

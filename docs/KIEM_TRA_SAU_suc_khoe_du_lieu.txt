@@ -1,0 +1,64 @@
+KIỂM TRA SAU — SỨC KHỎE DỮ LIỆU TASKLIST
+===========================================
+
+Mục đích
+--------
+Danh sách này được lưu lại để kiểm tra dữ liệu ở phase sau. Không hiển thị thành
+dashboard ở thời điểm hiện tại.
+
+Các kiểm tra cần thực hiện
+--------------------------
+
+1. Thiếu dữ liệu giao việc
+   - Chỉ thiếu Ngày Bắt Đầu.
+   - Chỉ thiếu Assignee.
+   - Thiếu đồng thời cả Ngày Bắt Đầu và Assignee.
+   - Ba nhóm phải loại trừ nhau và cộng lại bằng tổng task thiếu thông tin.
+
+2. Sai thứ tự timestamp
+   - Ngày Kiểm Duyệt sau Ngày Hoàn Thành.
+   - Ngày Nhận Checking trước Ngày Kiểm Duyệt.
+   - Ngày Hoàn Thành trước Ngày Bắt Đầu.
+
+3. Timestamp Checking/Reviewing cần xem lại
+   - Reviewing → Done bằng 0 phút.
+   - Ngày Nhận Checking trùng Ngày Hoàn Thành.
+   - Khoảng thời gian bằng 0 do cả hai mốc nằm ngoài giờ làm việc.
+   - Phân biệt lỗi dữ liệu với trường hợp nghiệp vụ hợp lệ.
+
+4. Định mức 1.7
+   - Task không map được theo Format Type + Công đoạn.
+   - Format Type rỗng.
+   - Công đoạn không thuộc nhóm có định mức.
+   - Chỉ đối chiếu phút dự kiến với phút chuẩn tham chiếu; không dùng để kết
+     luận năng suất thực tế khi chưa có thời gian bắt đầu/kết thúc làm thật.
+
+5. Mã task và liên kết sheet
+   - Mã task trùng trong Tasklist.
+   - Lịch sử phản hồi có mã task không tồn tại trong Tasklist.
+   - Một dòng phản hồi không có Assignee và không thể lấy Assignee từ Tasklist.
+
+6. Lịch nghỉ và SLA
+   - Lịch nghỉ chính xác hiện mới được cấu hình cho năm 2026.
+   - Khi dữ liệu có timestamp ngoài năm 2026 phải bổ sung lịch nghỉ chính thức
+     của Việt Nam, gồm lịch Tết và ngày nghỉ bù.
+   - Không tự suy đoán lịch nghỉ của năm chưa được công bố chính thức.
+
+7. Carry-in
+   - Carry-in bàn giao dựa trên Ngày Kiểm Duyệt.
+   - Carry-in hoàn thành dựa trên Ngày Hoàn Thành.
+   - Một task có thể nằm trong cả hai nhóm mốc.
+   - Tổng task trong kỳ phải khử trùng và chỉ đếm task đó một lần.
+
+8. Task tồn và dữ liệu lịch sử
+   - Aging tính đến Mốc task tồn.
+   - Task tồn và Aging sử dụng trạng thái hiện tại.
+   - Chưa thể tái dựng trạng thái lịch sử tại một ngày quá khứ nếu nguồn không
+     có lịch sử thay đổi trạng thái.
+
+Hướng xử lý phase sau
+---------------------
+- Tạo báo cáo kiểm tra có thể xuất Excel/CSV.
+- Mỗi lỗi có danh sách mã task, tên task, assignee và các timestamp liên quan.
+- Cho phép đánh dấu lỗi đã xác minh là trường hợp nghiệp vụ hợp lệ.
+- Chỉ đưa các kiểm tra lên dashboard nếu chúng cần được theo dõi thường xuyên.

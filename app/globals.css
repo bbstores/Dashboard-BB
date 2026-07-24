@@ -46,6 +46,23 @@ button:focus-visible, [role="button"]:focus-visible {
   justify-content: space-between;
   border-bottom: 1px solid var(--line);
 }
+.reportNavigation {
+  display: flex; align-items: center; gap: 7px; margin-left: auto; margin-right: 12px;
+}
+.reportNavigation > span {
+  margin-right: 3px; color: var(--muted); font-size: 9px; font-weight: 800;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.reportNavigation button {
+  height: 34px; padding: 0 11px; border: 1px solid var(--line); border-radius: 999px;
+  display: flex; align-items: center; gap: 7px; color: var(--green); background: var(--card);
+  font-size: 10px; font-weight: 800;
+}
+.reportNavigation button.active { border-color: var(--green); color: white; background: var(--green); }
+.reportNavigation small {
+  min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px;
+  display: grid; place-items: center; color: var(--green); background: var(--lime); font-size: 8px;
+}
 
 .dashboardBrand { display: flex; align-items: center; gap: 12px; }
 .dashboardBrand > span {
@@ -155,6 +172,87 @@ code { color: var(--green); background: #e4e3da; padding: 2px 6px; border-radius
   font-size: 10px; font-weight: 850; letter-spacing: .06em;
 }
 .clearButton:disabled { cursor: default; opacity: .35; }
+.saveReportButton {
+  height: 38px; padding: 0 15px; border: 0; border-radius: 9px;
+  color: white; background: var(--green); white-space: nowrap;
+  font-size: 10px; font-weight: 850; letter-spacing: .04em;
+}
+.saveReportButton span { color: var(--lime); font-size: 15px; vertical-align: -1px; }
+
+.reportPanelOverlay, .saveReportOverlay {
+  position: fixed; inset: 0; z-index: 120; background: rgba(9,20,16,.48);
+  backdrop-filter: blur(4px);
+}
+.reportPanelOverlay { display: flex; justify-content: flex-end; }
+.reportPanel {
+  width: min(460px, 94vw); height: 100%; padding: 28px; overflow: auto;
+  background: var(--paper); box-shadow: -20px 0 60px rgba(0,0,0,.2);
+  animation: drawerIn .2s ease-out;
+}
+.reportPanel > header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding-bottom: 22px; border-bottom: 1px solid var(--line);
+}
+.reportPanel h2, .saveReportModal h2 { margin: 0; font-size: 30px; letter-spacing: -.04em; }
+.reportPanel > header > button {
+  width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 50%;
+  color: var(--ink); background: var(--card); font-size: 23px;
+}
+.savedReportList { display: grid; gap: 10px; padding-top: 18px; }
+.savedReportItem {
+  display: grid; grid-template-columns: 1fr 36px; gap: 6px; padding: 7px;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--card);
+}
+.savedReportItem > button:first-child {
+  min-width: 0; padding: 10px; border: 0; display: grid; gap: 6px;
+  color: var(--ink); background: transparent; text-align: left;
+}
+.savedReportItem strong { overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+.savedReportItem span { color: var(--green); font-size: 10px; }
+.savedReportItem small { color: var(--muted); font-size: 9px; }
+.deleteReportButton {
+  align-self: center; width: 32px; height: 32px; border: 0; border-radius: 50%;
+  color: #9a4b43; background: #f6e3df; font-size: 18px;
+}
+.savedReportEmpty {
+  min-height: 260px; display: grid; place-items: center; align-content: center;
+  color: var(--muted); text-align: center;
+}
+.savedReportEmpty > span { color: var(--green); font-size: 34px; }
+.savedReportEmpty strong { margin-top: 12px; color: var(--ink); font-size: 14px; }
+.savedReportEmpty p { max-width: 270px; margin: 7px 0 0; font-size: 10px; line-height: 1.5; }
+.saveReportOverlay { display: grid; place-items: center; padding: 18px; }
+.saveReportModal {
+  width: min(480px, 100%); padding: 30px; border-radius: 22px;
+  background: var(--card); box-shadow: 0 24px 70px rgba(0,0,0,.24);
+}
+.saveReportModal > p { margin: 10px 0 22px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.saveReportModal > label {
+  display: grid; gap: 7px; color: var(--muted); font-size: 9px; font-weight: 800;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.saveReportModal input {
+  width: 100%; height: 44px; padding: 0 13px; border: 1px solid var(--line);
+  border-radius: 10px; color: var(--ink); background: white;
+  font-size: 13px; letter-spacing: 0; text-transform: none;
+}
+.saveReportModal fieldset { margin: 18px 0 0; padding: 0; border: 0; }
+.saveReportModal legend {
+  margin-bottom: 7px; color: var(--muted); font-size: 9px; font-weight: 800;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.saveReportModal fieldset button {
+  height: 36px; margin-right: 7px; padding: 0 13px; border: 1px solid var(--line);
+  border-radius: 999px; color: var(--green); background: white; font-size: 10px; font-weight: 800;
+}
+.saveReportModal fieldset button.active { border-color: var(--green); color: white; background: var(--green); }
+.saveReportActions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 26px; }
+.saveReportActions button {
+  height: 40px; padding: 0 17px; border: 1px solid var(--line); border-radius: 9px;
+  color: var(--green); background: transparent; font-size: 10px; font-weight: 850;
+}
+.saveReportActions button[type="submit"] { border-color: var(--green); color: white; background: var(--green); }
+.saveReportActions button:disabled { cursor: default; opacity: .4; }
 
 .kpiGrid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
@@ -277,6 +375,9 @@ code { color: var(--green); background: #e4e3da; padding: 2px 6px; border-radius
   position: relative; z-index: 3;
   color: white; border-color: var(--green); background: var(--green);
 }
+.collectionCard:has(.metricHoverGroup:hover) {
+  z-index: 100;
+}
 .collectionCard .chartKicker { color: var(--lime); }
 .collectionCard select { min-width: 185px; border-color: rgba(255,255,255,.2); color: white; background: rgba(255,255,255,.1); }
 .progressGrid {
@@ -371,7 +472,13 @@ code { color: var(--green); background: #e4e3da; padding: 2px 6px; border-radius
 .c1 { background: var(--green); }
 .c2 { background: #8fbf45; }
 .c3 { background: var(--orange); }
-.c4 { background: var(--red); }
+.c4 { background: #79a7a0; }
+.c5 { background: var(--red); }
+.detailTable .inspectionDateCell {
+  color: var(--green);
+  font-weight: 700;
+  white-space: nowrap;
+}
 .columnScroller { overflow-x: auto; padding: 16px 4px 2px; }
 .columnChart {
   height: 280px; display: flex; align-items: flex-end; gap: 14px;
@@ -612,7 +719,8 @@ code { color: var(--green); background: #e4e3da; padding: 2px 6px; border-radius
   .dashboardHero { padding-top: 50px; }
   .dashboardHero h1 { font-size: 48px; }
   .filterBar { position: static; display: grid; grid-template-columns: 1fr 1fr; }
-  .filterIntro, .clearButton { grid-column: 1 / -1; }
+  .filterIntro { grid-column: 1 / -1; }
+  .clearButton, .saveReportButton { width: 100%; }
   .filterBar .backlogFilter {
     grid-column: 1 / -1; padding: 12px 0 0; border-left: 0; border-top: 1px solid var(--line);
   }
@@ -637,6 +745,9 @@ code { color: var(--green); background: #e4e3da; padding: 2px 6px; border-radius
 @media (max-width: 520px) {
   .dashboardHeader { align-items: flex-start; padding: 16px 0; gap: 12px; }
   .dashboardBrand small { display: none; }
+  .reportNavigation { order: 3; width: 100%; margin: 8px 0 0; flex-wrap: wrap; }
+  .reportNavigation > span { width: 100%; }
+  .dashboardHeader { flex-wrap: wrap; }
   .uploadButton { padding: 11px 13px; }
   .dashboardHero h1 { font-size: 42px; }
   .chartCard, .kpiCard { padding: 19px; }
