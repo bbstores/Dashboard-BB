@@ -84,7 +84,8 @@ const SAVED_REPORTS_KEY = "bb-dashboard-saved-reports-v1";
 type PercentileDetail = {
   title: string;
   subtitle: string;
-  values: number[];
+  metricLabel: string;
+  observations: Array<{ task: Task; value: number }>;
   unit: "minutes" | "days";
 };
 
@@ -97,6 +98,7 @@ type DetailView = {
     label: string;
     value: (task: Task) => number;
     format: (value: number) => string;
+    describe?: (value: number) => string;
   };
 };
 
@@ -1485,9 +1487,13 @@ function DetailDrawer({
                             detail.taskMetric.value(task),
                           )}
                         </strong>
-                        <small>
-                          {lateMinuteBucket(detail.taskMetric.value(task))}
-                        </small>
+                        {detail.taskMetric.describe && (
+                          <small>
+                            {detail.taskMetric.describe(
+                              detail.taskMetric.value(task),
+                            )}
+                          </small>
+                        )}
                       </td>
                     )}
                   </tr>
@@ -1559,21 +1565,28 @@ function SlaMetricCard({
 function PercentileDialog({
   detail,
   onClose,
+  onSelect,
 }: {
   detail: PercentileDetail;
   onClose: () => void;
+  onSelect: (
+    label: string,
+    note: string,
+    observations: Array<{ task: Task; value: number }>,
+  ) => void;
 }) {
-  const q1 = percentile(detail.values, 0.25);
-  const p50 = percentile(detail.values, 0.5);
-  const q3 = percentile(detail.values, 0.75);
+  const values = detail.observations.map((observation) => observation.value);
+  const q1 = percentile(values, 0.25);
+  const p50 = percentile(values, 0.5);
+  const q3 = percentile(values, 0.75);
   const rows = [
-    { label: "Q1", value: q1, note: "25% quan sát không vượt quá" },
-    { label: "P50", value: p50, note: "Trung vị" },
-    { label: "Q3", value: q3, note: "75% quan sát không vượt quá" },
-    { label: "IQR", value: q3 - q1, note: `Khoảng Q1–Q3: ${formatDistributionValue(q1, detail.unit)} – ${formatDistributionValue(q3, detail.unit)}` },
-    { label: "P90", value: percentile(detail.values, 0.9), note: "90% quan sát không vượt quá" },
-    { label: "P95", value: percentile(detail.values, 0.95), note: "95% quan sát không vượt quá" },
-    { label: "P99", value: percentile(detail.values, 0.99), note: "99% quan sát không vượt quá" },
+    { label: "Q1", value: q1, note: "25% quan sát không vượt quá", select: (value: number) => value <= q1 },
+    { label: "P50", value: p50, note: "Các task từ trung vị trở lên", select: (value: number) => value >= p50 },
+    { label: "Q3", value: q3, note: "Các task từ Q3 trở lên", select: (value: number) => value >= q3 },
+    { label: "IQR", value: q3 - q1, note: `Khoảng Q1–Q3: ${formatDistributionValue(q1, detail.unit)} – ${formatDistributionValue(q3, detail.unit)}`, select: (value: number) => value >= q1 && value <= q3 },
+    { label: "P90", value: percentile(values, 0.9), note: "Các task từ P90 trở lên", select: (value: number) => value >= percentile(values, 0.9) },
+    { label: "P95", value: percentile(values, 0.95), note: "Các task từ P95 trở lên", select: (value: number) => value >= percentile(values, 0.95) },
+    { label: "P99", value: percentile(values, 0.99), note: "Các task từ P99 trở lên", select: (value: number) => value >= percentile(values, 0.99) },
   ];
   return (
     <div className="percentileOverlay" role="presentation" onMouseDown={onClose}>
@@ -1593,16 +1606,30 @@ function PercentileDialog({
           <button type="button" onClick={onClose} aria-label="Đóng">×</button>
         </header>
         <div className="percentileSample">
-          <strong>{formatNumber(detail.values.length)}</strong>
+          <strong>{formatNumber(detail.observations.length)}</strong>
           <span>quan sát trong mẫu hiện tại</span>
         </div>
         <div className="percentileGrid">
           {rows.map((row) => (
-            <article key={row.label} className={row.label === "P50" ? "median" : ""}>
+            <button
+              type="button"
+              key={row.label}
+              className={`percentileMetric ${row.label === "P50" ? "median" : ""}`}
+              onClick={() =>
+                onSelect(
+                  row.label,
+                  row.note,
+                  detail.observations.filter((observation) =>
+                    row.select(observation.value),
+                  ),
+                )
+              }
+            >
               <span>{row.label}</span>
               <strong>{formatDistributionValue(row.value, detail.unit)}</strong>
               <small>{row.note}</small>
-            </article>
+              <i>Xem task →</i>
+            </button>
           ))}
         </div>
         <p className="percentileNote">
@@ -3020,7 +3047,11 @@ export function Dashboard() {
                       setPercentileDetail({
                         title: "Mức trễ bàn giao",
                         subtitle: "Phân vị số phút trễ của các task bàn giao sang ngày khác, chỉ tính trong giờ làm việc.",
-                        values: analytics.sla.lateHandoffs.map((row) => row.minutes),
+                        metricLabel: "Số phút trễ",
+                        observations: analytics.sla.lateHandoffs.map((row) => ({
+                          task: row.task,
+                          value: row.minutes,
+                        })),
                         unit: "minutes",
                       })
                     }
@@ -3035,6 +3066,7 @@ export function Dashboard() {
                           label: "Số phút trễ",
                           value: handoffLateMinutes,
                           format: formatSlaMinutes,
+                          describe: lateMinuteBucket,
                         },
                       })
                     }
@@ -3065,6 +3097,7 @@ export function Dashboard() {
                         label: "Số phút trễ",
                         value: handoffLateMinutes,
                         format: formatSlaMinutes,
+                        describe: lateMinuteBucket,
                       },
                     })
                   }
@@ -3079,10 +3112,14 @@ export function Dashboard() {
                   note={`P90: ${analytics.sla.cycleP90} ngày · ${formatNumber(analytics.sla.cycleRows.length)} task đủ ngày`}
                   onExpand={() =>
                     setPercentileDetail({
-                      title: "Cycle time hoàn thành",
-                      subtitle: "Phân vị số ngày lịch từ Ngày Bắt Đầu đến Ngày Hoàn Thành.",
-                      values: analytics.sla.cycleRows.map((row) => row.days),
-                      unit: "days",
+                        title: "Cycle time hoàn thành",
+                        subtitle: "Phân vị số ngày lịch từ Ngày Bắt Đầu đến Ngày Hoàn Thành.",
+                        metricLabel: "Cycle time",
+                        observations: analytics.sla.cycleRows.map((row) => ({
+                          task: row.task,
+                          value: row.days,
+                        })),
+                        unit: "days",
                     })
                   }
                   onClick={() => setDetail({
@@ -3195,7 +3232,11 @@ export function Dashboard() {
                       setPercentileDetail({
                         title: "Checking → hoàn thành",
                         subtitle: "Toàn bộ thời gian kiểm duyệt trong giờ làm việc.",
-                        values: analytics.sla.checkingToDoneRows.map((row) => row.minutes),
+                        metricLabel: "Thời gian Checking → Done",
+                        observations: analytics.sla.checkingToDoneRows.map((row) => ({
+                          task: row.task,
+                          value: row.minutes,
+                        })),
                         unit: "minutes",
                       })
                     }
@@ -3217,7 +3258,11 @@ export function Dashboard() {
                       setPercentileDetail({
                         title: "Checking → Reviewing",
                         subtitle: "Thời gian task chờ checker nhận xử lý trong giờ làm việc.",
-                        values: analytics.sla.reviewingRows.map((row) => row.queueMinutes),
+                        metricLabel: "Thời gian chờ Reviewing",
+                        observations: analytics.sla.reviewingRows.map((row) => ({
+                          task: row.task,
+                          value: row.queueMinutes,
+                        })),
                         unit: "minutes",
                       })
                     }
@@ -3243,7 +3288,11 @@ export function Dashboard() {
                       setPercentileDetail({
                         title: "Reviewing → hoàn thành",
                         subtitle: "Thời gian checker xử lý task sau khi nhận trong giờ làm việc.",
-                        values: analytics.sla.reviewingRows.map((row) => row.reviewMinutes),
+                        metricLabel: "Thời gian Reviewing → Done",
+                        observations: analytics.sla.reviewingRows.map((row) => ({
+                          task: row.task,
+                          value: row.reviewMinutes,
+                        })),
                         unit: "minutes",
                       })
                     }
@@ -3331,6 +3380,24 @@ export function Dashboard() {
         <PercentileDialog
           detail={percentileDetail}
           onClose={() => setPercentileDetail(null)}
+          onSelect={(label, note, observations) => {
+            const selectedPercentile = percentileDetail;
+            setPercentileDetail(null);
+            setDetail({
+              title: `${selectedPercentile.title} · ${label}`,
+              subtitle: `${note} · ${formatNumber(observations.length)} task`,
+              tasks: observations.map((observation) => observation.task),
+              taskMetric: {
+                label: selectedPercentile.metricLabel,
+                value: (task) =>
+                  observations.find(
+                    (observation) => observation.task === task,
+                  )?.value ?? 0,
+                format: (value) =>
+                  formatDistributionValue(value, selectedPercentile.unit),
+              },
+            });
+          }}
         />
       )}
       {reportDepartment && (

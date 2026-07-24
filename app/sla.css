@@ -299,38 +299,47 @@
   gap: 10px;
 }
 
-.percentileGrid article {
+.percentileMetric {
   min-height: 132px;
   padding: 17px;
   border: 1px solid var(--line);
   border-radius: 15px;
   display: flex;
   flex-direction: column;
+  color: var(--ink);
   background: var(--card);
+  text-align: left;
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
 }
 
-.percentileGrid article.median {
+.percentileMetric:hover {
+  transform: translateY(-2px);
+  border-color: var(--green);
+  box-shadow: 0 10px 24px rgba(20,32,28,.08);
+}
+
+.percentileMetric.median {
   border-color: var(--green);
   color: white;
   background: var(--green);
 }
 
-.percentileGrid article > span {
+.percentileMetric > span {
   color: var(--green);
   font-size: 9px;
   font-weight: 900;
   letter-spacing: .12em;
 }
 
-.percentileGrid article.median > span { color: var(--lime); }
+.percentileMetric.median > span { color: var(--lime); }
 
-.percentileGrid article > strong {
+.percentileMetric > strong {
   margin-top: 16px;
   font-size: 21px;
   letter-spacing: -.04em;
 }
 
-.percentileGrid article > small {
+.percentileMetric > small {
   margin-top: auto;
   padding-top: 10px;
   color: var(--muted);
@@ -338,7 +347,17 @@
   line-height: 1.45;
 }
 
-.percentileGrid article.median > small { color: #c5d4ce; }
+.percentileMetric.median > small { color: #c5d4ce; }
+
+.percentileMetric > i {
+  margin-top: 9px;
+  color: var(--green);
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.percentileMetric.median > i { color: var(--lime); }
 
 .percentileNote {
   margin: 14px 0 0;
