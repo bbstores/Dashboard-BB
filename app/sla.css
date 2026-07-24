@@ -276,11 +276,18 @@
   font-size: 23px;
 }
 
+.percentileOverview {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 26px;
+  align-items: center;
+  padding: 20px 0 13px;
+}
+
 .percentileSample {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  padding: 20px 0 13px;
 }
 
 .percentileSample strong {
@@ -291,6 +298,115 @@
 .percentileSample span {
   color: var(--muted);
   font-size: 10px;
+}
+
+.percentileRail {
+  position: relative;
+  height: 84px;
+  margin: 0 38px 0 20px;
+}
+
+.percentileRailTrack {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 41px;
+  height: 3px;
+  border-radius: 999px;
+  background: #ccd2cc;
+}
+
+.percentileRailFill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--green);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .55s cubic-bezier(.2,.8,.2,1);
+}
+
+.percentileRail.isActive .percentileRailFill { transform: scaleX(1); }
+
+.percentileIqrBand {
+  position: absolute;
+  left: 25%;
+  top: -4px;
+  width: 50%;
+  height: 11px;
+  border-radius: 999px;
+  background: var(--lime);
+  opacity: 0;
+  transform: scaleX(.15);
+  transition: opacity .2s ease, transform .45s cubic-bezier(.2,.8,.2,1);
+}
+
+.percentileRail.showIqr .percentileIqrBand {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.percentileRailMarker {
+  position: absolute;
+  top: 0;
+  width: 76px;
+  height: 78px;
+  display: grid;
+  justify-items: center;
+  grid-template-rows: 30px 24px 18px;
+  color: var(--muted);
+  transform: translateX(-50%);
+  transition: opacity .2s ease, color .2s ease, transform .25s ease;
+}
+
+.percentileRailMarker > strong {
+  align-self: end;
+  font-size: 9px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.percentileRailMarker > i {
+  align-self: center;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  background: #8c9892;
+  box-shadow: 0 0 0 1px #8c9892;
+  transition: width .2s ease, height .2s ease, background .2s ease;
+}
+
+.percentileRailMarker > small {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .06em;
+}
+
+.percentileRail.isActive .percentileRailMarker:not(.active) { opacity: .42; }
+
+.percentileRailMarker.active {
+  z-index: 2;
+  color: var(--green);
+  transform: translateX(-50%) translateY(-3px) scale(1.12);
+}
+
+.percentileRailMarker.active > strong { font-size: 10px; }
+
+.percentileRailMarker.active > i {
+  width: 15px;
+  height: 15px;
+  background: var(--lime);
+  box-shadow: 0 0 0 2px var(--green), 0 5px 15px rgba(23,79,61,.25);
+}
+
+.percentileRailMarker.transient {
+  animation: percentileMarkerIn .32s cubic-bezier(.2,.8,.2,1);
+}
+
+@keyframes percentileMarkerIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(.7); }
+  to { opacity: 1; transform: translateX(-50%) translateY(-3px) scale(1.12); }
 }
 
 .percentileGrid {
@@ -370,6 +486,8 @@
 }
 
 @media (max-width: 720px) {
+  .percentileOverview { grid-template-columns: 1fr; gap: 4px; }
+  .percentileRail { margin-top: 6px; }
   .percentileGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .percentileDialog { padding: 22px; }
 }

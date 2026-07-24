@@ -1406,6 +1406,7 @@ function DetailDrawer({
             <table className="detailTable feedbackDetailTable">
               <thead>
                 <tr>
+                  <th>STT</th>
                   <th>Task</th>
                   <th>Tên task</th>
                   <th>Người làm</th>
@@ -1416,8 +1417,13 @@ function DetailDrawer({
               <tbody>
                 {detail.feedback.map((item, index) => (
                   <tr key={`${item.taskCode}-${item.at?.getTime() ?? "none"}-${index}`}>
+                    <td data-label="STT" className="detailRowNumber">
+                      {index + 1}
+                    </td>
                     <td data-label="Task"><strong>{item.taskCode}</strong></td>
-                    <td data-label="Tên task">{item.task?.title || "—"}</td>
+                    <td data-label="Tên task" className="detailTitleCell">
+                      {item.task?.title || "—"}
+                    </td>
                     <td data-label="Người làm">{item.assignee || item.task?.assignee || "—"}</td>
                     <td data-label="Thời điểm">{formatDateTime(item.at)}</td>
                     <td data-label="Trạng thái">
@@ -1433,6 +1439,7 @@ function DetailDrawer({
             <table className="detailTable taskDetailTable">
               <thead>
                 <tr>
+                  <th>STT</th>
                   <th>Task</th>
                   <th>Assignee</th>
                   <th>Trạng thái</th>
@@ -1444,6 +1451,9 @@ function DetailDrawer({
               <tbody>
                 {(detail.tasks ?? []).map((task, index) => (
                   <tr key={`${task.code}-${index}`}>
+                    <td data-label="STT" className="detailRowNumber">
+                      {index + 1}
+                    </td>
                     <td data-label="Task" className="taskIdentity">
                       <strong>{task.code}</strong>
                       <span>{task.title || "Chưa có tên task"}</span>
@@ -1576,6 +1586,7 @@ function PercentileDialog({
   ) => void;
 }) {
   const values = detail.observations.map((observation) => observation.value);
+  const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
   const q1 = percentile(values, 0.25);
   const p50 = percentile(values, 0.5);
   const q3 = percentile(values, 0.75);
@@ -1588,6 +1599,29 @@ function PercentileDialog({
     { label: "P95", value: percentile(values, 0.95), note: "Các task từ P95 trở lên", select: (value: number) => value >= percentile(values, 0.95) },
     { label: "P99", value: percentile(values, 0.99), note: "Các task từ P99 trở lên", select: (value: number) => value >= percentile(values, 0.99) },
   ];
+  const percentilePositions: Record<string, number> = {
+    P1: 1,
+    Q1: 25,
+    P50: 50,
+    Q3: 75,
+    P90: 90,
+    P95: 95,
+    P99: 99,
+    P100: 100,
+  };
+  const railMarkers = [
+    { label: "P1", ratio: 0.01 },
+    { label: "Q1", ratio: 0.25 },
+    { label: "P50", ratio: 0.5 },
+    { label: "Q3", ratio: 0.75 },
+    { label: "P90", ratio: 0.9 },
+    { label: "P100", ratio: 1 },
+  ].map((marker) => ({
+    ...marker,
+    value: percentile(values, marker.ratio),
+    position: percentilePositions[marker.label],
+  }));
+  const activeRow = rows.find((row) => row.label === hoveredMetric);
   return (
     <div className="percentileOverlay" role="presentation" onMouseDown={onClose}>
       <section
@@ -1605,9 +1639,51 @@ function PercentileDialog({
           </div>
           <button type="button" onClick={onClose} aria-label="Đóng">×</button>
         </header>
-        <div className="percentileSample">
-          <strong>{formatNumber(detail.observations.length)}</strong>
-          <span>quan sát trong mẫu hiện tại</span>
+        <div className="percentileOverview">
+          <div className="percentileSample">
+            <strong>{formatNumber(detail.observations.length)}</strong>
+            <span>quan sát trong mẫu hiện tại</span>
+          </div>
+          <div
+            className={`percentileRail ${hoveredMetric ? "isActive" : ""} ${hoveredMetric === "IQR" ? "showIqr" : ""}`}
+            aria-label="Trục phân vị từ P1 đến P100"
+          >
+            <div className="percentileRailTrack">
+              <i className="percentileRailFill" />
+              <i className="percentileIqrBand" />
+            </div>
+            {railMarkers.map((marker) => (
+              <span
+                key={marker.label}
+                className={`percentileRailMarker ${
+                  hoveredMetric === marker.label ? "active" : ""
+                }`}
+                style={{ left: `${marker.position}%` }}
+              >
+                <strong>
+                  {formatDistributionValue(marker.value, detail.unit)}
+                </strong>
+                <i />
+                <small>{marker.label}</small>
+              </span>
+            ))}
+            {activeRow &&
+              !railMarkers.some((marker) => marker.label === activeRow.label) &&
+              activeRow.label !== "IQR" && (
+                <span
+                  className="percentileRailMarker active transient"
+                  style={{
+                    left: `${percentilePositions[activeRow.label] ?? 50}%`,
+                  }}
+                >
+                  <strong>
+                    {formatDistributionValue(activeRow.value, detail.unit)}
+                  </strong>
+                  <i />
+                  <small>{activeRow.label}</small>
+                </span>
+              )}
+          </div>
         </div>
         <div className="percentileGrid">
           {rows.map((row) => (
@@ -1615,6 +1691,10 @@ function PercentileDialog({
               type="button"
               key={row.label}
               className={`percentileMetric ${row.label === "P50" ? "median" : ""}`}
+              onMouseEnter={() => setHoveredMetric(row.label)}
+              onMouseLeave={() => setHoveredMetric(null)}
+              onFocus={() => setHoveredMetric(row.label)}
+              onBlur={() => setHoveredMetric(null)}
               onClick={() =>
                 onSelect(
                   row.label,
