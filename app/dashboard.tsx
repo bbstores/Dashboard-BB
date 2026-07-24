@@ -81,6 +81,13 @@ type SavedReport = {
 
 const SAVED_REPORTS_KEY = "bb-dashboard-saved-reports-v1";
 
+type PercentileDetail = {
+  title: string;
+  subtitle: string;
+  values: number[];
+  unit: "minutes" | "days";
+};
+
 type DetailView = {
   title: string;
   subtitle: string;
@@ -476,6 +483,12 @@ function percentile(values: number[], ratio: number) {
 
 function formatSlaMinutes(minutes: number) {
   return `${formatNumber(Math.round(minutes))} phút`;
+}
+
+function formatDistributionValue(value: number, unit: "minutes" | "days") {
+  return unit === "minutes"
+    ? formatSlaMinutes(value)
+    : `${formatNumber(value)} ngày`;
 }
 
 const KPI_START_DATE = new Date(2026, 5, 15);
@@ -1454,6 +1467,7 @@ function SlaMetricCard({
   value,
   note,
   onClick,
+  onExpand,
   help,
 }: {
   kicker: string;
@@ -1461,6 +1475,7 @@ function SlaMetricCard({
   value: string;
   note: string;
   onClick?: () => void;
+  onExpand?: () => void;
   help?: DashboardHelp;
 }) {
   return (
@@ -1470,11 +1485,91 @@ function SlaMetricCard({
       onClick={onClick}
     >
       <HelpButton help={help ?? dashboardHelp(title)} />
-      <span>{kicker}</span>
+      {onExpand && (
+        <span
+          className="expandMetricButton"
+          role="button"
+          tabIndex={0}
+          title="Mở thống kê phân vị"
+          aria-label={`Mở thống kê phân vị của ${title}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onExpand();
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              event.stopPropagation();
+              onExpand();
+            }
+          }}
+        >
+          ↗
+        </span>
+      )}
+      <span className="slaMetricKicker">{kicker}</span>
       <small>{title}</small>
       <strong>{value}</strong>
       <p>{note}</p>
     </button>
+  );
+}
+
+function PercentileDialog({
+  detail,
+  onClose,
+}: {
+  detail: PercentileDetail;
+  onClose: () => void;
+}) {
+  const q1 = percentile(detail.values, 0.25);
+  const p50 = percentile(detail.values, 0.5);
+  const q3 = percentile(detail.values, 0.75);
+  const rows = [
+    { label: "Q1", value: q1, note: "25% quan sát không vượt quá" },
+    { label: "P50", value: p50, note: "Trung vị" },
+    { label: "Q3", value: q3, note: "75% quan sát không vượt quá" },
+    { label: "IQR", value: q3 - q1, note: `Khoảng Q1–Q3: ${formatDistributionValue(q1, detail.unit)} – ${formatDistributionValue(q3, detail.unit)}` },
+    { label: "P90", value: percentile(detail.values, 0.9), note: "90% quan sát không vượt quá" },
+    { label: "P95", value: percentile(detail.values, 0.95), note: "95% quan sát không vượt quá" },
+    { label: "P99", value: percentile(detail.values, 0.99), note: "99% quan sát không vượt quá" },
+  ];
+  return (
+    <div className="percentileOverlay" role="presentation" onMouseDown={onClose}>
+      <section
+        className="percentileDialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="percentile-dialog-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <span className="chartKicker">PHÂN TÍCH PHÂN VỊ MỞ RỘNG</span>
+            <h2 id="percentile-dialog-title">{detail.title}</h2>
+            <p>{detail.subtitle}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Đóng">×</button>
+        </header>
+        <div className="percentileSample">
+          <strong>{formatNumber(detail.values.length)}</strong>
+          <span>quan sát trong mẫu hiện tại</span>
+        </div>
+        <div className="percentileGrid">
+          {rows.map((row) => (
+            <article key={row.label} className={row.label === "P50" ? "median" : ""}>
+              <span>{row.label}</span>
+              <strong>{formatDistributionValue(row.value, detail.unit)}</strong>
+              <small>{row.note}</small>
+            </article>
+          ))}
+        </div>
+        <p className="percentileNote">
+          IQR là độ rộng của 50% dữ liệu nằm giữa Q1 và Q3; P95/P99 giúp nhận diện
+          phần đuôi dài và các trường hợp rất chậm mà P50 không thể hiện.
+        </p>
+      </section>
+    </div>
   );
 }
 
@@ -1498,6 +1593,8 @@ export function Dashboard() {
   );
   const [detail, setDetail] = useState<DetailView | null>(null);
   const [activeHelp, setActiveHelp] = useState<DashboardHelp | null>(null);
+  const [percentileDetail, setPercentileDetail] =
+    useState<PercentileDetail | null>(null);
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
   const [reportDepartment, setReportDepartment] =
     useState<ReportDepartment | null>(null);
@@ -2878,6 +2975,14 @@ export function Dashboard() {
                       calculation: "Bắt đầu tính từ 08:30 của ngày làm việc kế tiếp; loại ngoài giờ, nghỉ trưa, Chủ nhật và ngày lễ. P50 là trung vị.",
                       example: "Bàn giao 07:00 hôm sau → 0 phút làm việc. Bàn giao 09:30 → 60 phút.",
                     }}
+                    onExpand={() =>
+                      setPercentileDetail({
+                        title: "Mức trễ bàn giao",
+                        subtitle: "Phân vị số phút trễ của các task bàn giao sang ngày khác, chỉ tính trong giờ làm việc.",
+                        values: analytics.sla.lateHandoffs.map((row) => row.minutes),
+                        unit: "minutes",
+                      })
+                    }
                     onClick={() =>
                       setDetail({
                         title: "Task bàn giao trễ ngày",
@@ -2921,6 +3026,14 @@ export function Dashboard() {
                   title="P50 hoàn thành"
                   value={`${analytics.sla.cycleP50} ngày`}
                   note={`P90: ${analytics.sla.cycleP90} ngày · ${formatNumber(analytics.sla.cycleRows.length)} task đủ ngày`}
+                  onExpand={() =>
+                    setPercentileDetail({
+                      title: "Cycle time hoàn thành",
+                      subtitle: "Phân vị số ngày lịch từ Ngày Bắt Đầu đến Ngày Hoàn Thành.",
+                      values: analytics.sla.cycleRows.map((row) => row.days),
+                      unit: "days",
+                    })
+                  }
                   onClick={() => setDetail({
                     title: "Task có dữ liệu Cycle time",
                     subtitle: "Hoàn thành trong kỳ và có Ngày Bắt Đầu",
@@ -3027,6 +3140,14 @@ export function Dashboard() {
                     )}
                     note={`50% task không vượt quá mức trên · 90% không vượt quá ${formatSlaMinutes(analytics.sla.checkingToDoneP90)} · Mẫu ${formatNumber(analytics.sla.checkingToDoneRows.length)} task`}
                     help={dashboardHelp("Checking → Done · P50")}
+                    onExpand={() =>
+                      setPercentileDetail({
+                        title: "Checking → hoàn thành",
+                        subtitle: "Toàn bộ thời gian kiểm duyệt trong giờ làm việc.",
+                        values: analytics.sla.checkingToDoneRows.map((row) => row.minutes),
+                        unit: "minutes",
+                      })
+                    }
                     onClick={() => setDetail({
                       title: "Checking → Done",
                       subtitle: "Task hoàn thành trong kỳ có đủ hai mốc",
@@ -3041,6 +3162,14 @@ export function Dashboard() {
                     value={formatSlaMinutes(analytics.sla.queueP50)}
                     note={`50% task không chờ quá mức trên · 90% không chờ quá ${formatSlaMinutes(analytics.sla.queueP90)} · Mẫu ${formatNumber(analytics.sla.reviewingRows.length)} task`}
                     help={dashboardHelp("Checking → Reviewing · P50")}
+                    onExpand={() =>
+                      setPercentileDetail({
+                        title: "Checking → Reviewing",
+                        subtitle: "Thời gian task chờ checker nhận xử lý trong giờ làm việc.",
+                        values: analytics.sla.reviewingRows.map((row) => row.queueMinutes),
+                        unit: "minutes",
+                      })
+                    }
                     onClick={() => setDetail({
                       title: "Checking → Reviewing",
                       subtitle: "Thời gian chờ người checker nhận task",
@@ -3059,6 +3188,14 @@ export function Dashboard() {
                         : `50% task không vượt quá mức trên · 90% không vượt quá ${formatSlaMinutes(analytics.sla.reviewP90)} · Mẫu ${formatNumber(analytics.sla.reviewingRows.length)} task`
                     }
                     help={dashboardHelp("Reviewing → Done · P50")}
+                    onExpand={() =>
+                      setPercentileDetail({
+                        title: "Reviewing → hoàn thành",
+                        subtitle: "Thời gian checker xử lý task sau khi nhận trong giờ làm việc.",
+                        values: analytics.sla.reviewingRows.map((row) => row.reviewMinutes),
+                        unit: "minutes",
+                      })
+                    }
                     onClick={() => setDetail({
                       title: "Reviewing → Done",
                       subtitle: "Thời gian checker xử lý sau khi nhận task",
@@ -3139,6 +3276,12 @@ export function Dashboard() {
       )}
       {detail && <DetailDrawer detail={detail} onClose={() => setDetail(null)} />}
       {activeHelp && <HelpDialog help={activeHelp} onClose={() => setActiveHelp(null)} />}
+      {percentileDetail && (
+        <PercentileDialog
+          detail={percentileDetail}
+          onClose={() => setPercentileDetail(null)}
+        />
+      )}
       {reportDepartment && (
         <div
           className="reportPanelOverlay"

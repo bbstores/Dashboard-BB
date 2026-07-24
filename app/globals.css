@@ -589,7 +589,7 @@ code { color: var(--green); background: #e4e3da; padding: 2px 6px; border-radius
   border-radius: 16px; color: var(--ink); text-align: left;
   background: rgba(253,251,245,.78);
 }
-.slaMetric > span {
+.slaMetric > .slaMetricKicker {
   display: block; color: var(--green); font-size: 8px;
   font-weight: 850; letter-spacing: .13em;
 }
@@ -625,7 +625,7 @@ code { color: var(--green); background: #e4e3da; padding: 2px 6px; border-radius
   border-color: rgba(255,255,255,.15); color: white;
   background: rgba(255,255,255,.055);
 }
-.checkingCard .slaMetric > span { color: var(--lime); }
+.checkingCard .slaMetric > .slaMetricKicker { color: var(--lime); }
 .checkingCard .slaMetric > small, .checkingCard .slaMetric > p { color: #b9cbc4; }
 .normSummary {
   padding: 24px; border: 1px solid var(--line); border-radius: 20px;
