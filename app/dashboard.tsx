@@ -25,7 +25,6 @@ type Task = {
   startDate: Date | null;
   completedDate: Date | null;
   inspectionDate: Date | null;
-  receivedCheckingDate: Date | null;
   handoffRating: string;
   overallRating: string;
   type: string;
@@ -138,8 +137,8 @@ function dashboardObjective(title: string) {
     "Độ phủ định mức tham chiếu": "Biết bao nhiêu task có thể tìm được phút chuẩn tham chiếu trước khi sử dụng phần đối chiếu kế hoạch.",
   };
   if (objectives[title]) return objectives[title];
-  if (title.includes("Checking") || title.includes("Reviewing")) {
-    return "Đo tốc độ tiếp nhận, kiểm tra và kết thúc khâu duyệt để nhận diện thời gian chờ hoặc nút thắt trong quy trình kiểm duyệt.";
+  if (title.includes("Checking")) {
+    return "Đo toàn bộ thời gian từ khi task chuyển sang Checking đến khi hoàn thành, giúp nhận diện nút thắt trong quy trình kiểm duyệt.";
   }
   if (title.includes("Format Type")) {
     return "Hiểu sản lượng theo định dạng đầu ra để lập kế hoạch năng lực sản xuất và phân bổ đúng nhóm chuyên môn.";
@@ -252,13 +251,13 @@ function dashboardHelp(title: string): DashboardHelp {
   };
   if (exact[title]) return { title, ...exact[title] };
 
-  if (title.includes("Checking") || title.includes("Reviewing")) {
+  if (title.includes("Checking")) {
     return {
       title,
       purpose: "Đo thời gian xử lý ở bước kiểm duyệt trong giờ làm việc.",
-      calculation: "Tính thời gian giữa hai mốc ghi trên card, chỉ trong Thứ 2–Thứ 7, 08:30–12:00 và 13:00–17:30, loại ngày nghỉ lễ Việt Nam đã cấu hình. P50 là trung vị; P90 là mốc 90% task không vượt quá.",
+      calculation: "Tính thời gian từ Ngày Kiểm Duyệt đến Ngày Hoàn Thành, chỉ trong Thứ 2–Thứ 7, 08:30–12:00 và 13:00–17:30, loại ngày nghỉ lễ Việt Nam đã cấu hình. P50 là trung vị; P90 là mốc 90% task không vượt quá.",
       example: "Checking 17:00, Done 09:30 hôm sau → tính 30 phút chiều + 60 phút sáng = 90 phút.",
-      note: "Reviewing mới dùng gần đây nên mẫu cũ có thể thiếu mốc; ngưỡng 15 phút hiện là chỉ số thử nghiệm.",
+      note: "Luồng hiện tại chỉ sử dụng hai mốc Checking và Done.",
     };
   }
   if (title === "P50 hoàn thành") {
@@ -1621,6 +1620,20 @@ function PercentileDialog({
     value: percentile(values, marker.ratio),
     position: percentilePositions[marker.label],
   }));
+  const fastestObservation = detail.observations.reduce<
+    { task: Task; value: number } | undefined
+  >(
+    (fastest, observation) =>
+      !fastest || observation.value < fastest.value ? observation : fastest,
+    undefined,
+  );
+  const slowestObservation = detail.observations.reduce<
+    { task: Task; value: number } | undefined
+  >(
+    (slowest, observation) =>
+      !slowest || observation.value > slowest.value ? observation : slowest,
+    undefined,
+  );
   const activeRow = rows.find((row) => row.label === hoveredMetric);
   return (
     <div className="percentileOverlay" role="presentation" onMouseDown={onClose}>
@@ -1641,8 +1654,19 @@ function PercentileDialog({
         </header>
         <div className="percentileOverview">
           <div className="percentileSample">
+            <span>Quan sát trong mẫu hiện tại</span>
             <strong>{formatNumber(detail.observations.length)}</strong>
-            <span>quan sát trong mẫu hiện tại</span>
+            <div className="percentileExtremes">
+              <small>
+                <b>P1</b>
+                {fastestObservation?.task.code ?? "—"}
+              </small>
+              <i />
+              <small>
+                <b>P100</b>
+                {slowestObservation?.task.code ?? "—"}
+              </small>
+            </div>
           </div>
           <div
             className={`percentileRail ${hoveredMetric ? "isActive" : ""} ${hoveredMetric === "IQR" ? "showIqr" : ""}`}
@@ -1874,9 +1898,6 @@ export function Dashboard() {
           ),
           inspectionDate: excelDate(
             valueAt(row, taskHeaders, "Ngày Kiểm Duyệt"),
-          ),
-          receivedCheckingDate: excelDate(
-            valueAt(row, taskHeaders, "Ngày Nhận Checking"),
           ),
           handoffRating: normalize(
             valueAt(row, taskHeaders, "Đánh Giá Bàn Giao"),
@@ -2174,27 +2195,6 @@ export function Dashboard() {
         (row): row is { task: Task; minutes: number } =>
           row.minutes !== null,
       );
-    const reviewingRows = completedCohort
-      .map((task) => ({
-        task,
-        queueMinutes: businessMinutesBetween(
-          task.inspectionDate,
-          task.receivedCheckingDate,
-        ),
-        reviewMinutes: businessMinutesBetween(
-          task.receivedCheckingDate,
-          task.completedDate,
-        ),
-      }))
-      .filter(
-        (
-          row,
-        ): row is {
-          task: Task;
-          queueMinutes: number;
-          reviewMinutes: number;
-        } => row.queueMinutes !== null && row.reviewMinutes !== null,
-      );
     const normMap = new Map(
       data.norms.map((norm) => [normalizedKey(norm.formatType), norm]),
     );
@@ -2302,23 +2302,6 @@ export function Dashboard() {
         ),
         checkingToDoneP90: percentile(
           checkingToDoneRows.map((row) => row.minutes),
-          0.9,
-        ),
-        reviewingRows,
-        queueP50: percentile(
-          reviewingRows.map((row) => row.queueMinutes),
-          0.5,
-        ),
-        queueP90: percentile(
-          reviewingRows.map((row) => row.queueMinutes),
-          0.9,
-        ),
-        reviewP50: percentile(
-          reviewingRows.map((row) => row.reviewMinutes),
-          0.5,
-        ),
-        reviewP90: percentile(
-          reviewingRows.map((row) => row.reviewMinutes),
           0.9,
         ),
         normRows,
@@ -3294,8 +3277,8 @@ export function Dashboard() {
                     <h3>Tốc độ tiếp nhận và kiểm duyệt task</h3>
                   </div>
                   <small>
-                    Số phút chỉ tính trong giờ làm việc. P50 là mức 50% task
-                    không vượt quá; P90 là mức 90% task không vượt quá.
+                    Chỉ giữ luồng Checking → Done. Số phút tính trong giờ làm
+                    việc; P50 là trung vị và P90 là mức 90% task không vượt quá.
                   </small>
                   <HelpButton help={dashboardHelp("Checking → Done · P50")} />
                 </div>
@@ -3328,62 +3311,6 @@ export function Dashboard() {
                       ),
                     })}
                   />
-                  <SlaMetricCard
-                    kicker="THỜI GIAN CHỜ ĐƯỢC NHẬN KIỂM TRA"
-                    title="Từ chuyển Checking đến được nhận Reviewing"
-                    value={formatSlaMinutes(analytics.sla.queueP50)}
-                    note={`50% task không chờ quá mức trên · 90% không chờ quá ${formatSlaMinutes(analytics.sla.queueP90)} · Mẫu ${formatNumber(analytics.sla.reviewingRows.length)} task`}
-                    help={dashboardHelp("Checking → Reviewing · P50")}
-                    onExpand={() =>
-                      setPercentileDetail({
-                        title: "Checking → Reviewing",
-                        subtitle: "Thời gian task chờ checker nhận xử lý trong giờ làm việc.",
-                        metricLabel: "Thời gian chờ Reviewing",
-                        observations: analytics.sla.reviewingRows.map((row) => ({
-                          task: row.task,
-                          value: row.queueMinutes,
-                        })),
-                        unit: "minutes",
-                      })
-                    }
-                    onClick={() => setDetail({
-                      title: "Checking → Reviewing",
-                      subtitle: "Thời gian chờ người checker nhận task",
-                      tasks: analytics.sla.reviewingRows.map(
-                        (row) => row.task,
-                      ),
-                    })}
-                  />
-                  <SlaMetricCard
-                    kicker="THỜI GIAN CHECKER XỬ LÝ"
-                    title="Từ nhận Reviewing đến hoàn thành"
-                    value={formatSlaMinutes(analytics.sla.reviewP50)}
-                    note={
-                      analytics.sla.reviewP50 === 0
-                        ? `50% task có hai mốc trùng nhau · 90% không vượt quá ${formatSlaMinutes(analytics.sla.reviewP90)} · Mẫu ${formatNumber(analytics.sla.reviewingRows.length)} task · Cần kiểm tra chất lượng timestamp`
-                        : `50% task không vượt quá mức trên · 90% không vượt quá ${formatSlaMinutes(analytics.sla.reviewP90)} · Mẫu ${formatNumber(analytics.sla.reviewingRows.length)} task`
-                    }
-                    help={dashboardHelp("Reviewing → Done · P50")}
-                    onExpand={() =>
-                      setPercentileDetail({
-                        title: "Reviewing → hoàn thành",
-                        subtitle: "Thời gian checker xử lý task sau khi nhận trong giờ làm việc.",
-                        metricLabel: "Thời gian Reviewing → Done",
-                        observations: analytics.sla.reviewingRows.map((row) => ({
-                          task: row.task,
-                          value: row.reviewMinutes,
-                        })),
-                        unit: "minutes",
-                      })
-                    }
-                    onClick={() => setDetail({
-                      title: "Reviewing → Done",
-                      subtitle: "Thời gian checker xử lý sau khi nhận task",
-                      tasks: analytics.sla.reviewingRows.map(
-                        (row) => row.task,
-                    ),
-                  })}
-                />
               </div>
               </article>
 
@@ -3462,7 +3389,6 @@ export function Dashboard() {
           onClose={() => setPercentileDetail(null)}
           onSelect={(label, note, observations) => {
             const selectedPercentile = percentileDetail;
-            setPercentileDetail(null);
             setDetail({
               title: `${selectedPercentile.title} · ${label}`,
               subtitle: `${note} · ${formatNumber(observations.length)} task`,

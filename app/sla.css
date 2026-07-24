@@ -151,7 +151,7 @@
 }
 
 .checkingMetrics {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .slaMetric {
@@ -285,19 +285,54 @@
 }
 
 .percentileSample {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
 }
 
 .percentileSample strong {
+  order: 2;
   font-size: 28px;
   letter-spacing: -.04em;
 }
 
 .percentileSample span {
+  order: 1;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.percentileExtremes {
+  order: 3;
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.percentileExtremes > i {
+  width: 1px;
+  height: 22px;
+  background: var(--line);
+}
+
+.percentileExtremes small {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  color: var(--ink);
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.percentileExtremes small b {
+  color: var(--green);
+  font-size: 7px;
+  letter-spacing: .08em;
 }
 
 .percentileRail {
