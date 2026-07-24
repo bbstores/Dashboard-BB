@@ -612,12 +612,32 @@ function lateMinuteBucket(minutes: number) {
 
 function excelDate(value: unknown): Date | null {
   if (!value) return null;
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    // Excel serial dates do not carry a timezone. ExcelJS exposes them as UTC
+    // Date objects, so preserve their UTC wall-clock fields as local time.
+    return new Date(
+      value.getUTCFullYear(),
+      value.getUTCMonth(),
+      value.getUTCDate(),
+      value.getUTCHours(),
+      value.getUTCMinutes(),
+      value.getUTCSeconds(),
+      value.getUTCMilliseconds(),
+    );
+  }
 
   if (typeof value === "number" && Number.isFinite(value)) {
-    const utc = Math.round((value - 25569) * 86400 * 1000);
-    const date = new Date(utc);
-    return Number.isNaN(date.getTime()) ? null : date;
+    const utcDate = new Date(Math.round((value - 25569) * 86400 * 1000));
+    if (Number.isNaN(utcDate.getTime())) return null;
+    return new Date(
+      utcDate.getUTCFullYear(),
+      utcDate.getUTCMonth(),
+      utcDate.getUTCDate(),
+      utcDate.getUTCHours(),
+      utcDate.getUTCMinutes(),
+      utcDate.getUTCSeconds(),
+      utcDate.getUTCMilliseconds(),
+    );
   }
 
   if (typeof value === "object") {
