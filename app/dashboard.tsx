@@ -1635,6 +1635,12 @@ function PercentileDialog({
     undefined,
   );
   const activeRow = rows.find((row) => row.label === hoveredMetric);
+  const railStart = hoveredMetric === "IQR" ? 25 : 0;
+  const railWidth = hoveredMetric
+    ? hoveredMetric === "IQR"
+      ? 50
+      : percentilePositions[hoveredMetric] ?? 0
+    : 0;
   return (
     <div className="percentileOverlay" role="presentation" onMouseDown={onClose}>
       <section
@@ -1673,7 +1679,13 @@ function PercentileDialog({
             aria-label="Trục phân vị từ P1 đến P100"
           >
             <div className="percentileRailTrack">
-              <i className="percentileRailFill" />
+              <i
+                className="percentileRailFill"
+                style={{
+                  left: `${railStart}%`,
+                  width: `${railWidth}%`,
+                }}
+              />
               <i className="percentileIqrBand" />
             </div>
             {railMarkers.map((marker) => (

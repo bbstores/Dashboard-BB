@@ -353,15 +353,16 @@
 
 .percentileRailFill {
   position: absolute;
-  inset: 0;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
   border-radius: inherit;
   background: var(--green);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform .55s cubic-bezier(.2,.8,.2,1);
+  transition:
+    left .55s cubic-bezier(.2,.8,.2,1),
+    width .55s cubic-bezier(.2,.8,.2,1);
 }
-
-.percentileRail.isActive .percentileRailFill { transform: scaleX(1); }
 
 .percentileIqrBand {
   position: absolute;
