@@ -47,7 +47,7 @@ export function PieChart({
   ).result;
 
   return (
-    <article className={`chartCard ${className} ${compact ? "compactPie" : ""}`}>
+    <article className={`chartCard pieCard ${className} ${compact ? "compact" : ""}`}>
       <div className="chartTitle">
         <h3>{title}</h3>
         <div className="chartHeaderTools">
@@ -109,18 +109,20 @@ export function PieChart({
             <small>Task</small>
           </div>
         </div>
-        <div className="pieLegend">
+        <div className="legend">
           {slices.map((slice) => (
             <button
               type="button"
-              className={`legendItem ${onSelect ? "interactive" : ""}`}
+              className={`legendRow ${onSelect ? "interactive" : ""}`}
               key={slice.label}
               onClick={() => onSelect?.(slice.label)}
             >
               <i style={{ backgroundColor: slice.color }} />
-              <span className="legendLabel" title={slice.label}>{slice.label}</span>
-              <strong>{formatNumber(slice.value)}</strong>
-              <small>{formatPercent(slice.value, total)}</small>
+              <span title={slice.label}>{slice.label}</span>
+              <strong>
+                {formatNumber(slice.value)}
+                <small>{formatPercent(slice.value, total)}</small>
+              </strong>
               {hoverBreakdown && (
                 <div className="legendHoverPanel" role="tooltip">
                   <b>{hoverBreakdown(slice.label).title}</b>
