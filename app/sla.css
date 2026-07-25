@@ -225,7 +225,7 @@
   color: var(--muted);
   display: grid;
   font-size: 8px;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: auto 1fr auto;
   margin: 26px 295px 5px 170px;
 }
 
@@ -306,6 +306,19 @@
   transform: translate(-50%, -50%);
   width: 16px;
   z-index: 1;
+}
+
+.staffTimeMarker:first-of-type b,
+.staffTimeMarker:first-of-type > small {
+  left: 0;
+  transform: none;
+}
+
+.staffTimeMarker:last-of-type b,
+.staffTimeMarker:last-of-type > small {
+  left: auto;
+  right: 0;
+  transform: none;
 }
 
 .staffTimeMarker b {
@@ -1710,7 +1723,7 @@
 
 .dailyChartSvg {
   display: block;
-  height: 410px;
+  height: 480px;
   overflow: visible;
   width: 100%;
 }
