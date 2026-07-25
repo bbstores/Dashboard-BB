@@ -116,6 +116,208 @@
   padding: 18px;
 }
 
+.staffTimeCard {
+  background: #fbfaf5;
+  border: 1px solid rgba(23, 79, 61, .16);
+  border-radius: 20px;
+  margin: 18px 0;
+  padding: 22px;
+}
+
+.staffTimeHeader,
+.staffTimeLegend,
+.staffTimeLegend span,
+.staffTimeValues,
+.staffTimeValues button {
+  align-items: center;
+  display: flex;
+}
+
+.staffTimeHeader {
+  align-items: flex-start;
+  gap: 24px;
+  justify-content: space-between;
+}
+
+.staffTimeHeader h3 {
+  font-size: 20px;
+  margin: 6px 0 0;
+}
+
+.staffTimeHeader p {
+  color: var(--muted);
+  font-size: 10px;
+  margin: 6px 0 0;
+}
+
+.staffTimeLegend {
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.staffTimeLegend span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 750;
+  gap: 6px;
+}
+
+.staffTimeLegend i,
+.staffTimeValues i {
+  border-radius: 50%;
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+}
+
+.staffTimeLegend i.inspection,
+.staffTimeValues i.inspection,
+.staffTimeMarker.inspection {
+  background: #8fbf45;
+}
+
+.staffTimeLegend i.completion,
+.staffTimeValues i.completion,
+.staffTimeMarker.completion {
+  background: #d46b5f;
+}
+
+.staffTimeScale {
+  color: var(--muted);
+  display: grid;
+  font-size: 8px;
+  grid-template-columns: repeat(5, 1fr);
+  margin: 26px 235px 5px 170px;
+}
+
+.staffTimeScale span {
+  text-align: center;
+}
+
+.staffTimeScale span:first-child {
+  text-align: left;
+}
+
+.staffTimeScale span:last-child {
+  text-align: right;
+}
+
+.staffTimeRows {
+  display: grid;
+  gap: 8px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.staffTimeRow {
+  align-items: center;
+  border-top: 1px solid rgba(23, 79, 61, .09);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 154px minmax(320px, 1fr) 220px;
+  min-height: 58px;
+}
+
+.staffTimeRow > strong {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.staffTimeTrack {
+  background: #d9ddd4;
+  height: 2px;
+  position: relative;
+}
+
+.staffTimeGrid {
+  background: rgba(23, 79, 61, .1);
+  height: 26px;
+  position: absolute;
+  top: -12px;
+  width: 1px;
+}
+
+.staffTimeMarker {
+  border: 3px solid #fbfaf5;
+  border-radius: 50%;
+  cursor: pointer;
+  height: 16px;
+  padding: 0;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  z-index: 1;
+}
+
+.staffTimeMarker b {
+  background: #174f3d;
+  border-radius: 7px;
+  bottom: 18px;
+  color: white;
+  display: none;
+  font-size: 8px;
+  left: 50%;
+  padding: 4px 6px;
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.staffTimeMarker:hover b,
+.staffTimeMarker:focus-visible b {
+  display: block;
+}
+
+.staffTimeValues {
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.staffTimeValues button {
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  cursor: pointer;
+  gap: 5px;
+  padding: 4px;
+}
+
+.staffTimeValues button > strong {
+  font-size: 10px;
+}
+
+.staffTimeValues button > small {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+@media (max-width: 900px) {
+  .staffTimeScale {
+    display: none;
+  }
+
+  .staffTimeHeader {
+    flex-direction: column;
+  }
+
+  .staffTimeLegend {
+    justify-content: flex-start;
+  }
+
+  .staffTimeRow {
+    grid-template-columns: 120px minmax(260px, 1fr) 190px;
+    min-width: 650px;
+  }
+
+  .staffTimeRows {
+    overflow-x: auto;
+  }
+}
+
 .handoffSlaHeader {
   align-items: flex-start;
   display: flex;

@@ -69,6 +69,13 @@ type DailyTaskDatum = {
   handedBacklog: number;
   backlog: number;
 };
+type StaffTimeOfDayRow = {
+  name: string;
+  inspectionMedian: number | null;
+  completionMedian: number | null;
+  inspectionTasks: Task[];
+  completionTasks: Task[];
+};
 
 type SavedReport = {
   id: string;
@@ -497,6 +504,16 @@ function percentile(values: number[], ratio: number) {
 
 function formatSlaMinutes(minutes: number) {
   return `${formatNumber(Math.round(minutes))} phút`;
+}
+
+function minutesOfDay(value: Date) {
+  return value.getHours() * 60 + value.getMinutes();
+}
+
+function formatTimeOfDay(value: number | null) {
+  if (value === null) return "—";
+  const minutes = Math.round(value);
+  return `${String(Math.floor(minutes / 60) % 24).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
 function formatDistributionValue(value: number, unit: "minutes" | "days") {
@@ -1374,6 +1391,90 @@ function StaffColumns({
             </div>
           ))}
         </div>
+      </div>
+    </article>
+  );
+}
+
+function StaffTimeOfDayChart({
+  rows,
+  onSelect,
+}: {
+  rows: StaffTimeOfDayRow[];
+  onSelect: (row: StaffTimeOfDayRow, metric: "inspection" | "completion") => void;
+}) {
+  return (
+    <article className="staffTimeCard">
+      <div className="staffTimeHeader">
+        <div>
+          <span className="chartKicker">THỜI ĐIỂM LÀM VIỆC ĐIỂN HÌNH</span>
+          <h3>Nhân sự thường bàn giao và hoàn thành task lúc mấy giờ?</h3>
+          <p>Trung vị phần giờ–phút của từng mốc; mỗi dấu nằm trên thang 00:00–24:00.</p>
+        </div>
+        <div className="staffTimeLegend">
+          <span><i className="inspection" />Bàn giao</span>
+          <span><i className="completion" />Hoàn thành</span>
+          <HelpButton
+            help={{
+              title: "Trung vị thời điểm bàn giao và hoàn thành",
+              purpose: "Cho biết khung giờ mỗi nhân sự thường bàn giao và hoàn thành task.",
+              objective: "Nhận diện xu hướng dồn bàn giao hoặc hoàn thành vào cuối ca để điều chỉnh nhịp kiểm duyệt.",
+              calculation: "Chỉ lấy HH:mm của Ngày Kiểm Duyệt và Ngày Hoàn Thành, đổi thành số phút từ 00:00 rồi lấy P50 riêng cho từng nhân sự.",
+              example: "Các mốc bàn giao 09:00, 13:30, 15:00 → trung vị là 13:30.",
+              note: "Số mẫu của hai mốc có thể khác nhau. Task nhiều assignee được đưa vào mẫu của từng người.",
+            }}
+          />
+        </div>
+      </div>
+      <div className="staffTimeScale" aria-hidden="true">
+        <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span>
+      </div>
+      <div className="staffTimeRows">
+        {rows.map((row) => (
+          <div className="staffTimeRow" key={row.name}>
+            <strong title={row.name}>{row.name}</strong>
+            <div className="staffTimeTrack">
+              {[25, 50, 75].map((position) => (
+                <i className="staffTimeGrid" style={{ left: `${position}%` }} key={position} />
+              ))}
+              {row.inspectionMedian !== null && (
+                <button
+                  type="button"
+                  className="staffTimeMarker inspection"
+                  style={{ left: `${(row.inspectionMedian / 1440) * 100}%` }}
+                  title={`Bàn giao P50: ${formatTimeOfDay(row.inspectionMedian)} · ${row.inspectionTasks.length} task`}
+                  onClick={() => onSelect(row, "inspection")}
+                >
+                  <b>{formatTimeOfDay(row.inspectionMedian)}</b>
+                </button>
+              )}
+              {row.completionMedian !== null && (
+                <button
+                  type="button"
+                  className="staffTimeMarker completion"
+                  style={{ left: `${(row.completionMedian / 1440) * 100}%` }}
+                  title={`Hoàn thành P50: ${formatTimeOfDay(row.completionMedian)} · ${row.completionTasks.length} task`}
+                  onClick={() => onSelect(row, "completion")}
+                >
+                  <b>{formatTimeOfDay(row.completionMedian)}</b>
+                </button>
+              )}
+            </div>
+            <div className="staffTimeValues">
+              <button type="button" onClick={() => onSelect(row, "inspection")}>
+                <i className="inspection" />
+                <strong>{formatTimeOfDay(row.inspectionMedian)}</strong>
+                <small>{row.inspectionTasks.length} task</small>
+              </button>
+              <button type="button" onClick={() => onSelect(row, "completion")}>
+                <i className="completion" />
+                <strong>{formatTimeOfDay(row.completionMedian)}</strong>
+                <small>{row.completionTasks.length} task</small>
+              </button>
+            </div>
+          </div>
+        ))}
+        {!rows.length && <p className="emptyText">Chưa có dữ liệu thời điểm phù hợp.</p>}
       </div>
     </article>
   );
@@ -2416,6 +2517,53 @@ export function Dashboard() {
         (row): row is { task: Task; minutes: number } =>
           row.minutes !== null,
       );
+    const timeOfDayPeople = new Set<string>();
+    data.tasks.forEach((task) => {
+      if (
+        (task.inspectionDate && inWindow(task.inspectionDate, dateWindow)) ||
+        (task.completedDate && inWindow(task.completedDate, dateWindow))
+      ) {
+        assigneeNames(task.assignee).forEach((name) => timeOfDayPeople.add(name));
+      }
+    });
+    const staffTimeOfDayRows: StaffTimeOfDayRow[] = [...timeOfDayPeople]
+      .map((name) => {
+        const inspectionTasks = data.tasks.filter(
+          (task) =>
+            task.inspectionDate &&
+            inWindow(task.inspectionDate, dateWindow) &&
+            assigneeNames(task.assignee).includes(name),
+        );
+        const completionTasks = data.tasks.filter(
+          (task) =>
+            task.completedDate &&
+            inWindow(task.completedDate, dateWindow) &&
+            assigneeNames(task.assignee).includes(name),
+        );
+        return {
+          name,
+          inspectionMedian: inspectionTasks.length
+            ? percentile(
+                inspectionTasks.map((task) => minutesOfDay(task.inspectionDate!)),
+                0.5,
+              )
+            : null,
+          completionMedian: completionTasks.length
+            ? percentile(
+                completionTasks.map((task) => minutesOfDay(task.completedDate!)),
+                0.5,
+              )
+            : null,
+          inspectionTasks,
+          completionTasks,
+        };
+      })
+      .sort(
+        (a, b) =>
+          b.inspectionTasks.length +
+            b.completionTasks.length -
+          (a.inspectionTasks.length + a.completionTasks.length),
+      );
     const normMap = new Map(
       data.norms.map((norm) => [normalizedKey(norm.formatType), norm]),
     );
@@ -2517,6 +2665,7 @@ export function Dashboard() {
           agingBucket(row.days),
         ),
         checkingToDoneRows,
+        staffTimeOfDayRows,
         checkingToDoneP50: percentile(
           checkingToDoneRows.map((row) => row.minutes),
           0.5,
@@ -3461,6 +3610,20 @@ export function Dashboard() {
                   }
                 />
               </section>
+
+              <StaffTimeOfDayChart
+                rows={analytics.sla.staffTimeOfDayRows}
+                onSelect={(row, metric) => {
+                  const isInspection = metric === "inspection";
+                  setDetail({
+                    title: `${isInspection ? "Giờ bàn giao" : "Giờ hoàn thành"} · ${row.name}`,
+                    subtitle: `Các task tạo nên trung vị ${isInspection ? formatTimeOfDay(row.inspectionMedian) : formatTimeOfDay(row.completionMedian)} theo HH:mm`,
+                    tasks: isInspection
+                      ? row.inspectionTasks
+                      : row.completionTasks,
+                  });
+                }}
+              />
 
               <div className="slaMetrics">
                 <SlaMetricCard
