@@ -8,6 +8,7 @@ export function DailyTaskChart({
   assignees,
   assignee,
   onAssigneeChange,
+  onSelect,
 }: {
   rows: DailyTaskDatum[];
   assignees: string[];
