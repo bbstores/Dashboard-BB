@@ -57,6 +57,10 @@ export type DailyTaskDatum = {
   handedSameDay: number;
   handedBacklog: number;
   backlog: number;
+  assignedTasks: Task[];
+  handedSameDayTasks: Task[];
+  handedBacklogTasks: Task[];
+  backlogTasks: Task[];
 };
 
 export type StaffTimeOfDayRow = {

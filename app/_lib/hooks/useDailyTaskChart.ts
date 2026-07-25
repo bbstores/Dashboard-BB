@@ -44,32 +44,42 @@ export function useDailyTaskChart(
       const day = new Date(cursor);
       const key = dateKey(day);
       const cutoff = endOfDay(day);
+      
+      const assignedTasks = tasks.filter(
+        (task) => task.startDate && dateKey(task.startDate) === key,
+      );
+      const handedSameDayTasks = tasks.filter(
+        (task) =>
+          task.startDate &&
+          task.inspectionDate &&
+          dateKey(task.inspectionDate) === key &&
+          dateKey(task.startDate) === key,
+      );
+      const handedBacklogTasks = tasks.filter(
+        (task) =>
+          task.startDate &&
+          task.inspectionDate &&
+          dateKey(task.inspectionDate) === key &&
+          startOfDay(task.startDate) < startOfDay(task.inspectionDate),
+      );
+      const backlogTasks = tasks.filter(
+        (task) =>
+          task.startDate &&
+          task.startDate <= cutoff &&
+          (!task.inspectionDate || task.inspectionDate > cutoff) &&
+          !cancelledStatuses.has(normalizedKey(task.status)),
+      );
+
       rows.push({
         date: day,
-        assigned: tasks.filter(
-          (task) => task.startDate && dateKey(task.startDate) === key,
-        ).length,
-        handedSameDay: tasks.filter(
-          (task) =>
-            task.startDate &&
-            task.inspectionDate &&
-            dateKey(task.inspectionDate) === key &&
-            dateKey(task.startDate) === key,
-        ).length,
-        handedBacklog: tasks.filter(
-          (task) =>
-            task.startDate &&
-            task.inspectionDate &&
-            dateKey(task.inspectionDate) === key &&
-            startOfDay(task.startDate) < startOfDay(task.inspectionDate),
-        ).length,
-        backlog: tasks.filter(
-          (task) =>
-            task.startDate &&
-            task.startDate <= cutoff &&
-            (!task.inspectionDate || task.inspectionDate > cutoff) &&
-            !cancelledStatuses.has(normalizedKey(task.status)),
-        ).length,
+        assigned: assignedTasks.length,
+        handedSameDay: handedSameDayTasks.length,
+        handedBacklog: handedBacklogTasks.length,
+        backlog: backlogTasks.length,
+        assignedTasks,
+        handedSameDayTasks,
+        handedBacklogTasks,
+        backlogTasks,
       });
     }
     return { rows, assignees };

@@ -13,6 +13,10 @@ export function DailyTaskChart({
   assignees: string[];
   assignee: string;
   onAssigneeChange: (value: string) => void;
+  onSelect?: (
+    type: "assigned" | "handedSameDay" | "handedBacklog" | "backlog",
+    data: DailyTaskDatum,
+  ) => void;
 }) {
   const width = Math.max(860, rows.length * 42);
   const height = 480;
@@ -141,7 +145,9 @@ export function DailyTaskChart({
                 <g className="dailyPointGroup" key={dateKey(row.date)}>
                   <line className="dailyHoverGuide" x1={x} x2={x} y1={flowTop} y2={backlogTop + backlogHeight} />
                   <rect
-                    className="dailyAssignedBar"
+                    className={`dailyAssignedBar ${onSelect ? "interactive" : ""}`}
+                    style={onSelect ? { cursor: "pointer" } : undefined}
+                    onClick={() => onSelect?.("assigned", row)}
                     x={x - barGap / 2 - barWidth}
                     y={baseline - assignedHeight}
                     width={barWidth}
@@ -149,7 +155,9 @@ export function DailyTaskChart({
                     rx="3"
                   />
                   <rect
-                    className="dailyHandoffBar handedSameDay"
+                    className={`dailyHandoffBar handedSameDay ${onSelect ? "interactive" : ""}`}
+                    style={onSelect ? { cursor: "pointer" } : undefined}
+                    onClick={() => onSelect?.("handedSameDay", row)}
                     x={x + barGap / 2}
                     y={baseline - sameDayHeight}
                     width={barWidth}
@@ -157,7 +165,9 @@ export function DailyTaskChart({
                     rx="3"
                   />
                   <rect
-                    className="dailyHandoffBar handedBacklog"
+                    className={`dailyHandoffBar handedBacklog ${onSelect ? "interactive" : ""}`}
+                    style={onSelect ? { cursor: "pointer" } : undefined}
+                    onClick={() => onSelect?.("handedBacklog", row)}
                     x={x + barGap / 2}
                     y={baseline - sameDayHeight - handedBacklogHeight}
                     width={barWidth}
@@ -165,7 +175,9 @@ export function DailyTaskChart({
                     rx="3"
                   />
                   <circle
-                    className="dailyPoint backlog"
+                    className={`dailyPoint backlog ${onSelect ? "interactive" : ""}`}
+                    style={onSelect ? { cursor: "pointer" } : undefined}
+                    onClick={() => onSelect?.("backlog", row)}
                     cx={backlogPosition.x}
                     cy={backlogPosition.y}
                     r="4"

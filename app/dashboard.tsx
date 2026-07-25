@@ -579,6 +579,25 @@ export function Dashboard() {
               assignees={dailyTaskChart.assignees}
               assignee={dailyAssignee}
               onAssigneeChange={setDailyAssignee}
+              onSelect={(type, row) => {
+                const titleMap = {
+                  assigned: "Được giao",
+                  handedSameDay: "Bàn giao · Task trong ngày",
+                  handedBacklog: "Bàn giao · Xử lý task tồn",
+                  backlog: "Tồn cuối ngày",
+                };
+                const taskMap = {
+                  assigned: row.assignedTasks,
+                  handedSameDay: row.handedSameDayTasks,
+                  handedBacklog: row.handedBacklogTasks,
+                  backlog: row.backlogTasks,
+                };
+                setDetail({
+                  title: titleMap[type],
+                  subtitle: formatDate(row.date),
+                  tasks: taskMap[type],
+                });
+              }}
             />
 
             <StaffColumns
