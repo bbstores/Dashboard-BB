@@ -23,7 +23,8 @@ export function DailyTaskChart({
   const height = 480;
   const left = 48;
   const right = 24;
-  const plotWidth = width - left - right;
+  const plotPadding = 24;
+  const plotWidth = width - left - right - plotPadding * 2;
   const flowTop = 30;
   const flowHeight = 180;
   const backlogTop = 300;
@@ -43,7 +44,7 @@ export function DailyTaskChart({
   const backlogMin = Math.max(0, rawBacklogMin - backlogPadding);
   const backlogMax = Math.max(backlogMin + 1, rawBacklogMax + backlogPadding);
   const xFor = (index: number) =>
-    left +
+    left + plotPadding +
     (rows.length <= 1 ? plotWidth / 2 : (index / (rows.length - 1)) * plotWidth);
   const backlogPoint = (value: number, index: number) => ({
     x: xFor(index),

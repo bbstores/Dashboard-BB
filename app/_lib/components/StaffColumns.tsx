@@ -1,3 +1,4 @@
+import type { Task } from "../types";
 import { HelpButton } from "./HelpButton";
 import { dashboardHelp } from "../helpContent";
 
@@ -9,9 +10,13 @@ export function StaffColumns({
   rows: Array<{
     name: string;
     total: number;
+    totalTasks?: Task[];
     started: number;
+    startedTasks?: Task[];
     inspectionCarry: number;
+    inspectionCarryTasks?: Task[];
     completionCarry: number;
+    completionCarryTasks?: Task[];
     feedback: number;
   }>;
   onSelect?: (

@@ -620,22 +620,24 @@ export function Dashboard() {
                   });
                   return;
                 }
-                const rows = analytics!.classified.filter(
-                  (item) =>
-                    assigneeNames(item.task.assignee).includes(name) &&
-                    item.included &&
-                    (metric === "total" || item[metric]),
-                );
+                const row = analytics!.staffRows.find(r => r.name === name);
+                if (!row) return;
                 const labels = {
                   total: "Tổng task",
                   started: "Bắt đầu trong kỳ",
                   inspectionCarry: "Carry-in bàn giao",
                   completionCarry: "Carry-in hoàn thành",
                 };
+                const taskMap = {
+                  total: row.totalTasks,
+                  started: row.startedTasks,
+                  inspectionCarry: row.inspectionCarryTasks,
+                  completionCarry: row.completionCarryTasks,
+                };
                 setDetail({
-                  title: `${labels[metric]} · ${name}`,
+                  title: `${labels[metric as keyof typeof labels]} · ${name}`,
                   subtitle: "Các task tạo nên cột đã chọn",
-                  tasks: rows.map((item) => item.task),
+                  tasks: taskMap[metric as keyof typeof taskMap] ?? [],
                 });
               }}
             />

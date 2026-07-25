@@ -112,12 +112,19 @@ export function useDashboardStats(
           (item) =>
             assigneeNames(item.task.assignee).includes(name) && item.included,
         );
+        const startedRows = rows.filter((item) => item.started);
+        const inspectionCarryRows = rows.filter((item) => item.inspectionCarry);
+        const completionCarryRows = rows.filter((item) => item.completionCarry);
         return {
           name,
           total: rows.length,
-          started: rows.filter((item) => item.started).length,
-          inspectionCarry: rows.filter((item) => item.inspectionCarry).length,
-          completionCarry: rows.filter((item) => item.completionCarry).length,
+          totalTasks: rows.map(r => r.task),
+          started: startedRows.length,
+          startedTasks: startedRows.map(r => r.task),
+          inspectionCarry: inspectionCarryRows.length,
+          inspectionCarryTasks: inspectionCarryRows.map(r => r.task),
+          completionCarry: completionCarryRows.length,
+          completionCarryTasks: completionCarryRows.map(r => r.task),
           feedback: feedbackCount.get(name) ?? 0,
         };
       })
