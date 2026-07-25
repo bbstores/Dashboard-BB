@@ -75,7 +75,7 @@ import {
   DetailDrawer,
   SlaMetricCard,
   PercentileDialog,
-} from "./_lib/components";
+} from "./_lib/components/index";
 
 // ─── Context ────────────────────────────────────────────────────────────────
 
@@ -229,7 +229,7 @@ export function Dashboard() {
 
   function chartMetrics(key: string) {
     if (!analytics) throw new Error("Dashboard data is not loaded.");
-    const metrics = analytics.pieMetrics[chartScope(key)];
+    const metrics = analytics!.pieMetrics[chartScope(key)];
     return pieExcludeOutsource[key] ? metrics.withoutOutsource : metrics.all;
   }
 
@@ -258,7 +258,7 @@ export function Dashboard() {
             }
           >
             Media
-            <small>{savedReports.filter((report) => report.department === "media").length}</small>
+            <small>{savedReports.filter((report: SavedReport) => report.department === "media").length}</small>
           </button>
           <button
             type="button"
@@ -268,7 +268,7 @@ export function Dashboard() {
             }
           >
             Kinh doanh
-            <small>{savedReports.filter((report) => report.department === "business").length}</small>
+            <small>{savedReports.filter((report: SavedReport) => report.department === "business").length}</small>
           </button>
         </nav>
         <button className="uploadButton" onClick={() => fileRef.current?.click()}>
@@ -300,7 +300,7 @@ export function Dashboard() {
           <strong>{data ? data.fileName : "BB Store Task Export"}</strong>
           <small>
             {data
-              ? `${formatNumber(data.tasks.length)} task · ${formatNumber(data.feedback.length)} phản hồi`
+              ? `${formatNumber(data!.tasks.length)} task · ${formatNumber(data!.feedback.length)} phản hồi`
               : "Hỗ trợ workbook .xlsx có đúng tên sheet Lark Base"}
           </small>
         </div>
@@ -375,18 +375,18 @@ export function Dashboard() {
               onClick={() => setDetail({
                 title: "Task trong kỳ",
                 subtitle: "Hợp khử trùng của task bắt đầu, carry-in bàn giao và carry-in hoàn thành",
-                tasks: analytics.selectedTasks,
+                tasks: analytics!.selectedTasks,
               })}
             >
               <HelpButton help={dashboardHelp("Task trong kỳ")} />
               <span>Task trong kỳ</span>
-              <strong>{formatNumber(analytics.selectedTasks.length)}</strong>
+              <strong>{formatNumber(analytics!.selectedTasks.length)}</strong>
               <small>
-                <b>{formatNumber(analytics.startedInWindow.length)}</b> bắt đầu trong kỳ
+                <b>{formatNumber(analytics!.startedInWindow.length)}</b> bắt đầu trong kỳ
                 {" · "}
-                <b>{formatNumber(analytics.inspectionCarryIntoWindow.length)}</b> carry-in bàn giao
+                <b>{formatNumber(analytics!.inspectionCarryIntoWindow.length)}</b> carry-in bàn giao
                 {" · "}
-                <b>{formatNumber(analytics.completionCarryIntoWindow.length)}</b> carry-in hoàn thành
+                <b>{formatNumber(analytics!.completionCarryIntoWindow.length)}</b> carry-in hoàn thành
                 <br />
                 <em>Hai mốc carry-in có thể giao nhau; tổng đã khử trùng.</em>
               </small>
@@ -397,17 +397,17 @@ export function Dashboard() {
               onClick={() => setDetail({
                 title: "Task thiếu thông tin",
                 subtitle: "Chưa có Ngày Bắt Đầu hoặc chưa có Assignee",
-                tasks: data.tasks.filter((task) => !task.startDate || !task.assignee),
+                tasks: data!.tasks.filter((task) => !task.startDate || !task.assignee),
               })}
             >
               <HelpButton help={dashboardHelp("Task thiếu thông tin")} />
               <span>Thiếu ngày bắt đầu hoặc assignee</span>
-              <strong>{formatNumber(analytics.missingEither)}</strong>
+              <strong>{formatNumber(analytics!.missingEither)}</strong>
               <small>
-                <b>{analytics.missingStartOnly}</b> chỉ thiếu ngày ·{" "}
-                <b>{analytics.missingAssigneeOnly}</b> chỉ thiếu assignee
+                <b>{analytics!.missingStartOnly}</b> chỉ thiếu ngày ·{" "}
+                <b>{analytics!.missingAssigneeOnly}</b> chỉ thiếu assignee
                 <br />
-                <b>{analytics.missingBoth}</b> thiếu cả hai
+                <b>{analytics!.missingBoth}</b> thiếu cả hai
               </small>
             </button>
             <button
@@ -416,12 +416,12 @@ export function Dashboard() {
               onClick={() => setDetail({
                 title: "Task tồn tại mốc chọn",
                 subtitle: `Các task tồn tính đến ${formatDate(inputDate(backlogDate))}`,
-                tasks: analytics.backlogTasks,
+                tasks: analytics!.backlogTasks,
               })}
             >
               <HelpButton help={dashboardHelp("Task tồn tại mốc chọn")} />
               <span>Task tồn tại mốc chọn</span>
-              <strong>{formatNumber(analytics.backlogTotal)}</strong>
+              <strong>{formatNumber(analytics!.backlogTotal)}</strong>
               <small>Không tính Done, Archived, Pending/Cancel, Kinh Doanh Done</small>
             </button>
           </section>
@@ -459,7 +459,7 @@ export function Dashboard() {
             <HorizontalBars
               title="Leaderboard thời gian"
               subtitle="TỔNG PHÚT DỰ KIẾN THEO ASSIGNEE"
-              rows={analytics.leaderboard}
+              rows={analytics!.leaderboard}
               className="groupPeople leaderboardCard"
               format={
                 leaderboardUnit === "minutes"
@@ -489,7 +489,7 @@ export function Dashboard() {
               onSelect={(label) => setDetail({
                 title: `Thời gian của ${label}`,
                 subtitle: "Các task tạo nên tổng số phút dự kiến",
-                tasks: analytics.selectedTasks.filter(
+                tasks: analytics!.selectedTasks.filter(
                   (task) => assigneeNames(task.assignee).includes(label),
                 ),
               })}
@@ -508,7 +508,7 @@ export function Dashboard() {
                     aria-label="Chọn tháng bộ sưu tập"
                   >
                     <option value="">Chọn tháng bắt buộc</option>
-                    {analytics.months.map((month) => (
+                    {analytics!.months.map((month) => (
                       <option key={month} value={month}>{month}</option>
                     ))}
                   </select>
@@ -521,19 +521,19 @@ export function Dashboard() {
                     <div className="metricHoverGroup tasks">
                       <ProgressDonut
                         title="THEO SỐ TASK"
-                        done={analytics.collection.taskDone}
-                        total={analytics.collection.taskTotal}
+                        done={analytics!.collection.taskDone}
+                        total={analytics!.collection.taskTotal}
                         unit="task"
                         onSelect={(scope) => setDetail({
                           title: scope === "done" ? `Task Done · ${collectionMonth}` : `Tất cả task · ${collectionMonth}`,
                           subtitle: "Tiến độ Bộ Sưu Tập theo số lượng task",
-                          tasks: scope === "done" ? analytics.collectionDone : analytics.collectionTasks,
+                          tasks: scope === "done" ? analytics!.collectionDone : analytics!.collectionTasks,
                         })}
                       />
                       <CollectionChildrenPanel
                         month={collectionMonth}
                         metric="tasks"
-                        rows={analytics.childCollections}
+                        rows={analytics!.childCollections}
                         onSelect={(child) => setDetail({
                           title: `${child.name} · Số task`,
                           subtitle: "Các task thuộc BST con đã chọn",
@@ -544,19 +544,19 @@ export function Dashboard() {
                     <div className="metricHoverGroup minutes">
                       <ProgressDonut
                         title="THEO TỔNG PHÚT"
-                        done={analytics.collection.minuteDone}
-                        total={analytics.collection.minuteTotal}
+                        done={analytics!.collection.minuteDone}
+                        total={analytics!.collection.minuteTotal}
                         unit="phút"
                         onSelect={(scope) => setDetail({
                           title: scope === "done" ? `Phút đã Done · ${collectionMonth}` : `Tổng phút · ${collectionMonth}`,
                           subtitle: "Danh sách task tạo nên tổng số phút dự kiến",
-                          tasks: scope === "done" ? analytics.collectionDone : analytics.collectionTasks,
+                          tasks: scope === "done" ? analytics!.collectionDone : analytics!.collectionTasks,
                         })}
                       />
                       <CollectionChildrenPanel
                         month={collectionMonth}
                         metric="minutes"
-                        rows={analytics.childCollections}
+                        rows={analytics!.childCollections}
                         onSelect={(child) => setDetail({
                           title: `${child.name} · Tổng phút`,
                           subtitle: "Các task tạo nên số phút của BST con",
@@ -582,26 +582,26 @@ export function Dashboard() {
             />
 
             <StaffColumns
-              rows={analytics.staffRows}
+              rows={analytics!.staffRows}
               className="groupPeople"
               onSelect={(name, metric) => {
                 if (metric === "feedback") {
                   setDetail({
                     title: `Lần trả về · ${name}`,
                     subtitle: "Dữ liệu từ sheet 2.9 Lịch sử phản hồi Task trong bộ lọc",
-                    feedback: analytics.selectedFeedback
+                    feedback: analytics!.selectedFeedback
                       .filter((item) =>
                         assigneeNames(
                           item.assignee ||
-                            analytics.taskByCode.get(item.taskCode)?.assignee ||
+                            analytics!.taskByCode.get(item.taskCode)?.assignee ||
                             "",
                         ).includes(name),
                       )
-                      .map((item) => ({ ...item, task: analytics.taskByCode.get(item.taskCode) })),
+                      .map((item) => ({ ...item, task: analytics!.taskByCode.get(item.taskCode) })),
                   });
                   return;
                 }
-                const rows = analytics.classified.filter(
+                const rows = analytics!.classified.filter(
                   (item) =>
                     assigneeNames(item.task.assignee).includes(name) &&
                     item.included &&
@@ -652,10 +652,10 @@ export function Dashboard() {
                 }
                 onSelect={(label) => setDetail({
                   title: `Tuân thủ bàn giao · ${label}`,
-                  subtitle: `Đánh giá tại mốc ${formatDate(analytics.reportingDate)}`,
+                  subtitle: `Đánh giá tại mốc ${formatDate(analytics!.reportingDate)}`,
                   tasks: chartMetrics("handoff").tasks.filter(
                     (task) =>
-                      evaluateHandoff(task, analytics.reportingDate).label ===
+                      evaluateHandoff(task, analytics!.reportingDate).label ===
                       label,
                   ),
                 })}
@@ -672,10 +672,10 @@ export function Dashboard() {
                 }
                 onSelect={(label) => setDetail({
                   title: `Tuân thủ hoàn thành · ${label}`,
-                  subtitle: `Hạn là cuối ngày làm việc kế tiếp · đánh giá tại ${formatDate(analytics.reportingDate)}`,
+                  subtitle: `Hạn là cuối ngày làm việc kế tiếp · đánh giá tại ${formatDate(analytics!.reportingDate)}`,
                   tasks: chartMetrics("overall").tasks.filter(
                     (task) =>
-                      evaluateOverall(task, analytics.reportingDate).label ===
+                      evaluateOverall(task, analytics!.reportingDate).label ===
                       label,
                   ),
                 })}
@@ -685,12 +685,12 @@ export function Dashboard() {
             <HorizontalBars
               title="Task theo Type"
               subtitle="COLUMN TYPE"
-              rows={analytics.types}
+              rows={analytics!.types}
               className="groupOverview"
               onSelect={(label) => setDetail({
                 title: `Type · ${label}`,
                 subtitle: "Task trong bộ lọc có cùng Type",
-                tasks: analytics.selectedTasks.filter((task) => matchesGroup(task.type, label)),
+                tasks: analytics!.selectedTasks.filter((task) => matchesGroup(task.type, label)),
               })}
             />
             <PieChart
@@ -880,36 +880,36 @@ export function Dashboard() {
                   <SlaMetricCard
                     kicker="TỶ LỆ ĐÚNG NGÀY"
                     title="Task đã bàn giao đủ dữ liệu"
-                    value={`${Math.round(analytics.sla.handoffOnTimeRate)}%`}
-                    note={`${formatNumber(analytics.sla.onTimeHandoffs.length)} / ${formatNumber(analytics.sla.handedForKpi.length)} task bàn giao đúng ngày`}
+                    value={`${Math.round(analytics!.sla.handoffOnTimeRate)}%`}
+                    note={`${formatNumber(analytics!.sla.onTimeHandoffs.length)} / ${formatNumber(analytics!.sla.handedForKpi.length)} task bàn giao đúng ngày`}
                     help={dashboardHelp("Tuân thủ ngày bàn giao")}
                     onClick={() =>
                       setDetail({
                         title: "Bàn giao đúng ngày",
                         subtitle: "Ngày Kiểm Duyệt cùng ngày Ngày Bắt Đầu",
-                        tasks: analytics.sla.onTimeHandoffs.map((row) => row.task),
+                        tasks: analytics!.sla.onTimeHandoffs.map((row) => row.task),
                       })
                     }
                   />
                   <SlaMetricCard
                     kicker="CHƯA BÀN GIAO"
                     title="Quá hạn tại ngày báo cáo"
-                    value={formatNumber(analytics.sla.overdueHandoffs.length)}
-                    note={`Đánh giá tại ${formatDate(analytics.reportingDate)}`}
+                    value={formatNumber(analytics!.sla.overdueHandoffs.length)}
+                    note={`Đánh giá tại ${formatDate(analytics!.reportingDate)}`}
                     help={dashboardHelp("Tuân thủ ngày bàn giao")}
                     onClick={() =>
                       setDetail({
                         title: "Quá hạn chưa bàn giao",
                         subtitle: "Đã qua ngày bắt đầu nhưng chưa có Ngày Kiểm Duyệt",
-                        tasks: analytics.sla.overdueHandoffs.map((row) => row.task),
+                        tasks: analytics!.sla.overdueHandoffs.map((row) => row.task),
                       })
                     }
                   />
                   <SlaMetricCard
                     kicker="MỨC TRỄ ĐIỂN HÌNH"
                     title="P50 của task bàn giao trễ ngày"
-                    value={formatSlaMinutes(analytics.sla.handoffLateP50)}
-                    note={`${formatNumber(analytics.sla.lateHandoffs.length)} task trễ ngày · chỉ tính giờ làm việc`}
+                    value={formatSlaMinutes(analytics!.sla.handoffLateP50)}
+                    note={`${formatNumber(analytics!.sla.lateHandoffs.length)} task trễ ngày · chỉ tính giờ làm việc`}
                     help={{
                       title: "P50 phút trễ bàn giao",
                       purpose: "Mức phút trễ điển hình của riêng các task đã bàn giao sang ngày khác.",
@@ -922,7 +922,7 @@ export function Dashboard() {
                         title: "Mức trễ bàn giao",
                         subtitle: "Phân vị số phút trễ của các task bàn giao sang ngày khác, chỉ tính trong giờ làm việc.",
                         metricLabel: "Số phút trễ",
-                        observations: analytics.sla.lateHandoffs.map((row) => ({ task: row.task, value: row.minutes })),
+                        observations: analytics!.sla.lateHandoffs.map((row) => ({ task: row.task, value: row.minutes })),
                         unit: "minutes",
                       })
                     }
@@ -930,7 +930,7 @@ export function Dashboard() {
                       setDetail({
                         title: "Task bàn giao trễ ngày",
                         subtitle: "Các task tạo nên P50 và phân bổ mức độ trễ",
-                        tasks: analytics.sla.lateHandoffs.map((row) => row.task),
+                        tasks: analytics!.sla.lateHandoffs.map((row) => row.task),
                         taskMetric: {
                           label: "Số phút trễ",
                           value: handoffLateMinutes,
@@ -944,7 +944,7 @@ export function Dashboard() {
                 <HorizontalBars
                   title="Mức độ trễ bàn giao"
                   subtitle="PHÚT TRỄ TRONG GIỜ LÀM VIỆC"
-                  rows={analytics.sla.handoffLateDistribution}
+                  rows={analytics!.sla.handoffLateDistribution}
                   className="handoffLateChart"
                   help={{
                     title: "Mức độ trễ bàn giao",
@@ -957,7 +957,7 @@ export function Dashboard() {
                     setDetail({
                       title: `Mức trễ · ${label}`,
                       subtitle: "Task bàn giao trễ ngày trong cùng khoảng phút",
-                      tasks: analytics.sla.lateHandoffs
+                      tasks: analytics!.sla.lateHandoffs
                         .filter((row) => lateMinuteBucket(row.minutes) === label)
                         .map((row) => row.task),
                       taskMetric: {
@@ -972,7 +972,7 @@ export function Dashboard() {
               </section>
 
               <StaffTimeOfDayChart
-                rows={analytics.sla.staffTimeOfDayRows}
+                rows={analytics!.sla.staffTimeOfDayRows}
                 onSelect={(row, metric, tasks, context) => {
                   const isInspection = metric === "inspection";
                   const values = tasks
@@ -991,32 +991,32 @@ export function Dashboard() {
                 <SlaMetricCard
                   kicker="CYCLE TIME"
                   title="P50 hoàn thành"
-                  value={`${analytics.sla.cycleP50} ngày`}
-                  note={`P90: ${analytics.sla.cycleP90} ngày · ${formatNumber(analytics.sla.cycleRows.length)} task đủ ngày`}
+                  value={`${analytics!.sla.cycleP50} ngày`}
+                  note={`P90: ${analytics!.sla.cycleP90} ngày · ${formatNumber(analytics!.sla.cycleRows.length)} task đủ ngày`}
                   onExpand={() =>
                     setPercentileDetail({
                         title: "Cycle time hoàn thành",
                         subtitle: "Phân vị số ngày lịch từ Ngày Bắt Đầu đến Ngày Hoàn Thành.",
                         metricLabel: "Cycle time",
-                        observations: analytics.sla.cycleRows.map((row) => ({ task: row.task, value: row.days })),
+                        observations: analytics!.sla.cycleRows.map((row) => ({ task: row.task, value: row.days })),
                         unit: "days",
                     })
                   }
                   onClick={() => setDetail({
                     title: "Task có dữ liệu Cycle time",
                     subtitle: "Hoàn thành trong kỳ và có Ngày Bắt Đầu",
-                    tasks: analytics.sla.cycleRows.map((row) => row.task),
+                    tasks: analytics!.sla.cycleRows.map((row) => row.task),
                   })}
                 />
                 <SlaMetricCard
                   kicker="ĐỊNH MỨC 1.7"
                   title="Độ phủ định mức tham chiếu"
-                  value={`${Math.round(analytics.sla.normCoverage)}%`}
-                  note={`${formatNumber(analytics.sla.normMapped)} / ${formatNumber(analytics.sla.normEligible)} task map được`}
+                  value={`${Math.round(analytics!.sla.normCoverage)}%`}
+                  note={`${formatNumber(analytics!.sla.normMapped)} / ${formatNumber(analytics!.sla.normEligible)} task map được`}
                   onClick={() => setDetail({
                     title: "Task chưa có định mức",
                     subtitle: "Không tìm thấy Format Type/Công đoạn phù hợp trong sheet 1.7",
-                    tasks: analytics.sla.normRows
+                    tasks: analytics!.sla.normRows
                       .filter((row) => row.normMinutes === null)
                       .map((row) => row.task),
                   })}
@@ -1026,12 +1026,12 @@ export function Dashboard() {
               <div className="slaChartGrid cycleChartRow">
                 <PieChart
                   title="Cycle time theo ngày"
-                  data={analytics.sla.cycleDistribution}
+                  data={analytics!.sla.cycleDistribution}
                   compact
                   onSelect={(label) => setDetail({
                     title: `Cycle time · ${label}`,
                     subtitle: "Task hoàn thành trong kỳ",
-                    tasks: analytics.sla.cycleRows
+                    tasks: analytics!.sla.cycleRows
                       .filter((row) => cycleBucket(row.days) === label)
                       .map((row) => row.task),
                   })}
@@ -1041,10 +1041,10 @@ export function Dashboard() {
               <div className="slaChartGrid agingBacklogRow">
                 <PieChart
                   title="Aging task đang mở"
-                  data={analytics.sla.agingDistribution}
+                  data={analytics!.sla.agingDistribution}
                   compact
                   hoverBreakdown={(label) => {
-                    const rows = analytics.sla.openAgingRows.filter(
+                    const rows = analytics!.sla.openAgingRows.filter(
                       (row) => agingBucket(row.days) === label,
                     );
                     return { title: `${label} · phân bổ theo trạng thái`, data: groupCount(rows, (row) => row.task.status) };
@@ -1052,17 +1052,17 @@ export function Dashboard() {
                   onSelect={(label) => setDetail({
                     title: `Aging · ${label}`,
                     subtitle: `Task đang mở tính đến mốc ${formatDate(inputDate(backlogDate))}`,
-                    tasks: analytics.sla.openAgingRows
+                    tasks: analytics!.sla.openAgingRows
                       .filter((row) => agingBucket(row.days) === label)
                       .map((row) => row.task),
                   })}
                 />
                 <PieChart
                   title="Trạng thái task tồn"
-                  data={analytics.backlog}
+                  data={analytics!.backlog}
                   compact
                   hoverBreakdown={(label) => {
-                    const rows = analytics.sla.openAgingRows.filter((row) =>
+                    const rows = analytics!.sla.openAgingRows.filter((row) =>
                       matchesGroup(row.task.status, label),
                     );
                     return { title: `${label} · phân bổ theo Aging`, data: groupCount(rows, (row) => agingBucket(row.days)) };
@@ -1074,7 +1074,7 @@ export function Dashboard() {
                   onSelect={(label) => setDetail({
                     title: `Task tồn · ${label}`,
                     subtitle: `Task tồn trước mốc ${formatDate(inputDate(backlogDate))}`,
-                    tasks: analytics.backlogTasks.filter((task) =>
+                    tasks: analytics!.backlogTasks.filter((task) =>
                       matchesGroup(task.status, label),
                     ),
                   })}
@@ -1097,22 +1097,22 @@ export function Dashboard() {
                   <SlaMetricCard
                     kicker="TOÀN BỘ THỜI GIAN KIỂM DUYỆT"
                     title="Từ chuyển Checking đến hoàn thành"
-                    value={formatSlaMinutes(analytics.sla.checkingToDoneP50)}
-                    note={`50% task không vượt quá mức trên · 90% không vượt quá ${formatSlaMinutes(analytics.sla.checkingToDoneP90)} · Mẫu ${formatNumber(analytics.sla.checkingToDoneRows.length)} task`}
+                    value={formatSlaMinutes(analytics!.sla.checkingToDoneP50)}
+                    note={`50% task không vượt quá mức trên · 90% không vượt quá ${formatSlaMinutes(analytics!.sla.checkingToDoneP90)} · Mẫu ${formatNumber(analytics!.sla.checkingToDoneRows.length)} task`}
                     help={dashboardHelp("Checking → Done · P50")}
                     onExpand={() =>
                       setPercentileDetail({
                         title: "Checking → hoàn thành",
                         subtitle: "Toàn bộ thời gian kiểm duyệt trong giờ làm việc.",
                         metricLabel: "Thời gian Checking → Done",
-                        observations: analytics.sla.checkingToDoneRows.map((row) => ({ task: row.task, value: row.minutes })),
+                        observations: analytics!.sla.checkingToDoneRows.map((row) => ({ task: row.task, value: row.minutes })),
                         unit: "minutes",
                       })
                     }
                     onClick={() => setDetail({
                       title: "Checking → Done",
                       subtitle: "Task hoàn thành trong kỳ có đủ hai mốc",
-                      tasks: analytics.sla.checkingToDoneRows.map((row) => row.task),
+                      tasks: analytics!.sla.checkingToDoneRows.map((row) => row.task),
                     })}
                   />
               </div>
@@ -1121,12 +1121,12 @@ export function Dashboard() {
               <div className="slaChartGrid">
                 <PieChart
                   title="Đối chiếu kế hoạch với định mức 1.7"
-                  data={analytics.sla.normDistribution}
+                  data={analytics!.sla.normDistribution}
                   compact
                   onSelect={(label) => setDetail({
                     title: `Kế hoạch phút · ${label}`,
                     subtitle: "Đối chiếu phút dự kiến với chuẩn tham chiếu theo Format Type/Công đoạn; không phải thời gian làm thực tế",
-                    tasks: analytics.sla.normRows
+                    tasks: analytics!.sla.normRows
                       .filter((row) => row.label === label)
                       .map((row) => row.task),
                   })}
@@ -1146,13 +1146,13 @@ export function Dashboard() {
                   <div>
                     <span>
                       <small>PHÚT DỰ KIẾN TRÊN TASKLIST</small>
-                      <strong>{formatNumber(analytics.sla.normExpectedMinutes)}</strong>
-                      <em>{formatWorkDays(analytics.sla.normExpectedMinutes)}</em>
+                      <strong>{formatNumber(analytics!.sla.normExpectedMinutes)}</strong>
+                      <em>{formatWorkDays(analytics!.sla.normExpectedMinutes)}</em>
                     </span>
                     <span>
                       <small>PHÚT CHUẨN THAM CHIẾU 1.7</small>
-                      <strong>{formatNumber(analytics.sla.normStandardMinutes)}</strong>
-                      <em>{formatWorkDays(analytics.sla.normStandardMinutes)}</em>
+                      <strong>{formatNumber(analytics!.sla.normStandardMinutes)}</strong>
+                      <em>{formatWorkDays(analytics!.sla.normStandardMinutes)}</em>
                     </span>
                   </div>
                   <p>

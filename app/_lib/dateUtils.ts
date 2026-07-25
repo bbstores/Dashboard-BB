@@ -80,7 +80,7 @@ export function calendarDaysBetween(start: Date | null, end: Date | null) {
 
 export function percentile(values: number[], ratio: number) {
   if (!values.length) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = Array.from(values).sort((a, b) => a - b);
   const index = Math.min(
     sorted.length - 1,
     Math.max(0, Math.ceil(sorted.length * ratio) - 1),

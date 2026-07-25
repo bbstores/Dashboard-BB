@@ -24,14 +24,14 @@ export function matchesGroup(value: string, label: string) {
 }
 
 export function assigneeNames(value: string) {
-  const names = [
-    ...new Set(
+  const names = Array.from(
+    new Set(
       value
         .split(",")
         .map(normalize)
         .filter(Boolean),
     ),
-  ];
+  );
   return names.length ? names : ["Chưa có assignee"];
 }
 
@@ -82,24 +82,24 @@ export function groupCount<T>(rows: T[], key: (row: T) => string): PieDatum[] {
     const label = normalize(key(row)) || "Chưa xác định";
     result.set(label, (result.get(label) ?? 0) + 1);
   }
-  return [...result.entries()]
+  return Array.from(result.entries())
     .map(([label, value]) => ({ label, value }))
     .sort((a, b) => b.value - a.value);
 }
 
 export function collectionMonths(task: Task) {
-  return [...new Set(task.collection.match(/\d{2}\.\d{4}/g) ?? [])];
+  return Array.from(new Set(task.collection.match(/\d{2}\.\d{4}/g) ?? []));
 }
 
 export function collectionNames(task: Task, month: string) {
-  return [
-    ...new Set(
+  return Array.from(
+    new Set(
       task.collection
         .split(",")
         .map(normalize)
         .filter((name) => name && name.includes(month)),
     ),
-  ];
+  );
 }
 
 export function isCollectionDone(task: Task) {

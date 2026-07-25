@@ -81,7 +81,7 @@ export function cellValue(value: unknown): unknown {
 
 export function headersFor(sheet: import("exceljs").Worksheet) {
   const headers = new Map<string, number>();
-  sheet.getRow(1).eachCell({ includeEmpty: false }, (cell, column) => {
+  sheet.getRow(1).eachCell({ includeEmpty: false }, (cell: import("exceljs").Cell, column: number) => {
     headers.set(normalizedKey(cellValue(cell.value)), column);
   });
   return headers;

@@ -106,7 +106,7 @@ export function useDashboardStats(
     });
     feedbackCount.forEach((_, name) => people.add(name));
 
-    const staffRows = [...people]
+    const staffRows = Array.from(people)
       .map((name) => {
         const rows = classified.filter(
           (item) =>
@@ -123,9 +123,9 @@ export function useDashboardStats(
       })
       .sort((a, b) => b.total - a.total);
 
-    const months = [
-      ...new Set(data.tasks.flatMap(collectionMonths)),
-    ].sort((a, b) => {
+    const months = Array.from(
+      new Set(data.tasks.flatMap(collectionMonths)),
+    ).sort((a, b) => {
       const [am, ay] = a.split(".").map(Number);
       const [bm, by] = b.split(".").map(Number);
       return by - ay || bm - am;
@@ -145,7 +145,7 @@ export function useDashboardStats(
         childCollectionMap.set(name, rows);
       }
     }
-    const childCollections = [...childCollectionMap.entries()]
+    const childCollections = Array.from(childCollectionMap.entries())
       .map(([name, tasks]) => {
         const doneTasks = tasks.filter(isCollectionDone);
         return {
@@ -276,7 +276,7 @@ export function useDashboardStats(
         assigneeNames(task.assignee).forEach((name) => timeOfDayPeople.add(name));
       }
     });
-    const staffTimeOfDayRows: StaffTimeOfDayRow[] = [...timeOfDayPeople]
+    const staffTimeOfDayRows: StaffTimeOfDayRow[] = Array.from(timeOfDayPeople)
       .map((name) => {
         const inspectionTasks = data.tasks.filter(
           (task) =>
@@ -434,7 +434,7 @@ export function useDashboardStats(
           0,
         ),
       },
-      leaderboard: [...leaderboard.entries()]
+      leaderboard: Array.from(leaderboard.entries())
         .map(([label, values]) => ({ label, ...values }))
         .sort((a, b) => b.value - a.value),
       staffRows,

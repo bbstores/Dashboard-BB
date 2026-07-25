@@ -9,7 +9,7 @@ import {
   sameCalendarDay,
   businessMinutesBetween,
 } from "./dateUtils";
-import { normalizedKey } from "./taskUtils";
+import { normalizedKey } from "@/app/_lib/taskUtils";
 
 export function evaluateHandoff(task: Task, asOf: Date): MilestoneEvaluation {
   if (!task.startDate) {

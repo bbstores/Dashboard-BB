@@ -10,9 +10,9 @@ export function useDailyTaskChart(
 ) {
   return useMemo(() => {
     if (!data) return { rows: [] as DailyTaskDatum[], assignees: [] as string[] };
-    const assignees = [
-      ...new Set(data.tasks.flatMap((task) => assigneeNames(task.assignee))),
-    ].sort((a, b) => a.localeCompare(b, "vi"));
+    const assignees = Array.from(
+      new Set(data.tasks.flatMap((task) => assigneeNames(task.assignee))),
+    ).sort((a, b) => a.localeCompare(b, "vi"));
     const tasks = dailyAssignee
       ? data.tasks.filter((task) =>
           assigneeNames(task.assignee).includes(dailyAssignee),
