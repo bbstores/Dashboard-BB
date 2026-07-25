@@ -99,7 +99,7 @@ export function PieChart({
                   />
                 );
               })}
-              <circle cx="50" cy="50" r="32" fill="var(--bg)" />
+              <circle cx="50" cy="50" r="32" fill="var(--card)" />
             </svg>
           ) : (
             <div className="emptyDonut" />

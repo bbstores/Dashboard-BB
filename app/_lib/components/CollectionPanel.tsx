@@ -15,20 +15,22 @@ export function CollectionChildrenPanel({
 }) {
   if (!rows.length) return null;
   return (
-    <div className="childCollectionPanel">
-      <span className="chartKicker">BST CON · {month} · {metric === "tasks" ? "Số task" : "Phút"}</span>
-      <div className="childCollectionGrid">
+    <div className="metricChildren">
+      <div className="metricChildrenHeader">
+        <span className="chartKicker">BST CON · {month} · {metric === "tasks" ? "Số task" : "Phút"}</span>
+      </div>
+      <div className="metricChildrenGrid">
         {rows.map((child) => (
-          <button type="button" key={child.name} className="childCard" onClick={() => onSelect(child)}>
+          <button type="button" key={child.name} className="metricChild" onClick={() => onSelect(child)}>
             <MiniProgressDonut
               label={child.name}
               done={metric === "tasks" ? child.taskDone : child.minuteDone}
               total={metric === "tasks" ? child.taskTotal : child.minuteTotal}
             />
-            <small>
+            <strong>
               {formatNumber(metric === "tasks" ? child.taskDone : child.minuteDone)} /{" "}
               {formatNumber(metric === "tasks" ? child.taskTotal : child.minuteTotal)}
-            </small>
+            </strong>
           </button>
         ))}
       </div>
