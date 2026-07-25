@@ -71,8 +71,8 @@ type DailyTaskDatum = {
 };
 type StaffTimeOfDayRow = {
   name: string;
-  inspectionMedian: number | null;
-  completionMedian: number | null;
+  inspectionTimes: number[];
+  completionTimes: number[];
   inspectionTasks: Task[];
   completionTasks: Task[];
 };
@@ -506,14 +506,36 @@ function formatSlaMinutes(minutes: number) {
   return `${formatNumber(Math.round(minutes))} phút`;
 }
 
-function minutesOfDay(value: Date) {
-  return value.getHours() * 60 + value.getMinutes();
+function operationalMinute(value: Date) {
+  const clockMinute = value.getHours() * 60 + value.getMinutes();
+  const workdayStart = 8 * 60 + 30;
+  return clockMinute >= workdayStart
+    ? clockMinute - workdayStart
+    : clockMinute + 1440 - workdayStart;
 }
 
-function formatTimeOfDay(value: number | null) {
+function operationalDayStart(value: Date) {
+  const date = startOfDay(value);
+  const clockMinute = value.getHours() * 60 + value.getMinutes();
+  if (clockMinute < 8 * 60 + 30) date.setDate(date.getDate() - 1);
+  return date;
+}
+
+function operationalDayLag(start: Date | null, end: Date | null) {
+  if (!start || !end) return null;
+  return Math.round(
+    (operationalDayStart(end).getTime() -
+      operationalDayStart(start).getTime()) /
+      86400000,
+  );
+}
+
+function formatOperationalTime(value: number | null, showNextDay = false) {
   if (value === null) return "—";
-  const minutes = Math.round(value);
-  return `${String(Math.floor(minutes / 60) % 24).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+  const workdayStart = 8 * 60 + 30;
+  const clockMinute = (Math.round(value) + workdayStart) % 1440;
+  const nextDay = showNextDay && value >= 930;
+  return `${String(Math.floor(clockMinute / 60)).padStart(2, "0")}:${String(clockMinute % 60).padStart(2, "0")}${nextDay ? " +1" : ""}`;
 }
 
 function formatDistributionValue(value: number, unit: "minutes" | "days") {
@@ -1401,79 +1423,172 @@ function StaffTimeOfDayChart({
   onSelect,
 }: {
   rows: StaffTimeOfDayRow[];
-  onSelect: (row: StaffTimeOfDayRow, metric: "inspection" | "completion") => void;
+  onSelect: (
+    row: StaffTimeOfDayRow,
+    metric: "inspection" | "completion",
+    tasks: Task[],
+    context: string,
+  ) => void;
 }) {
+  const [metric, setMetric] = useState<"inspection" | "completion">("inspection");
+  const [cohort, setCohort] = useState<"all" | "sameDay" | "backlog">("all");
+  const [hoveredTimeMarker, setHoveredTimeMarker] = useState<{
+    person: string;
+    label: string;
+  } | null>(null);
+  const markers = [
+    { label: "P1", ratio: 0.01 },
+    { label: "Q1", ratio: 0.25 },
+    { label: "P50", ratio: 0.5 },
+    { label: "Q3", ratio: 0.75 },
+    { label: "P90", ratio: 0.9 },
+    { label: "P100", ratio: 1 },
+  ];
   return (
     <article className="staffTimeCard">
       <div className="staffTimeHeader">
         <div>
           <span className="chartKicker">THỜI ĐIỂM LÀM VIỆC ĐIỂN HÌNH</span>
           <h3>Nhân sự thường bàn giao và hoàn thành task lúc mấy giờ?</h3>
-          <p>Trung vị phần giờ–phút của từng mốc; mỗi dấu nằm trên thang 00:00–24:00.</p>
+          <p>Phân vị giờ–phút trên một ngày vận hành từ 08:30 đến 08:30 hôm sau.</p>
         </div>
         <div className="staffTimeLegend">
-          <span><i className="inspection" />Bàn giao</span>
-          <span><i className="completion" />Hoàn thành</span>
+          <div className="staffTimeMetricSwitch">
+            <button type="button" className={metric === "inspection" ? "active" : ""} onClick={() => setMetric("inspection")}>
+              Giờ bàn giao
+            </button>
+            <button type="button" className={metric === "completion" ? "active" : ""} onClick={() => setMetric("completion")}>
+              Giờ hoàn thành
+            </button>
+          </div>
+          <div className="staffTimeCohortSwitch">
+            <button type="button" className={cohort === "all" ? "active" : ""} onClick={() => setCohort("all")}>
+              Tất cả
+            </button>
+            <button type="button" className={cohort === "sameDay" ? "active" : ""} onClick={() => setCohort("sameDay")}>
+              Task trong ngày
+            </button>
+            <button type="button" className={cohort === "backlog" ? "active" : ""} onClick={() => setCohort("backlog")}>
+              Xử lý task tồn
+            </button>
+          </div>
           <HelpButton
             help={{
               title: "Trung vị thời điểm bàn giao và hoàn thành",
               purpose: "Cho biết khung giờ mỗi nhân sự thường bàn giao và hoàn thành task.",
               objective: "Nhận diện xu hướng dồn bàn giao hoặc hoàn thành vào cuối ca để điều chỉnh nhịp kiểm duyệt.",
-              calculation: "Chỉ lấy HH:mm của Ngày Kiểm Duyệt và Ngày Hoàn Thành, đổi thành số phút từ 00:00 rồi lấy P50 riêng cho từng nhân sự.",
-              example: "Các mốc bàn giao 09:00, 13:30, 15:00 → trung vị là 13:30.",
+              calculation: "Chỉ lấy HH:mm của Ngày Kiểm Duyệt hoặc Ngày Hoàn Thành. Ngày vận hành bắt đầu lúc 08:30 và kết thúc lúc 08:30 hôm sau; sau đó tính P1, Q1, P50, Q3, P90 và P100 riêng cho từng nhân sự.",
+              example: "23:00 đứng trước 02:00 hôm sau trên cùng một ngày vận hành; 02:00 được ghi là 02:00 +1.",
               note: "Số mẫu của hai mốc có thể khác nhau. Task nhiều assignee được đưa vào mẫu của từng người.",
             }}
           />
         </div>
       </div>
       <div className="staffTimeScale" aria-hidden="true">
-        <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span>
+        <span>08:30</span><span>14:30</span><span>20:30</span><span>02:30 +1</span><span>08:30 +1</span>
       </div>
       <div className="staffTimeRows">
-        {rows.map((row) => (
-          <div className="staffTimeRow" key={row.name}>
+        {rows.map((row) => {
+          const allTasks = metric === "inspection" ? row.inspectionTasks : row.completionTasks;
+          const dateFor = (task: Task) =>
+            metric === "inspection" ? task.inspectionDate : task.completedDate;
+          const tasks = allTasks.filter((task) => {
+            const lag = operationalDayLag(task.startDate, dateFor(task));
+            if (cohort === "sameDay") return lag === 0;
+            if (cohort === "backlog") return lag !== null && lag > 0;
+            return true;
+          });
+          const values = tasks
+            .map(dateFor)
+            .filter((value): value is Date => Boolean(value))
+            .map(operationalMinute);
+          const validLags = allTasks
+            .map((task) => operationalDayLag(task.startDate, dateFor(task)))
+            .filter((value): value is number => value !== null && value >= 0);
+          const sameDayCount = validLags.filter((value) => value === 0).length;
+          const backlogCount = validLags.filter((value) => value > 0).length;
+          const medianLag = validLags.length ? percentile(validLags, 0.5) : null;
+          const context = cohort === "sameDay"
+            ? "Task trong ngày (D0)"
+            : cohort === "backlog"
+              ? "Xử lý task tồn (D+1 trở lên)"
+              : "Tất cả task";
+          const percentileMarkers = values.length
+            ? markers.map((marker) => ({
+                ...marker,
+                value: percentile(values, marker.ratio),
+              }))
+            : [];
+          const firstPosition = percentileMarkers.length
+            ? (percentileMarkers[0].value / 1440) * 100
+            : 0;
+          const activeMarker =
+            hoveredTimeMarker?.person === row.name
+              ? percentileMarkers.find(
+                  (marker) => marker.label === hoveredTimeMarker.label,
+                )
+              : null;
+          const activePosition = activeMarker
+            ? (activeMarker.value / 1440) * 100
+            : firstPosition;
+          return (
+          <div className="staffTimeRow percentileTimeRow" key={row.name}>
             <strong title={row.name}>{row.name}</strong>
             <div className="staffTimeTrack">
               {[25, 50, 75].map((position) => (
                 <i className="staffTimeGrid" style={{ left: `${position}%` }} key={position} />
               ))}
-              {row.inspectionMedian !== null && (
+              <i
+                className={`staffTimeActiveRange ${activeMarker ? "active" : ""}`}
+                style={{
+                  left: `${firstPosition}%`,
+                  width: `${Math.max(0, activePosition - firstPosition)}%`,
+                }}
+              />
+              {percentileMarkers.map((marker) => (
                 <button
                   type="button"
-                  className="staffTimeMarker inspection"
-                  style={{ left: `${(row.inspectionMedian / 1440) * 100}%` }}
-                  title={`Bàn giao P50: ${formatTimeOfDay(row.inspectionMedian)} · ${row.inspectionTasks.length} task`}
-                  onClick={() => onSelect(row, "inspection")}
+                  className={`staffTimeMarker ${metric} ${marker.label === "P50" ? "median" : ""} ${
+                    activeMarker?.label === marker.label ? "active" : ""
+                  }`}
+                  style={{ left: `${(marker.value / 1440) * 100}%` }}
+                  title={`${marker.label}: ${formatOperationalTime(marker.value, true)} · ${tasks.length} task · ${context}`}
+                  onClick={() => onSelect(row, metric, tasks, context)}
+                  onMouseEnter={() =>
+                    setHoveredTimeMarker({
+                      person: row.name,
+                      label: marker.label,
+                    })
+                  }
+                  onMouseLeave={() => setHoveredTimeMarker(null)}
+                  onFocus={() =>
+                    setHoveredTimeMarker({
+                      person: row.name,
+                      label: marker.label,
+                    })
+                  }
+                  onBlur={() => setHoveredTimeMarker(null)}
+                  key={marker.label}
                 >
-                  <b>{formatTimeOfDay(row.inspectionMedian)}</b>
+                  <b>{formatOperationalTime(marker.value, true)}</b>
+                  <small>{marker.label}</small>
                 </button>
-              )}
-              {row.completionMedian !== null && (
-                <button
-                  type="button"
-                  className="staffTimeMarker completion"
-                  style={{ left: `${(row.completionMedian / 1440) * 100}%` }}
-                  title={`Hoàn thành P50: ${formatTimeOfDay(row.completionMedian)} · ${row.completionTasks.length} task`}
-                  onClick={() => onSelect(row, "completion")}
-                >
-                  <b>{formatTimeOfDay(row.completionMedian)}</b>
-                </button>
-              )}
+              ))}
             </div>
             <div className="staffTimeValues">
-              <button type="button" onClick={() => onSelect(row, "inspection")}>
-                <i className="inspection" />
-                <strong>{formatTimeOfDay(row.inspectionMedian)}</strong>
-                <small>{row.inspectionTasks.length} task</small>
+              <button type="button" onClick={() => onSelect(row, metric, tasks, context)}>
+                <i className={metric} />
+                <strong>P50 {values.length ? formatOperationalTime(percentile(values, 0.5), true) : "—"}</strong>
+                <small>{tasks.length} task</small>
               </button>
-              <button type="button" onClick={() => onSelect(row, "completion")}>
-                <i className="completion" />
-                <strong>{formatTimeOfDay(row.completionMedian)}</strong>
-                <small>{row.completionTasks.length} task</small>
-              </button>
+              <span className="staffTimeContext">
+                <b>{validLags.length ? `${Math.round((sameDayCount / validLags.length) * 100)}% D0` : "— D0"}</b>
+                <small>{validLags.length ? `${Math.round((backlogCount / validLags.length) * 100)}% tồn · P50 D+${medianLag}` : "Thiếu mốc bắt đầu"}</small>
+              </span>
             </div>
           </div>
-        ))}
+          );
+        })}
         {!rows.length && <p className="emptyText">Chưa có dữ liệu thời điểm phù hợp.</p>}
       </div>
     </article>
@@ -1492,32 +1607,43 @@ function DailyTaskChart({
   onAssigneeChange: (value: string) => void;
 }) {
   const width = Math.max(860, rows.length * 42);
-  const height = 310;
+  const height = 410;
   const left = 48;
   const right = 24;
-  const top = 28;
-  const bottom = 52;
   const plotWidth = width - left - right;
-  const plotHeight = height - top - bottom;
-  const max = Math.max(
+  const flowTop = 30;
+  const flowHeight = 170;
+  const backlogTop = 255;
+  const backlogHeight = 95;
+  const flowMax = Math.max(
     1,
     ...rows.flatMap((row) => [
       row.assigned,
       row.handedSameDay + row.handedBacklog,
-      row.backlog,
     ]),
   );
-  const point = (value: number, index: number) => ({
-    x: left + (rows.length <= 1 ? plotWidth / 2 : (index / (rows.length - 1)) * plotWidth),
-    y: top + plotHeight - (value / max) * plotHeight,
+  const backlogValues = rows.map((row) => row.backlog);
+  const rawBacklogMin = Math.min(...backlogValues);
+  const rawBacklogMax = Math.max(...backlogValues);
+  const backlogPadding = Math.max(2, Math.ceil((rawBacklogMax - rawBacklogMin) * 0.2));
+  const backlogMin = Math.max(0, rawBacklogMin - backlogPadding);
+  const backlogMax = Math.max(backlogMin + 1, rawBacklogMax + backlogPadding);
+  const xFor = (index: number) =>
+    left +
+    (rows.length <= 1 ? plotWidth / 2 : (index / (rows.length - 1)) * plotWidth);
+  const backlogPoint = (value: number, index: number) => ({
+    x: xFor(index),
+    y:
+      backlogTop +
+      backlogHeight -
+      ((value - backlogMin) / (backlogMax - backlogMin)) * backlogHeight,
   });
-  const pointsFor = (key: "assigned" | "backlog") =>
-    rows
-      .map((row, index) => {
-        const position = point(row[key], index);
-        return `${position.x},${position.y}`;
-      })
-      .join(" ");
+  const backlogPoints = rows
+    .map((row, index) => {
+      const position = backlogPoint(row.backlog, index);
+      return `${position.x},${position.y}`;
+    })
+    .join(" ");
   const labelStep = Math.max(1, Math.ceil(rows.length / 12));
 
   return (
@@ -1567,31 +1693,55 @@ function DailyTaskChart({
             role="img"
             aria-label="Biểu đồ số task được giao, bàn giao và tồn cuối ngày"
           >
+            <text className="dailyPanelLabel" x={left} y="14">LUỒNG TASK TRONG NGÀY</text>
             {[0, 0.5, 1].map((ratio) => {
-              const y = top + plotHeight - ratio * plotHeight;
+              const y = flowTop + flowHeight - ratio * flowHeight;
               return (
-                <g key={ratio}>
+                <g key={`flow-${ratio}`}>
                   <line className="dailyGridLine" x1={left} x2={width - right} y1={y} y2={y} />
                   <text className="dailyAxisText" x={left - 10} y={y + 4} textAnchor="end">
-                    {Math.round(max * ratio)}
+                    {Math.round(flowMax * ratio)}
                   </text>
                 </g>
               );
             })}
-            <polyline className="dailyLine backlog" points={pointsFor("backlog")} />
-            <polyline className="dailyLine assigned" points={pointsFor("assigned")} />
+            <line className="dailyPanelSeparator" x1={left} x2={width - right} y1="228" y2="228" />
+            <text className="dailyPanelLabel" x={left} y="245">TỒN CUỐI NGÀY</text>
+            {[0, 1].map((ratio) => {
+              const y = backlogTop + backlogHeight - ratio * backlogHeight;
+              return (
+                <g key={`backlog-${ratio}`}>
+                  <line className="dailyGridLine" x1={left} x2={width - right} y1={y} y2={y} />
+                  <text className="dailyAxisText" x={left - 10} y={y + 4} textAnchor="end">
+                    {Math.round(backlogMin + (backlogMax - backlogMin) * ratio)}
+                  </text>
+                </g>
+              );
+            })}
+            <polyline className="dailyLine backlog" points={backlogPoints} />
             {rows.map((row, index) => {
-              const x = point(0, index).x;
-              const barWidth = Math.min(18, Math.max(8, plotWidth / Math.max(rows.length, 1) / 2));
-              const sameDayHeight = (row.handedSameDay / max) * plotHeight;
-              const backlogHeight = (row.handedBacklog / max) * plotHeight;
-              const baseline = top + plotHeight;
+              const x = xFor(index);
+              const barWidth = Math.min(16, Math.max(7, plotWidth / Math.max(rows.length, 1) / 3));
+              const barGap = 3;
+              const assignedHeight = (row.assigned / flowMax) * flowHeight;
+              const sameDayHeight = (row.handedSameDay / flowMax) * flowHeight;
+              const handedBacklogHeight = (row.handedBacklog / flowMax) * flowHeight;
+              const baseline = flowTop + flowHeight;
+              const backlogPosition = backlogPoint(row.backlog, index);
               return (
                 <g className="dailyPointGroup" key={dateKey(row.date)}>
-                  <line className="dailyHoverGuide" x1={x} x2={x} y1={top} y2={top + plotHeight} />
+                  <line className="dailyHoverGuide" x1={x} x2={x} y1={flowTop} y2={backlogTop + backlogHeight} />
+                  <rect
+                    className="dailyAssignedBar"
+                    x={x - barGap / 2 - barWidth}
+                    y={baseline - assignedHeight}
+                    width={barWidth}
+                    height={assignedHeight}
+                    rx="3"
+                  />
                   <rect
                     className="dailyHandoffBar handedSameDay"
-                    x={x - barWidth / 2}
+                    x={x + barGap / 2}
                     y={baseline - sameDayHeight}
                     width={barWidth}
                     height={sameDayHeight}
@@ -1599,16 +1749,18 @@ function DailyTaskChart({
                   />
                   <rect
                     className="dailyHandoffBar handedBacklog"
-                    x={x - barWidth / 2}
-                    y={baseline - sameDayHeight - backlogHeight}
+                    x={x + barGap / 2}
+                    y={baseline - sameDayHeight - handedBacklogHeight}
                     width={barWidth}
-                    height={backlogHeight}
+                    height={handedBacklogHeight}
                     rx="3"
                   />
-                  {(["backlog", "assigned"] as const).map((key) => {
-                    const position = point(row[key], index);
-                    return <circle className={`dailyPoint ${key}`} key={key} cx={position.x} cy={position.y} r="4" />;
-                  })}
+                  <circle
+                    className="dailyPoint backlog"
+                    cx={backlogPosition.x}
+                    cy={backlogPosition.y}
+                    r="4"
+                  />
                   <title>
                     {formatDate(row.date)} · Được giao: {row.assigned} · Bàn giao: {row.handedSameDay + row.handedBacklog} (Task trong ngày: {row.handedSameDay}, Xử lý task tồn: {row.handedBacklog}) · Tồn cuối ngày: {row.backlog}
                   </title>
@@ -1721,7 +1873,7 @@ function DetailDrawer({
                     },
                     {
                       label: "Hoàn thành",
-                      date: formatDate(task.completedDate),
+                      date: formatDateTime(task.completedDate),
                       reached:
                         Boolean(task.completedDate) ||
                         ["done", "kinh doanh done"].includes(
@@ -2542,18 +2694,12 @@ export function Dashboard() {
         );
         return {
           name,
-          inspectionMedian: inspectionTasks.length
-            ? percentile(
-                inspectionTasks.map((task) => minutesOfDay(task.inspectionDate!)),
-                0.5,
-              )
-            : null,
-          completionMedian: completionTasks.length
-            ? percentile(
-                completionTasks.map((task) => minutesOfDay(task.completedDate!)),
-                0.5,
-              )
-            : null,
+          inspectionTimes: inspectionTasks.map((task) =>
+            operationalMinute(task.inspectionDate!),
+          ),
+          completionTimes: completionTasks.map((task) =>
+            operationalMinute(task.completedDate!),
+          ),
           inspectionTasks,
           completionTasks,
         };
@@ -3613,14 +3759,18 @@ export function Dashboard() {
 
               <StaffTimeOfDayChart
                 rows={analytics.sla.staffTimeOfDayRows}
-                onSelect={(row, metric) => {
+                onSelect={(row, metric, tasks, context) => {
                   const isInspection = metric === "inspection";
+                  const values = tasks
+                    .map((task) =>
+                      isInspection ? task.inspectionDate : task.completedDate,
+                    )
+                    .filter((value): value is Date => Boolean(value))
+                    .map(operationalMinute);
                   setDetail({
                     title: `${isInspection ? "Giờ bàn giao" : "Giờ hoàn thành"} · ${row.name}`,
-                    subtitle: `Các task tạo nên trung vị ${isInspection ? formatTimeOfDay(row.inspectionMedian) : formatTimeOfDay(row.completionMedian)} theo HH:mm`,
-                    tasks: isInspection
-                      ? row.inspectionTasks
-                      : row.completionTasks,
+                    subtitle: `${context} · P50 ${values.length ? formatOperationalTime(percentile(values, 0.5), true) : "—"} theo ngày vận hành 08:30–08:30`,
+                    tasks,
                   });
                 }}
               />

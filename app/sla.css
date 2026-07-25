@@ -156,6 +156,44 @@
   justify-content: flex-end;
 }
 
+.staffTimeMetricSwitch {
+  background: #e6ebe5;
+  border: 1px solid rgba(23, 79, 61, .14);
+  border-radius: 999px;
+  display: flex;
+  padding: 3px;
+}
+
+.staffTimeCohortSwitch {
+  display: flex;
+  gap: 3px;
+}
+
+.staffTimeMetricSwitch button,
+.staffTimeCohortSwitch button {
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 7px 11px;
+}
+
+.staffTimeCohortSwitch {
+  background: #f0f1eb;
+  border: 1px solid rgba(23, 79, 61, .12);
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.staffTimeMetricSwitch button.active,
+.staffTimeCohortSwitch button.active {
+  background: #174f3d;
+  color: white;
+}
+
 .staffTimeLegend span {
   color: var(--muted);
   font-size: 9px;
@@ -188,7 +226,7 @@
   display: grid;
   font-size: 8px;
   grid-template-columns: repeat(5, 1fr);
-  margin: 26px 235px 5px 170px;
+  margin: 26px 295px 5px 170px;
 }
 
 .staffTimeScale span {
@@ -215,8 +253,8 @@
   border-top: 1px solid rgba(23, 79, 61, .09);
   display: grid;
   gap: 16px;
-  grid-template-columns: 154px minmax(320px, 1fr) 220px;
-  min-height: 58px;
+  grid-template-columns: 154px minmax(320px, 1fr) 280px;
+  min-height: 82px;
 }
 
 .staffTimeRow > strong {
@@ -230,6 +268,23 @@
   background: #d9ddd4;
   height: 2px;
   position: relative;
+}
+
+.staffTimeActiveRange {
+  background: #174f3d;
+  border-radius: 999px;
+  height: 4px;
+  opacity: 0;
+  position: absolute;
+  top: -1px;
+  transition:
+    width .48s cubic-bezier(.2, .8, .2, 1),
+    opacity .18s ease;
+  z-index: 1;
+}
+
+.staffTimeActiveRange.active {
+  opacity: 1;
 }
 
 .staffTimeGrid {
@@ -254,27 +309,68 @@
 }
 
 .staffTimeMarker b {
-  background: #174f3d;
-  border-radius: 7px;
+  background: transparent;
   bottom: 18px;
-  color: white;
-  display: none;
+  color: var(--green);
+  display: block;
   font-size: 8px;
   left: 50%;
-  padding: 4px 6px;
   position: absolute;
   transform: translateX(-50%);
   white-space: nowrap;
 }
 
-.staffTimeMarker:hover b,
-.staffTimeMarker:focus-visible b {
-  display: block;
+.staffTimeMarker > small {
+  color: var(--muted);
+  font-size: 7px;
+  font-weight: 850;
+  left: 50%;
+  position: absolute;
+  top: 17px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.staffTimeMarker.median {
+  height: 20px;
+  outline: 3px solid rgba(143, 191, 69, .2);
+  width: 20px;
+}
+
+.staffTimeMarker.median b,
+.staffTimeMarker.median > small {
+  color: #174f3d;
+  font-weight: 900;
+}
+
+.staffTimeMarker.active {
+  box-shadow: 0 0 0 5px rgba(217, 255, 114, .42);
+  transform: translate(-50%, -50%) scale(1.18);
+  z-index: 3;
 }
 
 .staffTimeValues {
   gap: 6px;
   justify-content: flex-end;
+}
+
+.staffTimeContext {
+  border-left: 1px solid rgba(23, 79, 61, .14);
+  display: grid;
+  gap: 2px;
+  padding-left: 8px;
+  text-align: left;
+}
+
+.staffTimeContext b {
+  color: var(--green);
+  font-size: 9px;
+}
+
+.staffTimeContext small {
+  color: var(--muted);
+  font-size: 7px;
+  white-space: nowrap;
 }
 
 .staffTimeValues button {
@@ -309,8 +405,8 @@
   }
 
   .staffTimeRow {
-    grid-template-columns: 120px minmax(260px, 1fr) 190px;
-    min-width: 650px;
+    grid-template-columns: 120px minmax(260px, 1fr) 250px;
+    min-width: 720px;
   }
 
   .staffTimeRows {
@@ -1566,10 +1662,9 @@
 }
 
 .dailyLegend .assigned,
-.dailyLine.assigned,
-.dailyPoint.assigned {
+.dailyAssignedBar {
   color: #8fbf45;
-  stroke: #8fbf45;
+  fill: #8fbf45;
 }
 
 .dailyLegend .handedSameDay,
@@ -1615,7 +1710,7 @@
 
 .dailyChartSvg {
   display: block;
-  height: 310px;
+  height: 410px;
   overflow: visible;
   width: 100%;
 }
@@ -1630,6 +1725,18 @@
   fill: var(--muted);
   font-size: 10px;
   font-weight: 700;
+}
+
+.dailyPanelLabel {
+  fill: var(--green);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .12em;
+}
+
+.dailyPanelSeparator {
+  stroke: rgba(23, 79, 61, .18);
+  stroke-width: 1;
 }
 
 .dailyLine {
@@ -1648,7 +1755,8 @@
   stroke-width: 2.5;
 }
 
-.dailyHandoffBar {
+.dailyHandoffBar,
+.dailyAssignedBar {
   opacity: .9;
   transition: opacity .18s ease, filter .18s ease;
 }
@@ -1668,7 +1776,8 @@
   r: 6px;
 }
 
-.dailyPointGroup:hover .dailyHandoffBar {
+.dailyPointGroup:hover .dailyHandoffBar,
+.dailyPointGroup:hover .dailyAssignedBar {
   filter: saturate(1.25);
   opacity: 1;
 }
