@@ -57,7 +57,16 @@ export function useDashboardStats(
 
     const leaderboard = new Map<
       string,
-      { value: number; started: number; carried: number; waiting: number }
+      { 
+        value: number; 
+        started: number; 
+        carried: number; 
+        waiting: number; 
+        tasks: Task[]; 
+        startedTasks: Task[]; 
+        carriedTasks: Task[]; 
+        waitingTasks: Task[]; 
+      }
     >();
     for (const item of classified.filter(
       (row) => row.started || row.inspectionCarry,
@@ -68,19 +77,29 @@ export function useDashboardStats(
           started: 0,
           carried: 0,
           waiting: 0,
+          tasks: [],
+          startedTasks: [],
+          carriedTasks: [],
+          waitingTasks: [],
         };
         current.value += item.task.expectedMinutes;
+        current.tasks.push(item.task);
         const status = normalizedKey(item.task.status);
         const isWaiting =
           status === "to do" ||
           status === "todo" ||
           status === "pending / cancel" ||
           status === "pending/cancel";
-        if (isWaiting) current.waiting += item.task.expectedMinutes;
-        else if (item.inspectionCarry) {
+        if (isWaiting) {
+          current.waiting += item.task.expectedMinutes;
+          current.waitingTasks.push(item.task);
+        } else if (item.inspectionCarry) {
           current.carried += item.task.expectedMinutes;
+          current.carriedTasks.push(item.task);
+        } else {
+          current.started += item.task.expectedMinutes;
+          current.startedTasks.push(item.task);
         }
-        else current.started += item.task.expectedMinutes;
         leaderboard.set(name, current);
       }
     }

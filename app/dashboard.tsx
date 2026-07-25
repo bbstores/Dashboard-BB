@@ -486,13 +486,30 @@ export function Dashboard() {
                   </select>
                 </label>
               }
-              onSelect={(label) => setDetail({
-                title: `Thời gian của ${label}`,
-                subtitle: "Các task tạo nên tổng số phút dự kiến",
-                tasks: analytics!.selectedTasks.filter(
-                  (task) => assigneeNames(task.assignee).includes(label),
-                ),
-              })}
+              onSelect={(label, metric = "total") => {
+                const row = analytics!.leaderboard.find(r => r.label === label) as any;
+                if (!row) return;
+
+                const titleMap = {
+                  total: "Tổng thời gian",
+                  started: "Task trong kỳ",
+                  carried: "Carry-in bàn giao",
+                  waiting: "To Do / Pending-Cancel",
+                };
+
+                const taskMap = {
+                  total: row.tasks,
+                  started: row.startedTasks,
+                  carried: row.carriedTasks,
+                  waiting: row.waitingTasks,
+                };
+
+                setDetail({
+                  title: `${titleMap[metric as keyof typeof titleMap]} · ${label}`,
+                  subtitle: "Các task tạo nên thời gian đã chọn",
+                  tasks: taskMap[metric as keyof typeof taskMap] ?? [],
+                });
+              }}
             />
 
             <article className="chartCard collectionCard fullWidth groupProduction">

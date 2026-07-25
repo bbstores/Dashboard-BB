@@ -21,7 +21,10 @@ export function HorizontalBars({
     PieDatum & { started?: number; carried?: number; waiting?: number }
   >;
   format?: (value: number) => string;
-  onSelect?: (label: string) => void;
+  onSelect?: (
+    label: string,
+    metric?: "total" | "started" | "carried" | "waiting",
+  ) => void;
   tooltip?: (value: number) => string;
   headerAction?: ReactNode;
   className?: string;
@@ -58,7 +61,7 @@ export function HorizontalBars({
             type="button"
             className={`horizontalRow ${onSelect ? "interactive" : ""}`}
             key={row.label}
-            onClick={() => onSelect?.(row.label)}
+            onClick={() => onSelect?.(row.label, "total")}
           >
             <span className="rank">{String(index + 1).padStart(2, "0")}</span>
             <span className="barLabel" title={row.label}>{row.label}</span>
@@ -75,17 +78,35 @@ export function HorizontalBars({
                     style={{
                       width: `${row.value ? ((row.started ?? 0) / row.value) * 100 : 0}%`,
                     }}
+                    onClick={(e) => {
+                      if (onSelect && row.started) {
+                        e.stopPropagation();
+                        onSelect(row.label, "started");
+                      }
+                    }}
                   />
                   <i
                     className="carriedSegment"
                     style={{
                       width: `${row.value ? ((row.carried ?? 0) / row.value) * 100 : 0}%`,
                     }}
+                    onClick={(e) => {
+                      if (onSelect && row.carried) {
+                        e.stopPropagation();
+                        onSelect(row.label, "carried");
+                      }
+                    }}
                   />
                   <i
                     className="waitingSegment"
                     style={{
                       width: `${row.value ? ((row.waiting ?? 0) / row.value) * 100 : 0}%`,
+                    }}
+                    onClick={(e) => {
+                      if (onSelect && row.waiting) {
+                        e.stopPropagation();
+                        onSelect(row.label, "waiting");
+                      }
                     }}
                   />
                 </span>
