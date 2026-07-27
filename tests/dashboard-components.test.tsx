@@ -5,6 +5,7 @@ import { calculateDashboardStats } from "../features/dashboard/analytics/calcula
 import { DashboardFilters } from "../features/dashboard/components/DashboardFilters";
 import { DashboardKpis } from "../features/dashboard/components/DashboardKpis";
 import { DetailDrawer } from "../features/dashboard/dialogs/DetailDrawer";
+import { PercentileDialog } from "../features/dashboard/dialogs/PercentileDialog";
 import type {
   DetailView,
   ReportDepartment,
@@ -215,4 +216,43 @@ test("attention KPI opens invalid Done chronology as standalone detail", () => {
 
   assert.ok(screen.getByText("ANON-ATTENTION-001"));
   assert.equal(screen.queryByText("ANON-DETAIL-001"), null);
+});
+
+test("P50 selects P1 through P50 and sorts observations ascending", () => {
+  const observations = [8, 1, 5, 2, 13, 3].map((value, index) => ({
+    task: {
+      ...task(),
+      code: `ANON-PERCENTILE-${index + 1}`,
+    },
+    value,
+  }));
+  let selected:
+    | Array<{ task: Task; value: number }>
+    | undefined;
+
+  render(
+    <PercentileDialog
+      detail={{
+        title: "Cycle time hoàn thành",
+        subtitle: "Kiểm thử phân vị",
+        metricLabel: "Cycle time",
+        observations,
+        unit: "days",
+      }}
+      onClose={() => undefined}
+      onSelect={(_label, _note, selection) => {
+        selected = selection;
+      }}
+    />,
+  );
+
+  const p50Card = screen.getByRole("button", {
+    name: "P503 ngàyCác task từ P1 đến P50Xem task →",
+  });
+  fireEvent.click(p50Card);
+
+  assert.deepEqual(
+    selected?.map((observation) => observation.value),
+    [1, 2, 3],
+  );
 });

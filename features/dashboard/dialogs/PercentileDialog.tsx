@@ -21,14 +21,17 @@ export function PercentileDialog({
   const q1 = percentile(values, 0.25);
   const p50 = percentile(values, 0.5);
   const q3 = percentile(values, 0.75);
+  const p90 = percentile(values, 0.9);
+  const p95 = percentile(values, 0.95);
+  const p99 = percentile(values, 0.99);
   const rows = [
-    { label: "Q1", value: q1, note: "25% quan sát không vượt quá", select: (value: number) => value <= q1 },
-    { label: "P50", value: p50, note: "Các task từ trung vị trở lên", select: (value: number) => value >= p50 },
-    { label: "Q3", value: q3, note: "Các task từ Q3 trở lên", select: (value: number) => value >= q3 },
+    { label: "Q1", value: q1, note: "Các task từ P1 đến Q1", select: (value: number) => value <= q1 },
+    { label: "P50", value: p50, note: "Các task từ P1 đến P50", select: (value: number) => value <= p50 },
+    { label: "Q3", value: q3, note: "Các task từ P1 đến Q3", select: (value: number) => value <= q3 },
     { label: "IQR", value: q3 - q1, note: `Khoảng Q1–Q3: ${formatDistributionValue(q1, detail.unit)} – ${formatDistributionValue(q3, detail.unit)}`, select: (value: number) => value >= q1 && value <= q3 },
-    { label: "P90", value: percentile(values, 0.9), note: "Các task từ P90 trở lên", select: (value: number) => value >= percentile(values, 0.9) },
-    { label: "P95", value: percentile(values, 0.95), note: "Các task từ P95 trở lên", select: (value: number) => value >= percentile(values, 0.95) },
-    { label: "P99", value: percentile(values, 0.99), note: "Các task từ P99 trở lên", select: (value: number) => value >= percentile(values, 0.99) },
+    { label: "P90", value: p90, note: "Các task từ P1 đến P90", select: (value: number) => value <= p90 },
+    { label: "P95", value: p95, note: "Các task từ P1 đến P95", select: (value: number) => value <= p95 },
+    { label: "P99", value: p99, note: "Các task từ P1 đến P99", select: (value: number) => value <= p99 },
   ];
   const percentilePositions: Record<string, number> = {
     P1: 1,
@@ -167,9 +170,18 @@ export function PercentileDialog({
                 onSelect(
                   row.label,
                   row.note,
-                  detail.observations.filter((observation) =>
-                    row.select(observation.value),
-                  ),
+                  detail.observations
+                    .filter((observation) =>
+                      row.select(observation.value),
+                    )
+                    .sort(
+                      (left, right) =>
+                        left.value - right.value ||
+                        left.task.code.localeCompare(
+                          right.task.code,
+                          "vi",
+                        ),
+                    ),
                 )
               }
             >
