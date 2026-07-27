@@ -57,7 +57,7 @@ export function StaffColumns({
         </div>
       </div>
       <div className="columnScroller">
-        <div className="columnChart" style={{ minWidth: `${Math.max(780, rows.length * 94)}px` }}>
+        <div className="columnChart" style={{ minWidth: `${Math.max(780, rows.length * 124)}px` }}>
           {rows.map((row) => (
             <div className="columnGroup" key={row.name}>
               <div className="columns">
