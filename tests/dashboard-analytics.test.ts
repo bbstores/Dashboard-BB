@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { calculateDailyTaskChart } from "../features/dashboard/analytics/calculateDailyTaskChart";
 import { calculateDashboardStats } from "../features/dashboard/analytics/calculateDashboardStats";
+import { calculatePublicationStats } from "../features/dashboard/analytics/calculatePublicationStats";
 import type {
   DashboardData,
   DateWindow,
+  PublicationPost,
   Task,
 } from "../features/dashboard/model/types";
 
@@ -43,6 +45,7 @@ const dateWindow: DateWindow = {
 
 const dashboardData: DashboardData = {
   fileName: "analytics-fixture.xlsx",
+  publications: [],
   tasks: [
     task("T1", {
       startDate: date(10),
@@ -238,6 +241,7 @@ test("separates backlog rules from invalid Done chronology", () => {
   const cutoff = new Date(2026, 6, 20);
   const data: DashboardData = {
     fileName: "backlog-rules.xlsx",
+    publications: [],
     feedback: [],
     norms: [],
     tasks: [
@@ -279,6 +283,12 @@ test("separates backlog rules from invalid Done chronology", () => {
         inspectionDate: date(11),
         completedDate: date(11),
       }),
+      task("FUTURE-INSPECTION-DONE", {
+        status: "Done",
+        startDate: date(10),
+        inspectionDate: date(21),
+        completedDate: date(21),
+      }),
       task("CANCELLED", {
         status: "Pending/Cancel",
         startDate: date(10),
@@ -306,9 +316,11 @@ test("separates backlog rules from invalid Done chronology", () => {
   assert.deepEqual(
     chart.rows[0].backlogTasks.map((item) => item.code),
     [
+      "NO-INSPECTION-DONE",
       "NO-INSPECTION-OPEN",
       "SAME-DAY-OPEN",
       "INSPECTED-IN-PROGRESS",
+      "FUTURE-INSPECTION-DONE",
     ],
   );
   const stats = calculateDashboardStats(data, {
@@ -316,14 +328,89 @@ test("separates backlog rules from invalid Done chronology", () => {
     collectionMonth: "",
     backlogDate: "2026-07-20",
   });
-  assert.equal(stats.backlogTotal, 3);
+  assert.equal(stats.backlogTotal, 4);
   assert.ok(
-    stats.backlogTasks.some(
+    !stats.backlogTasks.some(
+      (item) => item.code === "SAME-DAY-OPEN",
+    ),
+  );
+  assert.ok(
+    !stats.backlogTasks.some(
       (item) => item.code === "OUTSOURCE-OPEN",
     ),
   );
   assert.deepEqual(
     stats.backlogAttentionTasks.map((item) => item.code),
     ["INVALID-DONE"],
+  );
+});
+
+test("calculates publication totals, platforms, types and daily rows", () => {
+  const publications: PublicationPost[] = [
+    {
+      id: "POST-1",
+      scheduledAt: date(10),
+      platform: "Facebook",
+      posted: true,
+      postType: "Reels",
+      title: "Post 1",
+    },
+    {
+      id: "POST-2",
+      scheduledAt: date(10),
+      platform: "Facebook",
+      posted: false,
+      postType: "Ảnh Post",
+      title: "Post 2",
+    },
+    {
+      id: "POST-3",
+      scheduledAt: date(11),
+      platform: "TikTok",
+      posted: true,
+      postType: "Video",
+      title: "Post 3",
+    },
+    {
+      id: "POST-OUTSIDE",
+      scheduledAt: date(21),
+      platform: "TikTok",
+      posted: true,
+      postType: "Video",
+      title: "Outside",
+    },
+  ];
+
+  const overview = calculatePublicationStats(
+    publications,
+    dateWindow,
+    "",
+  );
+  assert.equal(overview.total, 3);
+  assert.equal(overview.posted, 2);
+  assert.deepEqual(overview.platformRows, [
+    { label: "Facebook", total: 2, posted: 1 },
+    { label: "TikTok", total: 1, posted: 1 },
+  ]);
+
+  const facebook = calculatePublicationStats(
+    publications,
+    dateWindow,
+    "Facebook",
+  );
+  assert.deepEqual(facebook.postTypeRows, [
+    { label: "Ảnh Post", total: 1, posted: 0 },
+    { label: "Reels", total: 1, posted: 1 },
+  ]);
+  assert.equal(facebook.dailyRows.length, 11);
+  assert.deepEqual(
+    facebook.dailyRows
+      .filter((row) => row.total)
+      .map((row) => ({
+        day: row.date.getDate(),
+        total: row.total,
+        posted: row.posted,
+      })),
+    [{ day: 10, total: 2, posted: 1 }],
   );
 });

@@ -5,7 +5,8 @@ export type DashboardFiltersProps = {
   dateTo: string;
   backlogDate: string;
   hasDateFilter: boolean;
-  reportDepartment: ReportDepartment | null;
+  department: ReportDepartment;
+  showBacklogDate?: boolean;
   onDateFromChange: (value: string) => void;
   onDateToChange: (value: string) => void;
   onBacklogDateChange: (value: string) => void;
@@ -18,7 +19,8 @@ export function DashboardFilters({
   dateTo,
   backlogDate,
   hasDateFilter,
-  reportDepartment,
+  department,
+  showBacklogDate = true,
   onDateFromChange,
   onDateToChange,
   onBacklogDateChange,
@@ -50,15 +52,17 @@ export function DashboardFilters({
           onChange={(event) => onDateToChange(event.target.value)}
         />
       </label>
-      <label className="backlogFilter">
-        Mốc task tồn
-        <input
-          type="date"
-          value={backlogDate}
-          onChange={(event) => onBacklogDateChange(event.target.value)}
-        />
-        <small>Độc lập · mặc định hôm nay</small>
-      </label>
+      {showBacklogDate && (
+        <label className="backlogFilter">
+          Mốc task tồn
+          <input
+            type="date"
+            value={backlogDate}
+            onChange={(event) => onBacklogDateChange(event.target.value)}
+          />
+          <small>Độc lập · mặc định hôm nay</small>
+        </label>
+      )}
       <button
         className="clearButton"
         disabled={!hasDateFilter}
@@ -69,7 +73,7 @@ export function DashboardFilters({
       <button
         type="button"
         className="saveReportButton"
-        onClick={() => onOpenSaveReport(reportDepartment ?? "media")}
+        onClick={() => onOpenSaveReport(department)}
       >
         <span>＋</span> Lưu báo cáo
       </button>

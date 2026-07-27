@@ -15,6 +15,8 @@ import {
   FEEDBACK_REQUIRED_HEADERS,
   NORM_COLUMNS,
   NORM_REQUIRED_HEADERS,
+  PUBLICATION_COLUMNS,
+  PUBLICATION_REQUIRED_HEADERS,
   TASK_COLUMNS,
   TASK_REQUIRED_HEADERS,
 } from "../features/dashboard/data/excel/workbookSchema";
@@ -114,6 +116,35 @@ test("keeps the norm sheet optional and validates it when present", () => {
   );
 });
 
+test("keeps the publication sheet optional and validates it when present", () => {
+  const workbook = new ExcelJS.Workbook();
+  addSheet(
+    workbook,
+    DASHBOARD_SHEETS.tasks,
+    TASK_REQUIRED_HEADERS,
+  );
+  addSheet(
+    workbook,
+    DASHBOARD_SHEETS.feedback,
+    FEEDBACK_REQUIRED_HEADERS,
+  );
+  addSheet(
+    workbook,
+    DASHBOARD_SHEETS.publications,
+    PUBLICATION_REQUIRED_HEADERS.filter(
+      (header) => header !== PUBLICATION_COLUMNS.platform,
+    ),
+  );
+
+  assert.throws(
+    () => validateDashboardWorkbook(workbook),
+    (error: unknown) =>
+      error instanceof WorkbookValidationError &&
+      error.message.includes(DASHBOARD_SHEETS.publications) &&
+      error.message.includes(PUBLICATION_COLUMNS.platform),
+  );
+});
+
 test("parses validated task and feedback sheets", () => {
   const workbook = new ExcelJS.Workbook();
   const taskSheet = addSheet(
@@ -182,6 +213,7 @@ test("parses validated task and feedback sheets", () => {
   const daily = calculateDailyTaskChart(
     {
       fileName: "date-format-fixture.xlsx",
+      publications: [],
       tasks,
       feedback,
       norms: [],
@@ -280,6 +312,7 @@ test("restores yyyy/mm/dd even when it exposes invalid task chronology", () => {
   const daily = calculateDailyTaskChart(
     {
       fileName: "date-order-regression.xlsx",
+      publications: [],
       tasks,
       feedback: [],
       norms: [],

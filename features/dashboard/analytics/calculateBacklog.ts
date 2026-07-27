@@ -10,6 +10,7 @@ function isEligibleAtCutoff(task: Task, cutoff: Date) {
   return Boolean(
     task.startDate &&
     task.startDate <= cutoff &&
+    !normalizedKey(task.outsource) &&
     !EXCLUDED_BACKLOG_STAGES.has(normalizedKey(task.stage)),
   );
 }
@@ -38,7 +39,10 @@ function isBacklogAtCutoff(task: Task, cutoff: Date) {
   return notInspectedAtCutoff || status === "in progress";
 }
 
-/** Task tồn từ trước ngày mốc: dùng cho KPI, Aging và trạng thái task tồn. */
+/**
+ * Task tồn từ trước ngày mốc (< ngày xét):
+ * dùng cho KPI, Aging và trạng thái task tồn.
+ */
 export function isBacklogTask(task: Task, cutoff: Date) {
   return Boolean(
     isBacklogAtCutoff(task, cutoff) &&
@@ -47,7 +51,7 @@ export function isBacklogTask(task: Task, cutoff: Date) {
   );
 }
 
-/** Task còn tồn đến hết ngày: dùng cho đường Tồn cuối ngày. */
+/** Task còn tồn đến hết ngày (<= ngày xét): dùng cho đường Tồn cuối ngày. */
 export function isEndOfDayBacklogTask(task: Task, cutoff: Date) {
   return isBacklogAtCutoff(task, cutoff);
 }

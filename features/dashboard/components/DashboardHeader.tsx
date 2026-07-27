@@ -5,9 +5,10 @@ export type DashboardHeaderProps = {
   fileRef: RefObject<HTMLInputElement | null>;
   loading: boolean;
   hasData: boolean;
-  reportDepartment: ReportDepartment | null;
+  activeDepartment: ReportDepartment;
   reportCounts: Record<ReportDepartment, number>;
-  onToggleDepartment: (department: ReportDepartment) => void;
+  onDepartmentChange: (department: ReportDepartment) => void;
+  onOpenSavedReports: (department: ReportDepartment) => void;
   onFileSelected: (file: File) => void;
 };
 
@@ -15,11 +16,15 @@ export function DashboardHeader({
   fileRef,
   loading,
   hasData,
-  reportDepartment,
+  activeDepartment,
   reportCounts,
-  onToggleDepartment,
+  onDepartmentChange,
+  onOpenSavedReports,
   onFileSelected,
 }: DashboardHeaderProps) {
+  const departmentName =
+    activeDepartment === "media" ? "Media" : "Kinh doanh";
+
   return (
     <header className="dashboardHeader">
       <div className="dashboardBrand">
@@ -29,21 +34,31 @@ export function DashboardHeader({
           <small>Task performance dashboard</small>
         </div>
       </div>
-      <nav className="reportNavigation" aria-label="Báo cáo theo phòng ban">
-        <span>Báo cáo theo phòng ban</span>
+      <nav className="reportNavigation" aria-label="Dashboard theo phòng ban">
+        <span>Phòng ban</span>
         {(["media", "business"] as const).map((department) => (
           <button
             key={department}
             type="button"
-            className={reportDepartment === department ? "active" : ""}
-            onClick={() => onToggleDepartment(department)}
+            className={activeDepartment === department ? "active" : ""}
+            aria-pressed={activeDepartment === department}
+            onClick={() => onDepartmentChange(department)}
           >
             {department === "media" ? "Media" : "Kinh doanh"}
-            <small>{reportCounts[department]}</small>
           </button>
         ))}
       </nav>
       <button
+        type="button"
+        className="savedReportsButton"
+        aria-label={`Báo cáo đã lưu của ${departmentName}`}
+        onClick={() => onOpenSavedReports(activeDepartment)}
+      >
+        Báo cáo đã lưu
+        <small>{reportCounts[activeDepartment]}</small>
+      </button>
+      <button
+        type="button"
         className="uploadButton"
         onClick={() => fileRef.current?.click()}
       >

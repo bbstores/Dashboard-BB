@@ -7,10 +7,6 @@ import "./sections/collection/collection.css";
 import "./sections/publication/publication.css";
 import "./sections/sla/sla.css";
 import "./styles/dialogs.css";
-import {
-  formatDistributionValue,
-  formatNumber,
-} from "@/shared/formatting/format";
 import { DashboardFilters } from "./components/DashboardFilters";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { DashboardHero } from "./components/DashboardHero";
@@ -26,11 +22,12 @@ import { useDashboardDialogs } from "./hooks/useDashboardDialogs";
 import { useDashboardFilters } from "./hooks/useDashboardFilters";
 import { useDashboardStats } from "./hooks/useDashboardStats";
 import { useWorkbookData } from "./hooks/useWorkbookData";
-import type { ReportDepartment, SavedReport, Task } from "./model/types";
+import type { ReportDepartment, SavedReport } from "./model/types";
 import { useSavedReports } from "./saved-reports/useSavedReports";
 import { CollectionSection } from "./sections/CollectionSection";
 import { OverviewSection } from "./sections/OverviewSection";
 import { PeopleSection } from "./sections/PeopleSection";
+import { PostingSection } from "./sections/PostingSection";
 import { PublicationSection } from "./sections/PublicationSection";
 import { SlaSection } from "./sections/SlaSection";
 export function Dashboard() {
@@ -56,7 +53,7 @@ export function Dashboard() {
       ? metrics.withoutOutsource
       : metrics.all;
   }
-  function toggleReportDepartment(department: ReportDepartment) {
+  function toggleSavedReports(department: ReportDepartment) {
     dialogs.setReportDepartment(
       dialogs.reportDepartment === department ? null : department,
     );
@@ -72,32 +69,10 @@ export function Dashboard() {
     dialogs.finishSaveReport(dialogs.saveDepartment);
   }
   function applySavedReport(report: SavedReport) {
+    dialogs.setDashboardDepartment(report.department);
     filters.applySavedReportFilters(report.filters);
     dialogs.setReportDepartment(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function openPercentileTasks(
-    label: string,
-    note: string,
-    observations: Array<{ task: Task; value: number }>,
-  ) {
-    const selected = dialogs.percentileDetail;
-    if (!selected) return;
-    dialogs.setDetail({
-      title: `${selected.title} · ${label}`,
-      subtitle: `${note} · ${formatNumber(observations.length)} task`,
-      tasks: observations.map((observation) => observation.task),
-      taskMetric: {
-        label: selected.metricLabel,
-        value: (task) =>
-          observations.find(
-            (observation) => observation.task === task,
-          )?.value ?? 0,
-        format: (value) =>
-          formatDistributionValue(value, selected.unit),
-      },
-    });
   }
 
   const reportCounts = reports.savedReports.reduce<Record<ReportDepartment, number>>(
@@ -115,12 +90,16 @@ export function Dashboard() {
           fileRef={workbook.fileRef}
           loading={workbook.loading}
           hasData={Boolean(workbook.data)}
-          reportDepartment={dialogs.reportDepartment}
+          activeDepartment={dialogs.dashboardDepartment}
           reportCounts={reportCounts}
-          onToggleDepartment={toggleReportDepartment}
+          onDepartmentChange={dialogs.setDashboardDepartment}
+          onOpenSavedReports={toggleSavedReports}
           onFileSelected={(file) => void workbook.loadWorkbook(file)}
         />
-        <DashboardHero data={workbook.data} />
+        <DashboardHero
+          data={workbook.data}
+          department={dialogs.dashboardDepartment}
+        />
         {workbook.error && (
           <div className="errorBanner">{workbook.error}</div>
         )}
@@ -137,128 +116,147 @@ export function Dashboard() {
               dateTo={filters.dateTo}
               backlogDate={filters.backlogDate}
               hasDateFilter={filters.dateWindow.hasFilter}
-              reportDepartment={dialogs.reportDepartment}
+              department={dialogs.dashboardDepartment}
+              showBacklogDate={dialogs.dashboardDepartment === "media"}
               onDateFromChange={filters.setDateFrom}
               onDateToChange={filters.setDateTo}
               onBacklogDateChange={filters.setBacklogDate}
               onClearDateFilter={filters.clearDateWindow}
               onOpenSaveReport={dialogs.openSaveReport}
             />
-            <DashboardKpis
-              viewModel={{
-                selectedTasks: analytics.selectedTasks,
-                startedInWindow: analytics.startedInWindow,
-                inspectionCarryIntoWindow:
-                  analytics.inspectionCarryIntoWindow,
-                completionCarryIntoWindow:
-                  analytics.completionCarryIntoWindow,
-                missingEither: analytics.missingEither,
-                missingStartOnly: analytics.missingStartOnly,
-                missingAssigneeOnly: analytics.missingAssigneeOnly,
-                missingBoth: analytics.missingBoth,
-                backlogTasks: analytics.backlogTasks,
-                backlogAttentionTasks: analytics.backlogAttentionTasks,
-                backlogTotal: analytics.backlogTotal,
-              }}
-              allTasks={workbook.data.tasks}
-              backlogDate={filters.backlogDate}
-              onOpenDetail={dialogs.setDetail}
-            />
+            {dialogs.dashboardDepartment === "media" ? (
+              <>
+                <DashboardKpis
+                  viewModel={{
+                    selectedTasks: analytics.selectedTasks,
+                    startedInWindow: analytics.startedInWindow,
+                    inspectionCarryIntoWindow:
+                      analytics.inspectionCarryIntoWindow,
+                    completionCarryIntoWindow:
+                      analytics.completionCarryIntoWindow,
+                    missingEither: analytics.missingEither,
+                    missingStartOnly: analytics.missingStartOnly,
+                    missingAssigneeOnly: analytics.missingAssigneeOnly,
+                    missingBoth: analytics.missingBoth,
+                    backlogTasks: analytics.backlogTasks,
+                    backlogAttentionTasks:
+                      analytics.backlogAttentionTasks,
+                    backlogTotal: analytics.backlogTotal,
+                  }}
+                  allTasks={workbook.data.tasks}
+                  backlogDate={filters.backlogDate}
+                  onOpenDetail={dialogs.setDetail}
+                />
 
-            <section className="dashboardGrid">
-              <OverviewSection
-                viewModel={{
-                  reportingDate: analytics.reportingDate,
-                  types: analytics.types,
-                  selectedTasks: analytics.selectedTasks,
-                  metrics: {
-                    status: chartMetrics("status"),
-                    handoff: chartMetrics("handoff"),
-                    overall: chartMetrics("overall"),
-                    stages: chartMetrics("stages"),
-                    outsource: chartMetrics("outsource"),
-                  },
-                }}
-                scopes={{
-                  status: filters.chartScope("status"),
-                  handoff: filters.chartScope("handoff"),
-                  overall: filters.chartScope("overall"),
-                  stages: filters.chartScope("stages"),
-                  outsource: filters.chartScope("outsource"),
-                }}
-                excludeOutsource={filters.pieExcludeOutsource}
-                onScopeChange={filters.setChartScope}
-                onExcludeOutsourceChange={
-                  filters.setChartExcludeOutsource
-                }
-                onOpenDetail={dialogs.setDetail}
-              />
-              <PeopleSection
-                viewModel={{
-                  leaderboard: analytics.leaderboard,
-                  staffRows: analytics.staffRows,
-                  selectedFeedback: analytics.selectedFeedback,
-                  taskByCode: analytics.taskByCode,
-                  dailyTaskChart,
-                }}
-                leaderboardUnit={filters.leaderboardUnit}
-                dailyAssignee={filters.dailyAssignee}
-                onLeaderboardUnitChange={filters.setLeaderboardUnit}
-                onDailyAssigneeChange={filters.setDailyAssignee}
-                onOpenDetail={dialogs.setDetail}
-              />
-              <CollectionSection
-                viewModel={{
-                  months: analytics.months,
-                  collection: analytics.collection,
-                  collectionDone: analytics.collectionDone,
-                  collectionTasks: analytics.collectionTasks,
-                  childCollections: analytics.childCollections,
-                }}
-                collectionMonth={filters.collectionMonth}
-                onCollectionMonthChange={filters.setCollectionMonth}
-                onOpenDetail={dialogs.setDetail}
-              />
-              <PublicationSection
-                videoMetrics={chartMetrics("videoPublications")}
-                graphicMetrics={chartMetrics("graphicPublications")}
-                videoScope={filters.chartScope("videoPublications")}
-                graphicScope={filters.chartScope("graphicPublications")}
-                videoExcludeOutsource={Boolean(
-                  filters.pieExcludeOutsource.videoPublications,
-                )}
-                graphicExcludeOutsource={Boolean(
-                  filters.pieExcludeOutsource.graphicPublications,
-                )}
-                onScopeChange={filters.setChartScope}
-                onExcludeOutsourceChange={
-                  filters.setChartExcludeOutsource
-                }
-                onOpenDetail={dialogs.setDetail}
-              />
-              <SlaSection
-                viewModel={{
-                  sla: analytics.sla,
-                  reportingDate: analytics.reportingDate,
-                  backlog: analytics.backlog,
-                  backlogTasks: analytics.backlogTasks,
-                }}
-                backlogDate={filters.backlogDate}
-                onOpenDetail={dialogs.setDetail}
-                onOpenPercentile={dialogs.setPercentileDetail}
-              />
-            </section>
+                <section className="dashboardGrid">
+                  <OverviewSection
+                    viewModel={{
+                      reportingDate: analytics.reportingDate,
+                      types: analytics.types,
+                      selectedTasks: analytics.selectedTasks,
+                      metrics: {
+                        status: chartMetrics("status"),
+                        handoff: chartMetrics("handoff"),
+                        overall: chartMetrics("overall"),
+                        stages: chartMetrics("stages"),
+                        outsource: chartMetrics("outsource"),
+                      },
+                    }}
+                    scopes={{
+                      status: filters.chartScope("status"),
+                      handoff: filters.chartScope("handoff"),
+                      overall: filters.chartScope("overall"),
+                      stages: filters.chartScope("stages"),
+                      outsource: filters.chartScope("outsource"),
+                    }}
+                    excludeOutsource={filters.pieExcludeOutsource}
+                    onScopeChange={filters.setChartScope}
+                    onExcludeOutsourceChange={
+                      filters.setChartExcludeOutsource
+                    }
+                    onOpenDetail={dialogs.setDetail}
+                  />
+                  <PeopleSection
+                    viewModel={{
+                      leaderboard: analytics.leaderboard,
+                      staffRows: analytics.staffRows,
+                      selectedFeedback: analytics.selectedFeedback,
+                      taskByCode: analytics.taskByCode,
+                      dailyTaskChart,
+                    }}
+                    leaderboardUnit={filters.leaderboardUnit}
+                    dailyAssignee={filters.dailyAssignee}
+                    onLeaderboardUnitChange={
+                      filters.setLeaderboardUnit
+                    }
+                    onDailyAssigneeChange={filters.setDailyAssignee}
+                    onOpenDetail={dialogs.setDetail}
+                  />
+                  <CollectionSection
+                    viewModel={{
+                      months: analytics.months,
+                      collection: analytics.collection,
+                      collectionDone: analytics.collectionDone,
+                      collectionTasks: analytics.collectionTasks,
+                      childCollections: analytics.childCollections,
+                    }}
+                    collectionMonth={filters.collectionMonth}
+                    onCollectionMonthChange={
+                      filters.setCollectionMonth
+                    }
+                    onOpenDetail={dialogs.setDetail}
+                  />
+                  <PublicationSection
+                    videoMetrics={chartMetrics("videoPublications")}
+                    graphicMetrics={chartMetrics("graphicPublications")}
+                    videoScope={filters.chartScope("videoPublications")}
+                    graphicScope={filters.chartScope(
+                      "graphicPublications",
+                    )}
+                    videoExcludeOutsource={Boolean(
+                      filters.pieExcludeOutsource.videoPublications,
+                    )}
+                    graphicExcludeOutsource={Boolean(
+                      filters.pieExcludeOutsource.graphicPublications,
+                    )}
+                    onScopeChange={filters.setChartScope}
+                    onExcludeOutsourceChange={
+                      filters.setChartExcludeOutsource
+                    }
+                    onOpenDetail={dialogs.setDetail}
+                  />
+                  <SlaSection
+                    viewModel={{
+                      sla: analytics.sla,
+                      reportingDate: analytics.reportingDate,
+                      backlog: analytics.backlog,
+                      backlogTasks: analytics.backlogTasks,
+                    }}
+                    backlogDate={filters.backlogDate}
+                    onOpenDetail={dialogs.setDetail}
+                    onOpenPercentile={dialogs.setPercentileDetail}
+                  />
+                </section>
 
-            <section className="logicNote">
-              <span>LOGIC TEST V0.1</span>
-              <p>
-                &quot;Tổng task trong kỳ&quot; là hợp khử trùng của task có
-                Ngày Bắt Đầu, Ngày Kiểm Duyệt carry-in hoặc Ngày Hoàn Thành
-                carry-in nằm trong bộ lọc. Ngày Kiểm Duyệt phản ánh mốc người
-                làm bàn giao; Ngày Hoàn Thành phản ánh toàn quy trình và có
-                ảnh hưởng của người đánh giá.
-              </p>
-            </section>
+                <section className="logicNote">
+                  <span>LOGIC TEST V0.1</span>
+                  <p>
+                    &quot;Tổng task trong kỳ&quot; là hợp khử trùng của task
+                    có Ngày Bắt Đầu, Ngày Kiểm Duyệt carry-in hoặc Ngày Hoàn
+                    Thành carry-in nằm trong bộ lọc. Ngày Kiểm Duyệt phản ánh
+                    mốc người làm bàn giao; Ngày Hoàn Thành phản ánh toàn quy
+                    trình và có ảnh hưởng của người đánh giá.
+                  </p>
+                </section>
+              </>
+            ) : (
+              <section className="dashboardGrid businessDashboard">
+                <PostingSection
+                  publications={workbook.data.publications}
+                  dateWindow={filters.dateWindow}
+                />
+              </section>
+            )}
           </>
         )}
 
@@ -272,7 +270,7 @@ export function Dashboard() {
           <PercentileDialog
             detail={dialogs.percentileDetail}
             onClose={() => dialogs.setPercentileDetail(null)}
-            onSelect={openPercentileTasks}
+            onSelect={dialogs.openPercentileTasks}
           />
         )}
         {dialogs.reportDepartment && (

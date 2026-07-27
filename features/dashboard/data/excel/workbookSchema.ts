@@ -1,5 +1,6 @@
 export const DASHBOARD_SHEETS = {
   tasks: "2.6 Tasklist",
+  publications: "2.7 Đăng Bài",
   feedback: "2.9 Lịch sử phản hồi Task",
   norms: "1.7 Định Mức",
 } as const;
@@ -31,6 +32,15 @@ export const FEEDBACK_COLUMNS = {
   assignee: "Người Làm Task",
 } as const;
 
+export const PUBLICATION_COLUMNS = {
+  id: "ID Task",
+  scheduledAt: "Ngày Đăng",
+  platform: "Nền Tảng",
+  posted: "Đã Đăng",
+  postType: "Loại Bài Đăng",
+  title: "Tên Bài Đăng",
+} as const;
+
 export const NORM_COLUMNS = {
   formatType: "Tên Định Dạng",
   recordMinutes: "Thời gian Record (Phút)",
@@ -43,4 +53,7 @@ export const TASK_REQUIRED_HEADERS = Object.values(TASK_COLUMNS).filter(
   (header) => header !== TASK_COLUMNS.receivedStartDate,
 );
 export const FEEDBACK_REQUIRED_HEADERS = Object.values(FEEDBACK_COLUMNS);
+export const PUBLICATION_REQUIRED_HEADERS = Object.values(
+  PUBLICATION_COLUMNS,
+);
 export const NORM_REQUIRED_HEADERS = Object.values(NORM_COLUMNS);

@@ -3,12 +3,15 @@ import { afterEach, test } from "node:test";
 import { JSDOM } from "jsdom";
 import { calculateDashboardStats } from "../features/dashboard/analytics/calculateDashboardStats";
 import { DashboardFilters } from "../features/dashboard/components/DashboardFilters";
+import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { DashboardKpis } from "../features/dashboard/components/DashboardKpis";
 import { DailyTaskChart } from "../features/dashboard/components/DailyTaskChart";
 import { DetailDrawer } from "../features/dashboard/dialogs/DetailDrawer";
 import { PercentileDialog } from "../features/dashboard/dialogs/PercentileDialog";
+import { PostingSection } from "../features/dashboard/sections/PostingSection";
 import type {
   DetailView,
+  PublicationPost,
   ReportDepartment,
   Task,
 } from "../features/dashboard/model/types";
@@ -69,7 +72,7 @@ test("DashboardFilters emits typed filter actions", () => {
       dateTo=""
       backlogDate="2026-07-27"
       hasDateFilter
-      reportDepartment="business"
+      department="business"
       onDateFromChange={(value) => changes.push(`from:${value}`)}
       onDateToChange={(value) => changes.push(`to:${value}`)}
       onBacklogDateChange={(value) => changes.push(`backlog:${value}`)}
@@ -105,12 +108,76 @@ test("DashboardFilters emits typed filter actions", () => {
   assert.equal(saveDepartment, "business");
 });
 
+test("DashboardHeader switches dashboard and opens saved reports separately", () => {
+  let activeDepartment: ReportDepartment = "media";
+  let openedReports: ReportDepartment | null = null;
+  const inputRef = { current: null };
+
+  render(
+    <DashboardHeader
+      fileRef={inputRef}
+      loading={false}
+      hasData
+      activeDepartment="media"
+      reportCounts={{ media: 2, business: 3 }}
+      onDepartmentChange={(department) => {
+        activeDepartment = department;
+      }}
+      onOpenSavedReports={(department) => {
+        openedReports = department;
+      }}
+      onFileSelected={() => undefined}
+    />,
+  );
+
+  const mediaTab = screen.getByRole("button", { name: "Media" });
+  const businessTab = screen.getByRole("button", {
+    name: "Kinh doanh",
+  });
+  assert.equal(mediaTab.getAttribute("aria-pressed"), "true");
+  assert.equal(businessTab.getAttribute("aria-pressed"), "false");
+
+  fireEvent.click(businessTab);
+  assert.equal(activeDepartment, "business");
+  assert.equal(openedReports, null);
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Báo cáo đã lưu của Media",
+    }),
+  );
+  assert.equal(openedReports, "media");
+});
+
+test("DashboardFilters hides task backlog date on business dashboard", () => {
+  render(
+    <DashboardFilters
+      dateFrom=""
+      dateTo=""
+      backlogDate="2026-07-27"
+      hasDateFilter={false}
+      department="business"
+      showBacklogDate={false}
+      onDateFromChange={() => undefined}
+      onDateToChange={() => undefined}
+      onBacklogDateChange={() => undefined}
+      onClearDateFilter={() => undefined}
+      onOpenSaveReport={() => undefined}
+    />,
+  );
+
+  assert.equal(screen.queryByLabelText(/Mốc task tồn/), null);
+  assert.ok(screen.getByLabelText("Từ ngày"));
+  assert.ok(screen.getByLabelText("Đến ngày"));
+});
+
 test("KPI selection opens the matching detail data", () => {
   const selectedTask = task();
   selectedTask.receivedStartDate = new Date(2026, 6, 20, 9, 5);
   const stats = calculateDashboardStats(
     {
       fileName: "anonymous.xlsx",
+      publications: [],
       tasks: [selectedTask],
       feedback: [],
       norms: [],
@@ -175,6 +242,7 @@ test("attention KPI opens invalid Done chronology as standalone detail", () => {
   const stats = calculateDashboardStats(
     {
       fileName: "attention.xlsx",
+      publications: [],
       tasks: [backlogTask, attentionTask],
       feedback: [],
       norms: [],
@@ -286,4 +354,63 @@ test("monthly daily chart keeps all 31 date labels readable", () => {
   assert.ok(screen.getByText("01/07"));
   assert.ok(screen.getByText("02/07"));
   assert.ok(screen.getByText("31/07"));
+});
+
+test("posting section filters child charts by platform", () => {
+  const publications: PublicationPost[] = [
+    {
+      id: "POST-1",
+      scheduledAt: new Date(2026, 6, 10, 9),
+      platform: "Facebook",
+      posted: true,
+      postType: "Reels",
+      title: "Facebook reel",
+    },
+    {
+      id: "POST-2",
+      scheduledAt: new Date(2026, 6, 11, 9),
+      platform: "Facebook",
+      posted: false,
+      postType: "Ảnh Post",
+      title: "Facebook photo",
+    },
+    {
+      id: "POST-3",
+      scheduledAt: new Date(2026, 6, 11, 10),
+      platform: "TikTok",
+      posted: true,
+      postType: "Video",
+      title: "TikTok video",
+    },
+  ];
+  const { container } = render(
+    <PostingSection
+      publications={publications}
+      dateWindow={{
+        from: new Date(2026, 6, 10),
+        to: new Date(2026, 6, 11, 23, 59, 59, 999),
+        hasFilter: true,
+      }}
+    />,
+  );
+
+  const platformSelect = screen.getByLabelText(
+    "Chọn nền tảng đăng bài",
+  );
+  fireEvent.change(platformSelect, {
+    target: { value: "Facebook" },
+  });
+
+  assert.ok(
+    screen.getByRole("heading", { name: "Facebook" }),
+  );
+  assert.ok(screen.getByText("Ảnh Post"));
+  assert.ok(screen.getByText("Reels"));
+  assert.equal(screen.queryByText("Video"), null);
+  assert.match(
+    container
+      .querySelector(".postingTrend.total")
+      ?.getAttribute("d") ?? "",
+    /\bC\b/,
+  );
 });

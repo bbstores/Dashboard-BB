@@ -36,6 +36,17 @@
   display: grid; place-items: center; color: var(--green); background: var(--lime); font-size: 8px;
 }
 
+.savedReportsButton {
+  height: 34px; padding: 0 11px; border: 1px solid var(--line); border-radius: 999px;
+  display: flex; align-items: center; gap: 7px; color: var(--green); background: transparent;
+  white-space: nowrap; font-size: 10px; font-weight: 800;
+}
+
+.savedReportsButton small {
+  min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px;
+  display: grid; place-items: center; color: var(--green); background: var(--lime); font-size: 8px;
+}
+
 .dashboardBrand { display: flex; align-items: center; gap: 12px; }
 
 .dashboardBrand > span {
@@ -169,6 +180,8 @@
   gap: 16px;
 }
 
+.businessDashboard { grid-template-columns: 1fr; }
+
 .fullWidth { grid-column: 1 / -1; }
 
 .logicNote {
@@ -202,6 +215,7 @@
   .dashboardBrand small { display: none; }
   .reportNavigation { order: 3; width: 100%; margin: 8px 0 0; flex-wrap: wrap; }
   .reportNavigation > span { width: 100%; }
+  .savedReportsButton { margin-left: auto; }
   .dashboardHeader { flex-wrap: wrap; }
   .uploadButton { padding: 11px 13px; }
   .dashboardHero h1 { font-size: 42px; }

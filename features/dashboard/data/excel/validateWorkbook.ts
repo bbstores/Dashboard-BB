@@ -2,6 +2,7 @@ import {
   DASHBOARD_SHEETS,
   FEEDBACK_REQUIRED_HEADERS,
   NORM_REQUIRED_HEADERS,
+  PUBLICATION_REQUIRED_HEADERS,
   TASK_REQUIRED_HEADERS,
 } from "./workbookSchema";
 import { missingHeaders } from "./worksheetUtils";
@@ -9,6 +10,7 @@ import { missingHeaders } from "./worksheetUtils";
 export type DashboardWorksheets = {
   taskSheet: import("exceljs").Worksheet;
   feedbackSheet: import("exceljs").Worksheet;
+  publicationSheet?: import("exceljs").Worksheet;
   normSheet?: import("exceljs").Worksheet;
 };
 
@@ -49,13 +51,27 @@ export function validateDashboardWorkbook(
 ): DashboardWorksheets {
   const taskSheet = requireSheet(workbook, DASHBOARD_SHEETS.tasks);
   const feedbackSheet = requireSheet(workbook, DASHBOARD_SHEETS.feedback);
+  const publicationSheet = workbook.getWorksheet(
+    DASHBOARD_SHEETS.publications,
+  );
   const normSheet = workbook.getWorksheet(DASHBOARD_SHEETS.norms);
 
   validateRequiredHeaders(taskSheet, TASK_REQUIRED_HEADERS);
   validateRequiredHeaders(feedbackSheet, FEEDBACK_REQUIRED_HEADERS);
+  if (publicationSheet) {
+    validateRequiredHeaders(
+      publicationSheet,
+      PUBLICATION_REQUIRED_HEADERS,
+    );
+  }
   if (normSheet) {
     validateRequiredHeaders(normSheet, NORM_REQUIRED_HEADERS);
   }
 
-  return { taskSheet, feedbackSheet, normSheet };
+  return {
+    taskSheet,
+    feedbackSheet,
+    publicationSheet,
+    normSheet,
+  };
 }

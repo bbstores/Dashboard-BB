@@ -35,10 +35,20 @@ export type Feedback = {
   assignee: string;
 };
 
+export type PublicationPost = {
+  id: string;
+  scheduledAt: Date | null;
+  platform: string;
+  posted: boolean;
+  postType: string;
+  title: string;
+};
+
 export type DashboardData = {
   tasks: Task[];
   feedback: Feedback[];
   norms: WorkNorm[];
+  publications: PublicationPost[];
   fileName: string;
 };
 

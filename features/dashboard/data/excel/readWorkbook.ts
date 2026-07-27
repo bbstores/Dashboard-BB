@@ -1,6 +1,7 @@
 import type { DashboardData } from "../../model/types";
 import { parseFeedback } from "./parseFeedback";
 import { parseNorms } from "./parseNorms";
+import { parsePublications } from "./parsePublications";
 import { parseTasks } from "./parseTasks";
 import { validateDashboardWorkbook } from "./validateWorkbook";
 
@@ -11,7 +12,12 @@ export async function readDashboardWorkbook(
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(await file.arrayBuffer());
 
-  const { taskSheet, feedbackSheet, normSheet } =
+  const {
+    taskSheet,
+    feedbackSheet,
+    publicationSheet,
+    normSheet,
+  } =
     validateDashboardWorkbook(workbook);
   const tasks = parseTasks(taskSheet);
 
@@ -19,6 +25,9 @@ export async function readDashboardWorkbook(
     tasks,
     feedback: parseFeedback(feedbackSheet),
     norms: normSheet ? parseNorms(normSheet) : [],
+    publications: publicationSheet
+      ? parsePublications(publicationSheet)
+      : [],
     fileName: file.name,
   };
 }

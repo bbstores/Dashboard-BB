@@ -5,7 +5,6 @@ import {
 } from "@/shared/date/dateUtils";
 import {
   assigneeNames,
-  normalize,
 } from "../model/taskUtils";
 import type {
   DashboardData,
@@ -77,10 +76,8 @@ export function calculateDailyTaskChart(
         dateKey(task.inspectionDate) === key &&
         startOfDay(task.startDate) < startOfDay(task.inspectionDate),
     );
-    const backlogTasks = tasks.filter(
-      (task) =>
-        !normalize(task.outsource) &&
-        isEndOfDayBacklogTask(task, cutoff),
+    const backlogTasks = tasks.filter((task) =>
+      isEndOfDayBacklogTask(task, cutoff),
     );
 
     rows.push({

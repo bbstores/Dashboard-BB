@@ -16,11 +16,9 @@ export const COLORS = [
 ];
 
 export const EXCLUDED_BACKLOG_STATUSES = new Set([
-  "done",
   "archived",
   "pending / cancel",
   "pending/cancel",
-  "kinh doanh done",
 ]);
 
 export const KPI_START_DATE = new Date(2026, 5, 15);
