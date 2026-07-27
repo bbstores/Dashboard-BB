@@ -228,6 +228,17 @@ test("separates backlog rules from invalid Done chronology", () => {
         startDate: date(10),
         inspectionDate: null,
       }),
+      task("NO-INSPECTION-OPEN", {
+        status: "To Do",
+        startDate: date(10),
+        inspectionDate: null,
+      }),
+      task("TRAINNING-OPEN", {
+        stage: "Trainning",
+        status: "To Do",
+        startDate: date(10),
+        inspectionDate: null,
+      }),
       task("INSPECTED-IN-PROGRESS", {
         status: "In Progress",
         startDate: date(10),
@@ -250,6 +261,11 @@ test("separates backlog rules from invalid Done chronology", () => {
         startDate: date(10),
         inspectionDate: null,
       }),
+      task("ARCHIVED", {
+        status: "Archived",
+        startDate: date(10),
+        inspectionDate: null,
+      }),
     ],
   };
 
@@ -260,7 +276,7 @@ test("separates backlog rules from invalid Done chronology", () => {
   });
   assert.deepEqual(
     chart.rows[0].backlogTasks.map((item) => item.code),
-    ["NO-INSPECTION-DONE", "INSPECTED-IN-PROGRESS"],
+    ["NO-INSPECTION-OPEN", "INSPECTED-IN-PROGRESS"],
   );
   assert.deepEqual(
     chart.rows[0].attentionTasks.map((item) => item.code),

@@ -108,6 +108,15 @@ function restoreYearFirstDateOrder(date: Date) {
   return swapped ?? date;
 }
 
+function isMidnight(date: Date) {
+  return (
+    date.getHours() === 0 &&
+    date.getMinutes() === 0 &&
+    date.getSeconds() === 0 &&
+    date.getMilliseconds() === 0
+  );
+}
+
 function dateTimeFromNumberFormat(
   value: unknown,
   numberFormat: string,
@@ -128,9 +137,9 @@ function dateTimeFromNumberFormat(
     dayIndex > yearIndex;
 
   if (!isYearFirst) return null;
-  // The source exporter parses yyyy/mm/dd as yyyy/dd/mm before writing the
-  // Excel serial. Restore the original literal order for ambiguous dates.
-  return monthIndex < dayIndex
+  // Timed values are already materialized by ExcelJS in yyyy/mm/dd order.
+  // Only midnight values from this exporter carry the known dd/mm swap.
+  return monthIndex < dayIndex && isMidnight(date)
     ? restoreYearFirstDateOrder(date)
     : date;
 }

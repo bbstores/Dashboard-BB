@@ -220,6 +220,24 @@ test("normalizes supported Excel date values", () => {
   );
   assert.equal(formatDateTime(typedExcelDate), "16:25 11/05/2026");
 
+  const formattedTimedExcelDate = excelDateTime({
+    result: new Date(Date.UTC(2026, 5, 11, 17, 36)),
+    numberFormat: "yyyy/mm/dd hh:mm",
+  });
+  assert.equal(
+    formatDateTime(formattedTimedExcelDate),
+    "17:36 11/06/2026",
+  );
+
+  const formattedMidnightExcelDate = excelDateTime({
+    result: new Date(Date.UTC(2026, 10, 6, 0, 0)),
+    numberFormat: "yyyy/mm/dd hh:mm",
+  });
+  assert.equal(
+    formatDateTime(formattedMidnightExcelDate),
+    "00:00 11/06/2026",
+  );
+
   assert.equal(excelDateTime("11/05/2026 16:25"), null);
   assert.equal(excelDate("2026/05/11"), null);
   assert.equal(excelDateTime("2026/02/30 09:00"), null);

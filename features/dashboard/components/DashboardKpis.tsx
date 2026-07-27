@@ -96,7 +96,7 @@ export function DashboardKpis({
           })
         }
       >
-        Chưa kiểm duyệt hoặc vẫn In Progress
+        Chưa kiểm duyệt và chưa Done, hoặc vẫn In Progress
       </KpiCard>
     </section>
   );

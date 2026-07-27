@@ -4,9 +4,14 @@ import { normalizedKey } from "../model/taskUtils";
 import type { Task } from "../model/types";
 
 const FINISHED_STATUSES = new Set(["done", "kinh doanh done"]);
+const EXCLUDED_BACKLOG_STAGES = new Set(["trainning", "training"]);
 
 function isEligibleAtCutoff(task: Task, cutoff: Date) {
-  return Boolean(task.startDate && task.startDate <= cutoff);
+  return Boolean(
+    task.startDate &&
+    task.startDate <= cutoff &&
+    !EXCLUDED_BACKLOG_STAGES.has(normalizedKey(task.stage)),
+  );
 }
 
 export function isBacklogAttentionTask(task: Task, cutoff: Date) {
@@ -26,9 +31,7 @@ export function isBacklogAttentionTask(task: Task, cutoff: Date) {
 export function isBacklogTask(task: Task, cutoff: Date) {
   if (!isEligibleAtCutoff(task, cutoff)) return false;
   const status = normalizedKey(task.status);
-  if (EXCLUDED_BACKLOG_STATUSES.has(status) && status !== "done") {
-    return false;
-  }
+  if (EXCLUDED_BACKLOG_STATUSES.has(status)) return false;
   if (isBacklogAttentionTask(task, cutoff)) return false;
   const notInspectedAtCutoff =
     !task.inspectionDate || task.inspectionDate > cutoff;
