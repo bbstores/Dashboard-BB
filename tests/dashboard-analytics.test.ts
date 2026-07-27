@@ -289,6 +289,12 @@ test("separates backlog rules from invalid Done chronology", () => {
         startDate: date(10),
         inspectionDate: null,
       }),
+      task("OUTSOURCE-OPEN", {
+        status: "To Do",
+        startDate: date(10),
+        inspectionDate: null,
+        outsource: "Agency",
+      }),
     ],
   };
 
@@ -310,7 +316,12 @@ test("separates backlog rules from invalid Done chronology", () => {
     collectionMonth: "",
     backlogDate: "2026-07-20",
   });
-  assert.equal(stats.backlogTotal, 2);
+  assert.equal(stats.backlogTotal, 3);
+  assert.ok(
+    stats.backlogTasks.some(
+      (item) => item.code === "OUTSOURCE-OPEN",
+    ),
+  );
   assert.deepEqual(
     stats.backlogAttentionTasks.map((item) => item.code),
     ["INVALID-DONE"],
