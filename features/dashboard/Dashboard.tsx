@@ -55,7 +55,7 @@ import {
   outsourceName,
 } from "./model/taskUtils";
 
-import { parseTasks, parseFeedback, parseNorms } from "./data/excelParser";
+import { readDashboardWorkbook } from "./data/excel/readWorkbook";
 
 import { dashboardHelp } from "./help/helpContent";
 import { HelpProvider } from "./help/HelpProvider";
@@ -176,23 +176,7 @@ export function Dashboard() {
     setLoading(true);
     setError("");
     try {
-      const ExcelJS = await import("exceljs");
-      const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(await file.arrayBuffer());
-      const taskSheet = workbook.getWorksheet("2.6 Tasklist");
-      const feedbackSheet = workbook.getWorksheet("2.9 Lịch sử phản hồi Task");
-      const normSheet = workbook.getWorksheet("1.7 Định Mức");
-      if (!taskSheet || !feedbackSheet) {
-        throw new Error(
-          "Không tìm thấy sheet '2.6 Tasklist' hoặc '2.9 Lịch sử phản hồi Task'.",
-        );
-      }
-
-      const tasks = parseTasks(taskSheet);
-      const feedback = parseFeedback(feedbackSheet);
-      const norms = normSheet ? parseNorms(normSheet) : [];
-
-      setData({ tasks, feedback, norms, fileName: file.name });
+      setData(await readDashboardWorkbook(file));
       setCollectionMonth("");
       setDailyAssignee("");
     } catch (reason) {

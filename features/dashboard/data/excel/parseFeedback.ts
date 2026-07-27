@@ -1,0 +1,27 @@
+import { normalize } from "../../model/taskUtils";
+import type { Feedback } from "../../model/types";
+import { excelDate } from "./excelDate";
+import { FEEDBACK_COLUMNS } from "./workbookSchema";
+import { headersFor, valueAt } from "./worksheetUtils";
+
+export function parseFeedback(
+  sheet: import("exceljs").Worksheet,
+): Feedback[] {
+  const headers = headersFor(sheet);
+  const feedback: Feedback[] = [];
+  for (let index = 2; index <= sheet.actualRowCount; index += 1) {
+    const row = sheet.getRow(index);
+    const taskCode = normalize(
+      valueAt(row, headers, FEEDBACK_COLUMNS.taskCode),
+    );
+    if (!taskCode) continue;
+    feedback.push({
+      taskCode,
+      at: excelDate(valueAt(row, headers, FEEDBACK_COLUMNS.at)),
+      assignee: normalize(
+        valueAt(row, headers, FEEDBACK_COLUMNS.assignee),
+      ),
+    });
+  }
+  return feedback;
+}

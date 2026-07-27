@@ -35,6 +35,9 @@ test("reads the workbook locally without embedding employee data", async () => {
 
   assert.match(dashboardSource, /type="file"/);
   assert.match(dashboardSource, /file\.arrayBuffer\(\)/);
+  assert.match(dashboardSource, /readDashboardWorkbook/);
+  assert.match(dashboardSource, /validateDashboardWorkbook/);
+  assert.match(dashboardSource, /thiếu cột bắt buộc/);
   assert.match(dashboardSource, /"2\.6 Tasklist"|'2\.6 Tasklist'/);
   assert.match(dashboardSource, /"2\.9 Lịch sử phản hồi Task"|'2\.9 Lịch sử phản hồi Task'/);
   assert.doesNotMatch(dashboardSource, /\bfetch\s*\(/);
