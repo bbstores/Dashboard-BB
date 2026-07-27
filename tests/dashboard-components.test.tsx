@@ -156,3 +156,41 @@ test("KPI selection opens the matching detail data", () => {
   );
   assert.equal(closed, true);
 });
+
+test("DetailDrawer puts invalid Done chronology in an attention group", () => {
+  const backlogTask = task();
+  const attentionTask = {
+    ...task(),
+    code: "ANON-ATTENTION-001",
+    title: "Invalid chronology",
+    status: "Done",
+    startDate: new Date(2026, 6, 20),
+    inspectionDate: new Date(2026, 6, 19),
+    completedDate: new Date(2026, 6, 19),
+  };
+
+  render(
+    <DetailDrawer
+      detail={{
+        title: "Tồn cuối ngày",
+        subtitle: "20/07/2026",
+        tasks: [backlogTask],
+        attentionTasks: [attentionTask],
+      }}
+      onClose={() => undefined}
+    />,
+  );
+
+  assert.ok(screen.getByText("Dữ liệu cần lưu ý"));
+  assert.ok(
+    screen.getByText(
+      "1 task Done có Ngày Bắt Đầu sau Ngày Kiểm Duyệt",
+    ),
+  );
+  const backlogCode = screen.getByText("ANON-DETAIL-001");
+  const attentionCode = screen.getByText("ANON-ATTENTION-001");
+  assert.ok(
+    backlogCode.compareDocumentPosition(attentionCode) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+});

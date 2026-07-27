@@ -19,6 +19,7 @@ type DashboardKpisViewModel = Pick<
   | "missingAssigneeOnly"
   | "missingBoth"
   | "backlogTasks"
+  | "backlogAttentionTasks"
   | "backlogTotal"
 >;
 
@@ -91,10 +92,11 @@ export function DashboardKpis({
             title: "Task tồn tại mốc chọn",
             subtitle: `Các task tồn tính đến ${formatDate(inputDate(backlogDate))}`,
             tasks: viewModel.backlogTasks,
+            attentionTasks: viewModel.backlogAttentionTasks,
           })
         }
       >
-        Không tính Done, Archived, Pending/Cancel, Kinh Doanh Done
+        Chưa kiểm duyệt hoặc vẫn In Progress
       </KpiCard>
     </section>
   );

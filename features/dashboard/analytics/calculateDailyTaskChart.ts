@@ -5,19 +5,16 @@ import {
 } from "@/shared/date/dateUtils";
 import {
   assigneeNames,
-  normalizedKey,
 } from "../model/taskUtils";
 import type {
   DashboardData,
   DailyTaskDatum,
   DateWindow,
 } from "../model/types";
-
-const CANCELLED_STATUSES = new Set([
-  "archived",
-  "pending / cancel",
-  "pending/cancel",
-]);
+import {
+  isBacklogAttentionTask,
+  isBacklogTask,
+} from "./calculateBacklog";
 
 export function calculateDailyTaskChart(
   data: DashboardData,
@@ -82,12 +79,11 @@ export function calculateDailyTaskChart(
         dateKey(task.inspectionDate) === key &&
         startOfDay(task.startDate) < startOfDay(task.inspectionDate),
     );
-    const backlogTasks = tasks.filter(
-      (task) =>
-        task.startDate &&
-        task.startDate <= cutoff &&
-        (!task.inspectionDate || task.inspectionDate > cutoff) &&
-        !CANCELLED_STATUSES.has(normalizedKey(task.status)),
+    const backlogTasks = tasks.filter((task) =>
+      isBacklogTask(task, cutoff),
+    );
+    const attentionTasks = tasks.filter((task) =>
+      isBacklogAttentionTask(task, cutoff),
     );
 
     rows.push({
@@ -100,6 +96,7 @@ export function calculateDailyTaskChart(
       handedSameDayTasks,
       handedBacklogTasks,
       backlogTasks,
+      attentionTasks,
     });
   }
   return { rows, assignees };

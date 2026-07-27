@@ -62,6 +62,7 @@ export type DailyTaskDatum = {
   handedSameDayTasks: Task[];
   handedBacklogTasks: Task[];
   backlogTasks: Task[];
+  attentionTasks: Task[];
 };
 
 export type StaffTimeOfDayRow = {
@@ -102,6 +103,7 @@ export type DetailView = {
   title: string;
   subtitle: string;
   tasks?: Task[];
+  attentionTasks?: Task[];
   feedback?: Array<Feedback & { task?: Task }>;
   taskMetric?: {
     label: string;

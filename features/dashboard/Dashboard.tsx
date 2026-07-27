@@ -157,6 +157,7 @@ export function Dashboard() {
                 missingAssigneeOnly: analytics.missingAssigneeOnly,
                 missingBoth: analytics.missingBoth,
                 backlogTasks: analytics.backlogTasks,
+                backlogAttentionTasks: analytics.backlogAttentionTasks,
                 backlogTotal: analytics.backlogTotal,
               }}
               allTasks={workbook.data.tasks}

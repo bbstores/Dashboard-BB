@@ -53,9 +53,9 @@ export function dashboardHelp(title: string): DashboardHelp {
     },
     "Task tồn tại mốc chọn": {
       purpose: "Cho biết lượng task còn tồn trước ngày mốc độc lập.",
-      calculation: "Ngày Bắt Đầu ≤ mốc và trạng thái hiện tại không thuộc Done, Archived, Pending/Cancel, Kinh Doanh Done. Task chưa có ngày bắt đầu không nằm trong chỉ số này.",
-      example: "Mốc 01/08, task bắt đầu 30/07 và đang In Progress được tính; task không có ngày bắt đầu không được tính.",
-      note: "Chỉ số dùng trạng thái hiện tại, không tái dựng trạng thái lịch sử tại ngày mốc.",
+      calculation: "Ngày Bắt Đầu ≤ mốc và thỏa một trong hai điều kiện: chưa có Ngày Kiểm Duyệt tại mốc, hoặc đã có Ngày Kiểm Duyệt nhưng trạng thái hiện tại vẫn là In Progress. Done có Ngày Bắt Đầu sau Ngày Kiểm Duyệt được tách khỏi tổng và đưa vào Dữ liệu cần lưu ý.",
+      example: "Mốc 01/08: task chưa kiểm duyệt được tính tồn; task đã kiểm duyệt nhưng còn In Progress vẫn tính tồn; task Done có thứ tự ngày sai được đưa xuống nhóm lưu ý.",
+      note: "Archived và Pending/Cancel không tính vào tồn. Task chưa có ngày bắt đầu không nằm trong chỉ số này.",
     },
     "Leaderboard thời gian": {
       purpose: "Xếp hạng tải công việc dự kiến theo nhân sự.",
@@ -102,9 +102,9 @@ export function dashboardHelp(title: string): DashboardHelp {
     },
     "Trạng thái task tồn": {
       purpose: "Cơ cấu các task tồn tại mốc theo trạng thái hiện tại.",
-      calculation: "Trước tiên lấy task có Ngày Bắt Đầu ≤ mốc và loại trạng thái hoàn tất; sau đó nhóm số task còn lại theo trạng thái.",
-      example: "Có 40 task tồn, trong đó 18 In Progress → lát In Progress là 18 và 45%.",
-      note: "Task chưa có ngày bắt đầu không nằm trong task tồn; trạng thái dùng là trạng thái hiện tại.",
+      calculation: "Lấy task có Ngày Bắt Đầu ≤ mốc, chưa có Ngày Kiểm Duyệt tại mốc hoặc đã kiểm duyệt nhưng trạng thái vẫn In Progress; sau đó nhóm theo trạng thái hiện tại.",
+      example: "Có 40 task tồn theo điều kiện kiểm duyệt, trong đó 18 In Progress → lát In Progress là 18 và 45%.",
+      note: "Done có Ngày Bắt Đầu sau Ngày Kiểm Duyệt được tách thành Dữ liệu cần lưu ý, không tính vào biểu đồ task tồn.",
     },
     "Task theo Type": {
       purpose: "Biểu đồ số lượng task được phân loại theo cột Type.",

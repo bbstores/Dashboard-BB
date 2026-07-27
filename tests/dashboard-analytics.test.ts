@@ -215,3 +215,66 @@ test("calculates the daily chart as a pure function", () => {
     ["T3"],
   );
 });
+
+test("separates backlog rules from invalid Done chronology", () => {
+  const cutoff = new Date(2026, 6, 20);
+  const data: DashboardData = {
+    fileName: "backlog-rules.xlsx",
+    feedback: [],
+    norms: [],
+    tasks: [
+      task("NO-INSPECTION-DONE", {
+        status: "Done",
+        startDate: date(10),
+        inspectionDate: null,
+      }),
+      task("INSPECTED-IN-PROGRESS", {
+        status: "In Progress",
+        startDate: date(10),
+        inspectionDate: date(12),
+      }),
+      task("INVALID-DONE", {
+        status: "Done",
+        startDate: date(16),
+        inspectionDate: date(11),
+        completedDate: date(11),
+      }),
+      task("VALID-DONE", {
+        status: "Done",
+        startDate: date(10),
+        inspectionDate: date(11),
+        completedDate: date(11),
+      }),
+      task("CANCELLED", {
+        status: "Pending/Cancel",
+        startDate: date(10),
+        inspectionDate: null,
+      }),
+    ],
+  };
+
+  const chart = calculateDailyTaskChart(data, "", {
+    from: cutoff,
+    to: cutoff,
+    hasFilter: true,
+  });
+  assert.deepEqual(
+    chart.rows[0].backlogTasks.map((item) => item.code),
+    ["NO-INSPECTION-DONE", "INSPECTED-IN-PROGRESS"],
+  );
+  assert.deepEqual(
+    chart.rows[0].attentionTasks.map((item) => item.code),
+    ["INVALID-DONE"],
+  );
+
+  const stats = calculateDashboardStats(data, {
+    dateWindow: { from: null, to: null, hasFilter: false },
+    collectionMonth: "",
+    backlogDate: "2026-07-20",
+  });
+  assert.equal(stats.backlogTotal, 2);
+  assert.deepEqual(
+    stats.backlogAttentionTasks.map((item) => item.code),
+    ["INVALID-DONE"],
+  );
+});

@@ -1,6 +1,122 @@
-import type { DetailView } from "../model/types";
+import type { DetailView, Task } from "../model/types";
 import { formatNumber, formatDate, formatDateTime } from "@/shared/formatting/format";
 import { normalizedKey } from "../model/taskUtils";
+
+function TaskDetailRow({
+  task,
+  index,
+  detail,
+}: {
+  task: Task;
+  index: number;
+  detail: DetailView;
+}) {
+  const hasBusinessApproval = Boolean(task.businessApprovalDate);
+  const milestones = [
+    {
+      label: "Bắt đầu",
+      date: formatDate(task.startDate),
+      reached: Boolean(task.startDate),
+    },
+    {
+      label: "Kiểm duyệt",
+      date: formatDateTime(task.inspectionDate),
+      reached: Boolean(task.inspectionDate),
+    },
+    {
+      label: "Hoàn thành",
+      date: formatDateTime(task.completedDate),
+      reached:
+        Boolean(task.completedDate) ||
+        ["done", "kinh doanh done"].includes(
+          normalizedKey(task.status),
+        ),
+    },
+    ...(hasBusinessApproval
+      ? [
+          {
+            label: "Kinh doanh duyệt",
+            date: formatDateTime(task.businessApprovalDate),
+            reached: true,
+          },
+        ]
+      : []),
+  ];
+  const reachedIndex = milestones.reduce(
+    (last, milestone, milestoneIndex) =>
+      milestone.reached ? milestoneIndex : last,
+    -1,
+  );
+  const progress =
+    milestones.length > 1 && reachedIndex >= 0
+      ? (reachedIndex / (milestones.length - 1)) * 100
+      : 0;
+
+  return (
+    <tr>
+      <td data-label="STT" className="detailRowNumber">
+        {index + 1}
+      </td>
+      <td data-label="Task" className="taskIdentity">
+        <strong>{task.code}</strong>
+        <span>{task.title || "Chưa có tên task"}</span>
+      </td>
+      <td data-label="Assignee" className="assigneeCell">
+        {task.assignee || "Chưa có assignee"}
+      </td>
+      <td data-label="Trạng thái">
+        <span className="statusPill">
+          {task.status || "Chưa xác định"}
+        </span>
+      </td>
+      <td
+        data-label="Timeline"
+        className={`taskTimeline stages${milestones.length}`}
+      >
+        <b
+          className="taskTimelineTrack"
+          aria-hidden="true"
+          style={{
+            background: `linear-gradient(to right, #174f3d 0 ${progress}%, #d9ddd4 ${progress}% 100%)`,
+          }}
+        />
+        {milestones.map((milestone, milestoneIndex) => (
+          <span
+            className={milestone.reached ? "reachedMilestone" : ""}
+            key={milestone.label}
+          >
+            <i>{String(milestoneIndex + 1).padStart(2, "0")}</i>
+            <small>{milestone.label}</small>
+            <strong>{milestone.date}</strong>
+          </span>
+        ))}
+      </td>
+      <td data-label="Phút dự kiến" className="minutesCell">
+        <strong>{formatNumber(task.expectedMinutes)}</strong>
+        <small>phút</small>
+      </td>
+      {detail.taskMetric && (
+        <td
+          data-label={detail.taskMetric.label}
+          className="calculatedMetricCell"
+        >
+          <strong>
+            {detail.taskMetric.format(
+              detail.taskMetric.value(task),
+            )}
+          </strong>
+          {detail.taskMetric.describe && (
+            <small>
+              {detail.taskMetric.describe(
+                detail.taskMetric.value(task),
+              )}
+            </small>
+          )}
+        </td>
+      )}
+    </tr>
+  );
+}
 
 export function DetailDrawer({
   detail,
@@ -10,6 +126,8 @@ export function DetailDrawer({
   onClose: () => void;
 }) {
   const count = detail.feedback?.length ?? detail.tasks?.length ?? 0;
+  const attentionTasks = detail.attentionTasks ?? [];
+  const hasRecords = count > 0 || attentionTasks.length > 0;
   return (
     <div className="detailOverlay" role="presentation" onMouseDown={onClose}>
       <aside
@@ -79,116 +197,41 @@ export function DetailDrawer({
                 </tr>
               </thead>
               <tbody>
-                {(detail.tasks ?? []).map((task, index) => {
-                  const hasBusinessApproval = Boolean(task.businessApprovalDate);
-                  const milestones = [
-                    {
-                      label: "Bắt đầu",
-                      date: formatDate(task.startDate),
-                      reached: Boolean(task.startDate),
-                    },
-                    {
-                      label: "Kiểm duyệt",
-                      date: formatDateTime(task.inspectionDate),
-                      reached: Boolean(task.inspectionDate),
-                    },
-                    {
-                      label: "Hoàn thành",
-                      date: formatDateTime(task.completedDate),
-                      reached:
-                        Boolean(task.completedDate) ||
-                        ["done", "kinh doanh done"].includes(
-                          normalizedKey(task.status),
-                        ),
-                    },
-                    ...(hasBusinessApproval
-                      ? [
-                          {
-                            label: "Kinh doanh duyệt",
-                            date: formatDateTime(task.businessApprovalDate),
-                            reached: true,
-                          },
-                        ]
-                      : []),
-                  ];
-                  const reachedIndex = milestones.reduce(
-                    (last, milestone, milestoneIndex) =>
-                      milestone.reached ? milestoneIndex : last,
-                    -1,
-                  );
-                  const progress =
-                    milestones.length > 1 && reachedIndex >= 0
-                      ? (reachedIndex / (milestones.length - 1)) * 100
-                      : 0;
-                  return (
-                  <tr key={`${task.code}-${index}`}>
-                    <td data-label="STT" className="detailRowNumber">
-                      {index + 1}
-                    </td>
-                    <td data-label="Task" className="taskIdentity">
-                      <strong>{task.code}</strong>
-                      <span>{task.title || "Chưa có tên task"}</span>
-                    </td>
-                    <td data-label="Assignee" className="assigneeCell">
-                      {task.assignee || "Chưa có assignee"}
-                    </td>
-                    <td data-label="Trạng thái">
-                      <span className="statusPill">
-                        {task.status || "Chưa xác định"}
+                {(detail.tasks ?? []).map((task, index) => (
+                  <TaskDetailRow
+                    detail={detail}
+                    index={index}
+                    key={`${task.code}-${index}`}
+                    task={task}
+                  />
+                ))}
+              </tbody>
+              {attentionTasks.length > 0 && (
+                <tbody className="attentionTaskGroup">
+                  <tr className="attentionTaskHeading">
+                    <td colSpan={detail.taskMetric ? 7 : 6}>
+                      <strong>Dữ liệu cần lưu ý</strong>
+                      <span>
+                        {formatNumber(attentionTasks.length)} task Done có
+                        Ngày Bắt Đầu sau Ngày Kiểm Duyệt
                       </span>
                     </td>
-                    <td
-                      data-label="Timeline"
-                      className={`taskTimeline stages${milestones.length}`}
-                    >
-                      <b
-                        className="taskTimelineTrack"
-                        aria-hidden="true"
-                        style={{
-                          background: `linear-gradient(to right, #174f3d 0 ${progress}%, #d9ddd4 ${progress}% 100%)`,
-                        }}
-                      />
-                      {milestones.map((milestone, milestoneIndex) => (
-                        <span
-                          className={milestone.reached ? "reachedMilestone" : ""}
-                          key={milestone.label}
-                        >
-                          <i>{String(milestoneIndex + 1).padStart(2, "0")}</i>
-                          <small>{milestone.label}</small>
-                          <strong>{milestone.date}</strong>
-                        </span>
-                      ))}
-                    </td>
-                    <td data-label="Phút dự kiến" className="minutesCell">
-                      <strong>{formatNumber(task.expectedMinutes)}</strong>
-                      <small>phút</small>
-                    </td>
-                    {detail.taskMetric && (
-                      <td
-                        data-label={detail.taskMetric.label}
-                        className="calculatedMetricCell"
-                      >
-                        <strong>
-                          {detail.taskMetric.format(
-                            detail.taskMetric.value(task),
-                          )}
-                        </strong>
-                        {detail.taskMetric.describe && (
-                          <small>
-                            {detail.taskMetric.describe(
-                              detail.taskMetric.value(task),
-                            )}
-                          </small>
-                        )}
-                      </td>
-                    )}
                   </tr>
-                  );
-                })}
-              </tbody>
+                  {attentionTasks.map((task, index) => (
+                    <TaskDetailRow
+                      detail={detail}
+                      index={(detail.tasks?.length ?? 0) + index}
+                      key={`attention-${task.code}-${index}`}
+                      task={task}
+                    />
+                  ))}
+                </tbody>
+              )}
             </table>
           )}
-          {!count && <p className="detailEmpty">Không có bản ghi phù hợp.</p>}
+          {!hasRecords && (
+            <p className="detailEmpty">Không có bản ghi phù hợp.</p>
+          )}
         </div>
       </aside>
     </div>

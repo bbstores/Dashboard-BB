@@ -93,8 +93,8 @@ export function DailyTaskChart({
               title: "Task theo ngày",
               purpose: "Theo dõi đồng thời lượng việc đi vào, lượng việc thoát ra và backlog cuối từng ngày.",
               objective: "Nếu đường tồn tăng liên tục trong khi số bàn giao thấp hơn số được giao, nhóm đang tích lũy quá tải.",
-              calculation: "Được giao theo Ngày Bắt Đầu; bàn giao theo Ngày Kiểm Duyệt. Cột bàn giao tách Task trong ngày khi hai mốc cùng ngày và Xử lý task tồn khi Ngày Bắt Đầu trước Ngày Kiểm Duyệt. Tồn cuối ngày là task đã bắt đầu nhưng chưa bàn giao tại 23:59 ngày đó. Archived và Pending/Cancel không tính vào tồn.",
-              example: "Ngày có 8 task bàn giao, trong đó 5 task bắt đầu cùng ngày và 3 task bắt đầu từ ngày trước → cột chồng gồm 5 Task trong ngày và 3 Xử lý task tồn.",
+              calculation: "Được giao theo Ngày Bắt Đầu; bàn giao theo Ngày Kiểm Duyệt. Tồn cuối ngày gồm task chưa có Ngày Kiểm Duyệt tại 23:59 hoặc đã kiểm duyệt nhưng trạng thái hiện tại vẫn In Progress. Done có Ngày Bắt Đầu sau Ngày Kiểm Duyệt được tách thành Dữ liệu cần lưu ý ở cuối bảng chi tiết.",
+              example: "Task đã kiểm duyệt nhưng vẫn In Progress tiếp tục nằm trong tồn. Task Done có thứ tự ngày sai không tăng đường tồn mà xuất hiện ở nhóm lưu ý.",
             }}
           />
         </div>

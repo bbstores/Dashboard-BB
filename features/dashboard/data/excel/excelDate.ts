@@ -103,39 +103,14 @@ function swappedMonthAndDay(date: Date) {
   );
 }
 
-function resolveDateOrder(
-  date: Date,
-  referenceDate: Date | null,
-  preferSwapped = false,
-) {
+function restoreYearFirstDateOrder(date: Date) {
   const swapped = swappedMonthAndDay(date);
-  if (!swapped) return date;
-
-  if (referenceDate) {
-    const rawLag = date.getTime() - referenceDate.getTime();
-    const swappedLag = swapped.getTime() - referenceDate.getTime();
-    const rawIsAfterStart = rawLag >= 0;
-    const swappedIsAfterStart = swappedLag >= 0;
-    if (rawIsAfterStart !== swappedIsAfterStart) {
-      return swappedIsAfterStart ? swapped : date;
-    }
-    if (
-      rawIsAfterStart &&
-      swappedIsAfterStart &&
-      swappedLag < rawLag
-    ) {
-      return swapped;
-    }
-    return date;
-  }
-
-  return preferSwapped ? swapped : date;
+  return swapped ?? date;
 }
 
 function dateTimeFromNumberFormat(
   value: unknown,
   numberFormat: string,
-  referenceDate: Date | null,
 ) {
   const date = excelWallClockDate(value);
   if (!date) return null;
@@ -153,13 +128,16 @@ function dateTimeFromNumberFormat(
     dayIndex > yearIndex;
 
   if (!isYearFirst) return null;
-  return resolveDateOrder(date, referenceDate, dayIndex < monthIndex);
+  // The source exporter parses yyyy/mm/dd as yyyy/dd/mm before writing the
+  // Excel serial. Restore the original literal order for ambiguous dates.
+  return monthIndex < dayIndex
+    ? restoreYearFirstDateOrder(date)
+    : date;
 }
 
 function excelTemporalValue(
   value: unknown,
   parseText: TextDateParser,
-  referenceDate: Date | null = null,
 ): Date | null {
   if (value == null || value === "") return null;
 
@@ -174,31 +152,25 @@ function excelTemporalValue(
       const formattedDate = dateTimeFromNumberFormat(
         candidate.result,
         candidate.numberFormat,
-        referenceDate,
       );
       if (formattedDate) return formattedDate;
     }
     if (candidate.result != null) {
-      return excelTemporalValue(
-        candidate.result,
-        parseText,
-        referenceDate,
-      );
+      return excelTemporalValue(candidate.result, parseText);
     }
     if (candidate.text) {
-      return excelTemporalValue(candidate.text, parseText, referenceDate);
+      return excelTemporalValue(candidate.text, parseText);
     }
     if (candidate.richText) {
       return excelTemporalValue(
         candidate.richText.map((item) => item.text ?? "").join(""),
         parseText,
-        referenceDate,
       );
     }
   }
 
   const excelDate = excelWallClockDate(value);
-  if (excelDate) return resolveDateOrder(excelDate, referenceDate);
+  if (excelDate) return excelDate;
 
   const text = normalize(value);
   return text ? parseText(text) : null;
@@ -212,11 +184,6 @@ export function excelDate(value: unknown): Date | null {
 /** Parses Excel milestones that include a time: yyyy/mm/dd hh:mm. */
 export function excelDateTime(
   value: unknown,
-  referenceDate: Date | null = null,
 ): Date | null {
-  return excelTemporalValue(
-    value,
-    parseYearFirstDateTime,
-    referenceDate,
-  );
+  return excelTemporalValue(value, parseYearFirstDateTime);
 }

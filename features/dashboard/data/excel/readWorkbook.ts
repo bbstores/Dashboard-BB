@@ -17,7 +17,7 @@ export async function readDashboardWorkbook(
 
   return {
     tasks,
-    feedback: parseFeedback(feedbackSheet, tasks),
+    feedback: parseFeedback(feedbackSheet),
     norms: normSheet ? parseNorms(normSheet) : [],
     fileName: file.name,
   };

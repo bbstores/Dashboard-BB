@@ -225,7 +225,7 @@ test("normalizes supported Excel date values", () => {
   assert.equal(excelDateTime("2026/02/30 09:00"), null);
 });
 
-test("resolves swapped Excel date serials against the task start date", () => {
+test("restores yyyy/mm/dd even when it exposes invalid task chronology", () => {
   const workbook = new ExcelJS.Workbook();
   const taskSheet = addSheet(
     workbook,
@@ -237,7 +237,7 @@ test("resolves swapped Excel date serials against the task start date", () => {
     [TASK_COLUMNS.code]: "TSK-DATE-ORDER",
     [TASK_COLUMNS.title]: "Date order regression",
     [TASK_COLUMNS.status]: "Done",
-    [TASK_COLUMNS.startDate]: "11/5/2026",
+    [TASK_COLUMNS.startDate]: "16/5/2026",
   };
   const row = taskSheet.addRow(
     TASK_REQUIRED_HEADERS.map((header) => values[header] ?? ""),
@@ -270,6 +270,10 @@ test("resolves swapped Excel date serials against the task start date", () => {
     { from: july27, to: july27, hasFilter: true },
   );
   assert.equal(daily.rows[0].backlog, 0);
+  assert.deepEqual(
+    daily.rows[0].attentionTasks.map((task) => task.code),
+    ["TSK-DATE-ORDER"],
+  );
 });
 
 test("reads a valid workbook through the client adapter", async () => {

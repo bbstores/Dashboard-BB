@@ -11,7 +11,7 @@ import type {
   DateWindow,
   PieScope,
 } from "../model/types";
-import { calculateBacklog } from "./calculateBacklog";
+import { calculateBacklogBreakdown } from "./calculateBacklog";
 import { calculateCollections } from "./calculateCollections";
 import { calculateLeaderboard } from "./calculateLeaderboard";
 import { calculatePieMetrics } from "./calculatePieMetrics";
@@ -45,7 +45,8 @@ export function calculateDashboardStats(
   );
   const backlogCutoff =
     inputDate(backlogDate, true) ?? endOfDay(new Date());
-  const backlogTasks = calculateBacklog(data.tasks, backlogCutoff);
+  const { backlogTasks, attentionTasks: backlogAttentionTasks } =
+    calculateBacklogBreakdown(data.tasks, backlogCutoff);
   const reportingDate = dateWindow.to ?? endOfDay(new Date());
   const pieTaskSets: Record<PieScope, typeof data.tasks> = {
     started: selection.startedInWindow.map((item) => item.task),
@@ -64,6 +65,7 @@ export function calculateDashboardStats(
     ...staff,
     ...collections,
     backlogTasks,
+    backlogAttentionTasks,
     pieMetrics: calculatePieMetrics(pieTaskSets, reportingDate),
     sla: calculateSla(
       data,

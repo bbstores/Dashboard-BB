@@ -127,6 +127,8 @@ export function PeopleSection({
             title: titleMap[type],
             subtitle: formatDate(row.date),
             tasks: taskMap[type],
+            attentionTasks:
+              type === "backlog" ? row.attentionTasks : undefined,
           });
         }}
       />

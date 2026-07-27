@@ -1,11 +1,9 @@
-import { EXCLUDED_BACKLOG_STATUSES } from "../model/constants";
 import {
   agingBucket,
   assigneeNames,
   cycleBucket,
   groupCount,
   inWindow,
-  normalizedKey,
 } from "../model/taskUtils";
 import {
   evaluateHandoff,
@@ -24,6 +22,7 @@ import {
   operationalMinute,
   percentile,
 } from "@/shared/date/dateUtils";
+import { isBacklogTask } from "./calculateBacklog";
 import { calculateNormMetrics } from "./calculateNormMetrics";
 
 function calculateStaffTimeOfDayRows(
@@ -89,12 +88,7 @@ export function calculateSla(
       (row): row is { task: Task; days: number } => row.days !== null,
     );
   const openAgingRows = data.tasks
-    .filter(
-      (task) =>
-        task.startDate &&
-        task.startDate <= backlogCutoff &&
-        !EXCLUDED_BACKLOG_STATUSES.has(normalizedKey(task.status)),
-    )
+    .filter((task) => isBacklogTask(task, backlogCutoff))
     .map((task) => ({
       task,
       days: calendarDaysBetween(task.startDate, backlogCutoff),
