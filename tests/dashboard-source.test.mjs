@@ -89,3 +89,58 @@ test("delegates dashboard state and persistence to feature hooks", async () => {
   assert.match(savedReportHook, /loadSavedReports/);
   assert.match(savedReportHook, /saveSavedReports/);
 });
+
+test("keeps phase 6 UI sections isolated behind typed view models", async () => {
+  const dashboardSource = await readFile(
+    new URL("../features/dashboard/Dashboard.tsx", import.meta.url),
+    "utf8",
+  );
+  const sectionNames = [
+    "OverviewSection",
+    "PeopleSection",
+    "CollectionSection",
+    "PublicationSection",
+    "SlaSection",
+  ];
+  const sectionSources = await Promise.all(
+    sectionNames.map((name) =>
+      readFile(
+        new URL(`../features/dashboard/sections/${name}.tsx`, import.meta.url),
+        "utf8",
+      ),
+    ),
+  );
+  const dialogNames = [
+    "DetailDrawer",
+    "HelpDialog",
+    "PercentileDialog",
+    "SavedReportsPanel",
+    "SaveReportDialog",
+  ];
+
+  assert.ok(
+    dashboardSource.split("\n").length - 1 <= 300,
+    "Dashboard.tsx should remain an orchestration component under 300 lines",
+  );
+  for (const name of sectionNames) {
+    assert.match(dashboardSource, new RegExp(`<${name}`));
+  }
+  for (const source of sectionSources) {
+    assert.match(source, /viewModel|videoMetrics/);
+    assert.doesNotMatch(
+      source,
+      /readDashboardWorkbook|useWorkbookData|useDashboardStats|exceljs/,
+    );
+  }
+  assert.doesNotMatch(dashboardSource, /\banalytics=\{analytics\}/);
+  await Promise.all(
+    dialogNames.map((name) =>
+      access(
+        new URL(
+          `../features/dashboard/dialogs/${name}.tsx`,
+          import.meta.url,
+        ),
+      ),
+    ),
+  );
+});

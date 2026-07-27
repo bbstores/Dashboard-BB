@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { HelpDialog } from "../components/HelpDialog";
+import { HelpDialog } from "../dialogs/HelpDialog";
 import type { DashboardHelp } from "../model/types";
 import { HelpContext } from "./HelpContext";
 
