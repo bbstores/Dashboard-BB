@@ -103,23 +103,24 @@ function swappedMonthAndDay(date: Date) {
   );
 }
 
-function restoreYearFirstDateOrder(date: Date) {
-  const swapped = swappedMonthAndDay(date);
-  return swapped ?? date;
-}
-
-function isMidnight(date: Date) {
-  return (
-    date.getHours() === 0 &&
-    date.getMinutes() === 0 &&
-    date.getSeconds() === 0 &&
-    date.getMilliseconds() === 0
+function calendarDistance(left: Date, right: Date) {
+  const leftDay = Date.UTC(
+    left.getFullYear(),
+    left.getMonth(),
+    left.getDate(),
   );
+  const rightDay = Date.UTC(
+    right.getFullYear(),
+    right.getMonth(),
+    right.getDate(),
+  );
+  return Math.abs(leftDay - rightDay);
 }
 
 function dateTimeFromNumberFormat(
   value: unknown,
   numberFormat: string,
+  referenceDate?: Date | null,
 ) {
   const date = excelWallClockDate(value);
   if (!date) return null;
@@ -137,16 +138,27 @@ function dateTimeFromNumberFormat(
     dayIndex > yearIndex;
 
   if (!isYearFirst) return null;
-  // Timed values are already materialized by ExcelJS in yyyy/mm/dd order.
-  // Only midnight values from this exporter carry the known dd/mm swap.
-  return monthIndex < dayIndex && isMidnight(date)
-    ? restoreYearFirstDateOrder(date)
+  if (monthIndex > dayIndex || !referenceDate) return date;
+
+  /*
+   * Some legacy rows were serialized by Excel after interpreting an original
+   * yyyy/MM/dd value as yyyy/dd/MM. Other rows in the same columns were stored
+   * correctly, so neither always swapping nor special-casing 00:00 is safe.
+   * The task start date is the stable day-first field in this workbook. When
+   * both month/day orders are valid, use the one nearest to that task date.
+   */
+  const swapped = swappedMonthAndDay(date);
+  if (!swapped) return date;
+  return calendarDistance(swapped, referenceDate) <
+    calendarDistance(date, referenceDate)
+    ? swapped
     : date;
 }
 
 function excelTemporalValue(
   value: unknown,
   parseText: TextDateParser,
+  referenceDate?: Date | null,
 ): Date | null {
   if (value == null || value === "") return null;
 
@@ -161,19 +173,29 @@ function excelTemporalValue(
       const formattedDate = dateTimeFromNumberFormat(
         candidate.result,
         candidate.numberFormat,
+        referenceDate,
       );
       if (formattedDate) return formattedDate;
     }
     if (candidate.result != null) {
-      return excelTemporalValue(candidate.result, parseText);
+      return excelTemporalValue(
+        candidate.result,
+        parseText,
+        referenceDate,
+      );
     }
     if (candidate.text) {
-      return excelTemporalValue(candidate.text, parseText);
+      return excelTemporalValue(
+        candidate.text,
+        parseText,
+        referenceDate,
+      );
     }
     if (candidate.richText) {
       return excelTemporalValue(
         candidate.richText.map((item) => item.text ?? "").join(""),
         parseText,
+        referenceDate,
       );
     }
   }
@@ -193,6 +215,11 @@ export function excelDate(value: unknown): Date | null {
 /** Parses Excel milestones that include a time: yyyy/mm/dd hh:mm. */
 export function excelDateTime(
   value: unknown,
+  referenceDate?: Date | null,
 ): Date | null {
-  return excelTemporalValue(value, parseYearFirstDateTime);
+  return excelTemporalValue(
+    value,
+    parseYearFirstDateTime,
+    referenceDate,
+  );
 }

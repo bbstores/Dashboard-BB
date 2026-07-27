@@ -18,6 +18,14 @@ export function parseTasks(sheet: import("exceljs").Worksheet): Task[] {
     const startDate = excelDate(
       temporalValueAt(row, headers, TASK_COLUMNS.startDate),
     );
+    const receivedStartDate = excelDateTime(
+      temporalValueAt(
+        row,
+        headers,
+        TASK_COLUMNS.receivedStartDate,
+      ),
+      startDate,
+    );
     tasks.push({
       code,
       title: normalize(valueAt(row, headers, TASK_COLUMNS.title)),
@@ -31,14 +39,18 @@ export function parseTasks(sheet: import("exceljs").Worksheet): Task[] {
       status: normalize(valueAt(row, headers, TASK_COLUMNS.status)),
       assignee: normalize(valueAt(row, headers, TASK_COLUMNS.assignee)),
       startDate,
+      receivedStartDate,
       completedDate: excelDateTime(
         temporalValueAt(row, headers, TASK_COLUMNS.completedDate),
+        startDate,
       ),
       inspectionDate: excelDateTime(
         temporalValueAt(row, headers, TASK_COLUMNS.inspectionDate),
+        startDate,
       ),
       businessApprovalDate: excelDateTime(
         temporalValueAt(row, headers, TASK_COLUMNS.businessApprovalDate),
+        startDate,
       ),
       handoffRating: normalize(
         valueAt(row, headers, TASK_COLUMNS.handoffRating),

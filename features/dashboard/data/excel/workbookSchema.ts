@@ -17,6 +17,7 @@ export const TASK_COLUMNS = {
   startDate: "Ngày Bắt Đầu",
   completedDate: "Ngày Hoàn Thành",
   inspectionDate: "Ngày Kiểm Duyệt",
+  receivedStartDate: "Thời Gian Bắt Đầu Nhận Task",
   businessApprovalDate: "Ngày Kinh Doanh Duyệt",
   handoffRating: "Đánh Giá Bàn Giao",
   overallRating: "Đánh Giá Tổng",
@@ -38,6 +39,8 @@ export const NORM_COLUMNS = {
   contentMinutes: "Thời gian Viết Content",
 } as const;
 
-export const TASK_REQUIRED_HEADERS = Object.values(TASK_COLUMNS);
+export const TASK_REQUIRED_HEADERS = Object.values(TASK_COLUMNS).filter(
+  (header) => header !== TASK_COLUMNS.receivedStartDate,
+);
 export const FEEDBACK_REQUIRED_HEADERS = Object.values(FEEDBACK_COLUMNS);
 export const NORM_REQUIRED_HEADERS = Object.values(NORM_COLUMNS);

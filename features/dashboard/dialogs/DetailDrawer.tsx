@@ -15,8 +15,10 @@ function TaskDetailRow({
   const milestones = [
     {
       label: "Bắt đầu",
-      date: formatDate(task.startDate),
-      reached: Boolean(task.startDate),
+      date: task.receivedStartDate
+        ? formatDateTime(task.receivedStartDate)
+        : formatDate(task.startDate),
+      reached: Boolean(task.receivedStartDate || task.startDate),
     },
     {
       label: "Kiểm duyệt",

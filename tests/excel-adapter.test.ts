@@ -232,7 +232,7 @@ test("normalizes supported Excel date values", () => {
   const formattedMidnightExcelDate = excelDateTime({
     result: new Date(Date.UTC(2026, 10, 6, 0, 0)),
     numberFormat: "yyyy/mm/dd hh:mm",
-  });
+  }, new Date(2026, 5, 11));
   assert.equal(
     formatDateTime(formattedMidnightExcelDate),
     "00:00 11/06/2026",
@@ -288,6 +288,57 @@ test("restores yyyy/mm/dd even when it exposes invalid task chronology", () => {
     { from: july27, to: july27, hasFilter: true },
   );
   assert.equal(daily.rows[0].backlog, 0);
+});
+
+test("keeps TSK3163 midnight dates in July and parses task receive time", () => {
+  const workbook = new ExcelJS.Workbook();
+  const headers = [
+    ...TASK_REQUIRED_HEADERS,
+    TASK_COLUMNS.receivedStartDate,
+  ];
+  const taskSheet = addSheet(
+    workbook,
+    DASHBOARD_SHEETS.tasks,
+    headers,
+  );
+  const values: Record<string, ExcelJS.CellValue> = {
+    [TASK_COLUMNS.code]: "TSK3163",
+    [TASK_COLUMNS.status]: "Done",
+    [TASK_COLUMNS.startDate]: "11/07/2026",
+  };
+  const row = taskSheet.addRow(
+    headers.map((header) => values[header] ?? ""),
+  );
+  for (const columnName of [
+    TASK_COLUMNS.inspectionDate,
+    TASK_COLUMNS.receivedStartDate,
+  ]) {
+    const column = headers.indexOf(columnName) + 1;
+    const cell = row.getCell(column);
+    cell.value = new Date(Date.UTC(2026, 6, 11, 0, 0));
+    cell.numFmt = "yyyy/mm/dd hh:mm";
+  }
+  const completionCell = row.getCell(
+    headers.indexOf(TASK_COLUMNS.completedDate) + 1,
+  );
+  completionCell.value = new Date(
+    Date.UTC(2026, 6, 20, 17, 42),
+  );
+  completionCell.numFmt = "yyyy/mm/dd hh:mm";
+
+  const [task] = parseTasks(taskSheet);
+  assert.equal(
+    formatDateTime(task.inspectionDate),
+    "00:00 11/07/2026",
+  );
+  assert.equal(
+    formatDateTime(task.receivedStartDate ?? null),
+    "00:00 11/07/2026",
+  );
+  assert.equal(
+    formatDateTime(task.completedDate),
+    "17:42 20/07/2026",
+  );
 });
 
 test("reads a valid workbook through the client adapter", async () => {

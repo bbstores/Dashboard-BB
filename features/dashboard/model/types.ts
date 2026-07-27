@@ -11,6 +11,7 @@ export type Task = {
   status: string;
   assignee: string;
   startDate: Date | null;
+  receivedStartDate?: Date | null;
   completedDate: Date | null;
   inspectionDate: Date | null;
   businessApprovalDate: Date | null;

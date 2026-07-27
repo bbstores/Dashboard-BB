@@ -105,6 +105,7 @@ test("DashboardFilters emits typed filter actions", () => {
 
 test("KPI selection opens the matching detail data", () => {
   const selectedTask = task();
+  selectedTask.receivedStartDate = new Date(2026, 6, 20, 9, 5);
   const stats = calculateDashboardStats(
     {
       fileName: "anonymous.xlsx",
@@ -151,6 +152,7 @@ test("KPI selection opens the matching detail data", () => {
 
   assert.ok(screen.getByText("ANON-DETAIL-001"));
   assert.ok(screen.getByText("Anonymous detail task"));
+  assert.ok(screen.getByText("09:05 20/07/2026"));
   fireEvent.click(
     screen.getByRole("button", { name: "Đóng chi tiết" }),
   );
