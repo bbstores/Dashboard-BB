@@ -4,6 +4,7 @@ import { JSDOM } from "jsdom";
 import { calculateDashboardStats } from "../features/dashboard/analytics/calculateDashboardStats";
 import { DashboardFilters } from "../features/dashboard/components/DashboardFilters";
 import { DashboardKpis } from "../features/dashboard/components/DashboardKpis";
+import { DailyTaskChart } from "../features/dashboard/components/DailyTaskChart";
 import { DetailDrawer } from "../features/dashboard/dialogs/DetailDrawer";
 import { PercentileDialog } from "../features/dashboard/dialogs/PercentileDialog";
 import type {
@@ -255,4 +256,34 @@ test("P50 selects P1 through P50 and sorts observations ascending", () => {
     selected?.map((observation) => observation.value),
     [1, 2, 3],
   );
+});
+
+test("monthly daily chart keeps all 31 date labels readable", () => {
+  const rows = Array.from({ length: 31 }, (_, index) => ({
+    date: new Date(2026, 6, index + 1),
+    assigned: index,
+    handedSameDay: 0,
+    handedBacklog: 0,
+    backlog: index,
+    assignedTasks: [],
+    handedSameDayTasks: [],
+    handedBacklogTasks: [],
+    backlogTasks: [],
+  }));
+
+  const { container } = render(
+    <DailyTaskChart
+      rows={rows}
+      assignees={[]}
+      assignee=""
+      onAssigneeChange={() => undefined}
+    />,
+  );
+
+  const chart = container.querySelector(".dailyChartSvg");
+  assert.ok(chart);
+  assert.equal(chart.getAttribute("style"), "min-width: 1860px;");
+  assert.ok(screen.getByText("01/07"));
+  assert.ok(screen.getByText("02/07"));
+  assert.ok(screen.getByText("31/07"));
 });

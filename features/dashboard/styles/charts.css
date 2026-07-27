@@ -404,6 +404,7 @@
   margin-top: 18px;
   overflow-x: auto;
   padding-bottom: 4px;
+  scrollbar-gutter: stable;
 }
 .dailyChartSvg {
   display: block;

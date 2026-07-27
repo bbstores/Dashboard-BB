@@ -219,6 +219,19 @@ test("calculates the daily chart as a pure function", () => {
     july16?.backlogTasks.map((item) => item.code),
     ["T3"],
   );
+
+  const monthlyChart = calculateDailyTaskChart(
+    dashboardData,
+    "",
+    {
+      from: new Date(2026, 6, 1),
+      to: new Date(2026, 6, 31),
+      hasFilter: true,
+    },
+  );
+  assert.equal(monthlyChart.rows.length, 31);
+  assert.equal(monthlyChart.rows[0].date.getDate(), 1);
+  assert.equal(monthlyChart.rows[30].date.getDate(), 31);
 });
 
 test("separates backlog rules from invalid Done chronology", () => {

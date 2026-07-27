@@ -19,11 +19,19 @@ export function DailyTaskChart({
     data: DailyTaskDatum,
   ) => void;
 }) {
-  const width = Math.max(860, rows.length * 42);
   const height = 480;
   const left = 48;
   const right = 24;
   const plotPadding = 24;
+  const showsEveryDay = rows.length <= 31;
+  const daySpacing = rows.length > 14 && showsEveryDay ? 58 : 42;
+  const width = Math.max(
+    860,
+    left +
+      right +
+      plotPadding * 2 +
+      Math.max(0, rows.length - 1) * daySpacing,
+  );
   const plotWidth = width - left - right - plotPadding * 2;
   const flowTop = 30;
   const flowHeight = 180;
@@ -59,7 +67,9 @@ export function DailyTaskChart({
       return `${position.x},${position.y}`;
     })
     .join(" ");
-  const labelStep = Math.max(1, Math.ceil(rows.length / 12));
+  const labelStep = showsEveryDay
+    ? 1
+    : Math.max(1, Math.ceil(rows.length / 31));
 
   return (
     <article className="chartCard fullWidth groupPeople dailyTaskCard">
