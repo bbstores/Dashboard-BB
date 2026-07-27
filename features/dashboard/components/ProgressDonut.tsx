@@ -1,4 +1,4 @@
-import { formatNumber } from "../format";
+import { formatNumber } from "@/shared/formatting/format";
 
 export function ProgressDonut({
   title,

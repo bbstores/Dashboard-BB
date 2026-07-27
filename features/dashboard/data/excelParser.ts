@@ -1,7 +1,7 @@
 // ─── Excel Parsing Utilities ────────────────────────────────────────────────
 
-import { normalize, normalizedKey, numberValue } from "./taskUtils";
-import type { Task, Feedback, WorkNorm } from "./types";
+import { normalize, normalizedKey, numberValue } from "../model/taskUtils";
+import type { Task, Feedback, WorkNorm } from "../model/types";
 
 export function excelDate(value: unknown): Date | null {
   if (!value) return null;

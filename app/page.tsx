@@ -1,4 +1,4 @@
-import { Dashboard } from "./dashboard";
+import { Dashboard } from "@/features/dashboard/Dashboard";
 
 export default function Home() {
   return <Dashboard />;

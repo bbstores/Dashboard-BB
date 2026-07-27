@@ -1,6 +1,6 @@
-import type { DetailView } from "../types";
-import { formatNumber, formatDate, formatDateTime } from "../format";
-import { normalizedKey } from "../taskUtils";
+import type { DetailView } from "../model/types";
+import { formatNumber, formatDate, formatDateTime } from "@/shared/formatting/format";
+import { normalizedKey } from "../model/taskUtils";
 
 export function DetailDrawer({
   detail,

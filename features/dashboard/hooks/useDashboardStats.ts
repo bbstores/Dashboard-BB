@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { EXCLUDED_BACKLOG_STATUSES } from "../constants";
+import { EXCLUDED_BACKLOG_STATUSES } from "../model/constants";
 import {
   endOfDay,
   inputDate,
@@ -7,13 +7,13 @@ import {
   calendarDaysBetween,
   percentile,
   operationalMinute,
-} from "../dateUtils";
+} from "@/shared/date/dateUtils";
 import {
   evaluateHandoff,
   evaluateOverall,
   handoffLateMinutes,
   lateMinuteBucket,
-} from "../slaUtils";
+} from "../model/slaUtils";
 import {
   normalizedKey,
   assigneeNames,
@@ -29,8 +29,8 @@ import {
   outsourceName,
   inWindow,
   classifyTask,
-} from "../taskUtils";
-import type { DashboardData, DateWindow, PieScope, StaffTimeOfDayRow, Task } from "../types";
+} from "../model/taskUtils";
+import type { DashboardData, DateWindow, PieScope, StaffTimeOfDayRow, Task } from "../model/types";
 
 export function useDashboardStats(
   data: DashboardData | null,

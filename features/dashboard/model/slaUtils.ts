@@ -8,8 +8,8 @@ import {
   nextWorkingDay,
   sameCalendarDay,
   businessMinutesBetween,
-} from "./dateUtils";
-import { normalizedKey } from "@/app/_lib/taskUtils";
+} from "@/shared/date/dateUtils";
+import { normalizedKey } from "./taskUtils";
 
 export function evaluateHandoff(task: Task, asOf: Date): MilestoneEvaluation {
   if (!task.startDate) {

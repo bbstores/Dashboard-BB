@@ -1,5 +1,5 @@
-import type { DashboardHelp } from "../types";
-import { dashboardHelp } from "../helpContent";
+import type { DashboardHelp } from "../model/types";
+import { dashboardHelp } from "../model/helpContent";
 import { HelpButton } from "./HelpButton";
 
 export function SlaMetricCard({

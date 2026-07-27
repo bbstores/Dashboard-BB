@@ -1,5 +1,5 @@
-import type { DashboardHelp } from "../types";
-import { dashboardObjective } from "../helpContent";
+import type { DashboardHelp } from "../model/types";
+import { dashboardObjective } from "../model/helpContent";
 
 export function HelpDialog({ help, onClose }: { help: DashboardHelp; onClose: () => void }) {
   return (

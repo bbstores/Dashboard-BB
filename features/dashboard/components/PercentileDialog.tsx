@@ -1,7 +1,7 @@
 import { useState } from "react";
-import type { Task, PercentileDetail } from "../types";
-import { percentile } from "../dateUtils";
-import { formatNumber, formatDistributionValue } from "../format";
+import type { Task, PercentileDetail } from "../model/types";
+import { percentile } from "@/shared/date/dateUtils";
+import { formatNumber, formatDistributionValue } from "@/shared/formatting/format";
 
 export function PercentileDialog({
   detail,

@@ -1,6 +1,6 @@
-import type { Task } from "../types";
+import type { Task } from "../model/types";
 import { HelpButton } from "./HelpButton";
-import { dashboardHelp } from "../helpContent";
+import { dashboardHelp } from "../model/helpContent";
 
 export function StaffColumns({
   rows,

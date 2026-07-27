@@ -1,6 +1,6 @@
-import type { DailyTaskDatum } from "../types";
-import { dateKey } from "../dateUtils";
-import { formatDate } from "../format";
+import type { DailyTaskDatum } from "../model/types";
+import { dateKey } from "@/shared/date/dateUtils";
+import { formatDate } from "@/shared/formatting/format";
 import { HelpButton } from "./HelpButton";
 
 export function DailyTaskChart({

@@ -6,7 +6,9 @@ const root = new URL("../", import.meta.url);
 
 test("implements the requested task dashboard sections", async () => {
   const { execSync } = await import("child_process");
-  const dashboardSource = execSync("find app -type f -name '*.ts' -o -name '*.tsx' | xargs cat").toString();
+  const dashboardSource = execSync(
+    "find app features shared -type f \\( -name '*.ts' -o -name '*.tsx' \\) -print0 | xargs -0 cat",
+  ).toString();
 
   for (const expected of [
     "Leaderboard thời gian",
@@ -26,7 +28,9 @@ test("implements the requested task dashboard sections", async () => {
 
 test("reads the workbook locally without embedding employee data", async () => {
   const { execSync } = await import("child_process");
-  const dashboardSource = execSync("find app -type f -name '*.ts' -o -name '*.tsx' | xargs cat").toString();
+  const dashboardSource = execSync(
+    "find app features shared -type f \\( -name '*.ts' -o -name '*.tsx' \\) -print0 | xargs -0 cat",
+  ).toString();
   const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
 
   assert.match(dashboardSource, /type="file"/);

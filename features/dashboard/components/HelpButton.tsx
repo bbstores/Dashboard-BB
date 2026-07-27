@@ -1,8 +1,8 @@
 "use client";
 
 import { useContext } from "react";
-import type { DashboardHelp } from "../types";
-import { HelpContext } from "../../dashboard";
+import type { DashboardHelp } from "../model/types";
+import { HelpContext } from "../Dashboard";
 
 export function HelpButton({ help }: { help: DashboardHelp }) {
   const openHelp = useContext(HelpContext);

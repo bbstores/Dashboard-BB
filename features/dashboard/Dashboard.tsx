@@ -1,6 +1,6 @@
 "use client";
 
-import "./sla.css";
+import "./styles/sla.css";
 import {
   createContext,
   useEffect,
@@ -18,15 +18,15 @@ import type {
   DetailView,
   DashboardHelp,
   PercentileDetail,
-} from "./_lib/types";
+} from "./model/types";
 
-import { SAVED_REPORTS_KEY } from "./_lib/constants";
+import { SAVED_REPORTS_KEY } from "./model/constants";
 
 import {
   inputDate,
   percentile,
   operationalMinute,
-} from "./_lib/dateUtils";
+} from "@/shared/date/dateUtils";
 
 import {
   formatNumber,
@@ -37,14 +37,14 @@ import {
   formatSlaMinutes,
   formatOperationalTime,
   formatDistributionValue,
-} from "./_lib/format";
+} from "@/shared/formatting/format";
 
 import {
   evaluateHandoff,
   evaluateOverall,
   handoffLateMinutes,
   lateMinuteBucket,
-} from "./_lib/slaUtils";
+} from "./model/slaUtils";
 
 import {
   matchesGroup,
@@ -55,27 +55,26 @@ import {
   agingBucket,
   groupCount,
   outsourceName,
-} from "./_lib/taskUtils";
+} from "./model/taskUtils";
 
-import { parseTasks, parseFeedback, parseNorms } from "./_lib/excelParser";
+import { parseTasks, parseFeedback, parseNorms } from "./data/excelParser";
 
-import { dashboardHelp } from "./_lib/helpContent";
-import { useDashboardStats, useDailyTaskChart } from "./_lib/hooks";
+import { dashboardHelp } from "./model/helpContent";
+import { useDashboardStats } from "./hooks/useDashboardStats";
+import { useDailyTaskChart } from "./hooks/useDailyTaskChart";
 
-import {
-  HelpButton,
-  HelpDialog,
-  PieChart,
-  ProgressDonut,
-  CollectionChildrenPanel,
-  HorizontalBars,
-  StaffColumns,
-  StaffTimeOfDayChart,
-  DailyTaskChart,
-  DetailDrawer,
-  SlaMetricCard,
-  PercentileDialog,
-} from "./_lib/components/index";
+import { HelpButton } from "./components/HelpButton";
+import { HelpDialog } from "./components/HelpDialog";
+import { PieChart } from "./components/PieChart";
+import { ProgressDonut } from "./components/ProgressDonut";
+import { CollectionChildrenPanel } from "./components/CollectionPanel";
+import { HorizontalBars } from "./components/HorizontalBars";
+import { StaffColumns } from "./components/StaffColumns";
+import { StaffTimeOfDayChart } from "./components/StaffTimeOfDayChart";
+import { DailyTaskChart } from "./components/DailyTaskChart";
+import { DetailDrawer } from "./components/DetailDrawer";
+import { SlaMetricCard } from "./components/SlaMetricCard";
+import { PercentileDialog } from "./components/PercentileDialog";
 
 // ─── Context ────────────────────────────────────────────────────────────────
 
@@ -487,7 +486,7 @@ export function Dashboard() {
                 </label>
               }
               onSelect={(label, metric = "total") => {
-                const row = analytics!.leaderboard.find(r => r.label === label) as any;
+                const row = analytics!.leaderboard.find((item) => item.label === label);
                 if (!row) return;
 
                 const titleMap = {

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { startOfDay, endOfDay, dateKey } from "../dateUtils";
-import { assigneeNames, normalizedKey } from "../taskUtils";
-import type { DashboardData, DailyTaskDatum, DateWindow } from "../types";
+import { startOfDay, endOfDay, dateKey } from "@/shared/date/dateUtils";
+import { assigneeNames, normalizedKey } from "../model/taskUtils";
+import type { DashboardData, DailyTaskDatum, DateWindow } from "../model/types";
 
 export function useDailyTaskChart(
   data: DashboardData | null,

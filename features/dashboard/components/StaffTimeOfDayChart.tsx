@@ -1,7 +1,7 @@
 import { useState } from "react";
-import type { Task, StaffTimeOfDayRow } from "../types";
-import { operationalDayLag, operationalMinute, percentile } from "../dateUtils";
-import { formatOperationalTime } from "../format";
+import type { Task, StaffTimeOfDayRow } from "../model/types";
+import { operationalDayLag, operationalMinute, percentile } from "@/shared/date/dateUtils";
+import { formatOperationalTime } from "@/shared/formatting/format";
 import { HelpButton } from "./HelpButton";
 
 export function StaffTimeOfDayChart({

@@ -1,5 +1,5 @@
-import type { ChildCollection } from "../types";
-import { formatNumber } from "../format";
+import type { ChildCollection } from "../model/types";
+import { formatNumber } from "@/shared/formatting/format";
 import { MiniProgressDonut } from "./ProgressDonut";
 
 export function CollectionChildrenPanel({
