@@ -44,6 +44,20 @@ export function valueAt(
   return column ? cellValue(row.getCell(column).value) : "";
 }
 
+export function temporalValueAt(
+  row: import("exceljs").Row,
+  headers: HeaderIndex,
+  name: string,
+) {
+  const column = headers.get(normalizedKey(name));
+  if (!column) return "";
+  const cell = row.getCell(column);
+  return {
+    result: cellValue(cell.value),
+    numberFormat: cell.numFmt,
+  };
+}
+
 export function missingHeaders(
   sheet: import("exceljs").Worksheet,
   requiredHeaders: readonly string[],

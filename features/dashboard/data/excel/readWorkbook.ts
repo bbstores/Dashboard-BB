@@ -13,10 +13,11 @@ export async function readDashboardWorkbook(
 
   const { taskSheet, feedbackSheet, normSheet } =
     validateDashboardWorkbook(workbook);
+  const tasks = parseTasks(taskSheet);
 
   return {
-    tasks: parseTasks(taskSheet),
-    feedback: parseFeedback(feedbackSheet),
+    tasks,
+    feedback: parseFeedback(feedbackSheet, tasks),
     norms: normSheet ? parseNorms(normSheet) : [],
     fileName: file.name,
   };

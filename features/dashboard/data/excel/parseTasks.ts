@@ -2,7 +2,11 @@ import { normalize, numberValue } from "../../model/taskUtils";
 import type { Task } from "../../model/types";
 import { excelDate, excelDateTime } from "./excelDate";
 import { TASK_COLUMNS } from "./workbookSchema";
-import { headersFor, valueAt } from "./worksheetUtils";
+import {
+  headersFor,
+  temporalValueAt,
+  valueAt,
+} from "./worksheetUtils";
 
 export function parseTasks(sheet: import("exceljs").Worksheet): Task[] {
   const headers = headersFor(sheet);
@@ -11,6 +15,9 @@ export function parseTasks(sheet: import("exceljs").Worksheet): Task[] {
     const row = sheet.getRow(index);
     const code = normalize(valueAt(row, headers, TASK_COLUMNS.code));
     if (!code) continue;
+    const startDate = excelDate(
+      temporalValueAt(row, headers, TASK_COLUMNS.startDate),
+    );
     tasks.push({
       code,
       title: normalize(valueAt(row, headers, TASK_COLUMNS.title)),
@@ -23,15 +30,18 @@ export function parseTasks(sheet: import("exceljs").Worksheet): Task[] {
       ),
       status: normalize(valueAt(row, headers, TASK_COLUMNS.status)),
       assignee: normalize(valueAt(row, headers, TASK_COLUMNS.assignee)),
-      startDate: excelDate(valueAt(row, headers, TASK_COLUMNS.startDate)),
+      startDate,
       completedDate: excelDateTime(
-        valueAt(row, headers, TASK_COLUMNS.completedDate),
+        temporalValueAt(row, headers, TASK_COLUMNS.completedDate),
+        startDate,
       ),
       inspectionDate: excelDateTime(
-        valueAt(row, headers, TASK_COLUMNS.inspectionDate),
+        temporalValueAt(row, headers, TASK_COLUMNS.inspectionDate),
+        startDate,
       ),
       businessApprovalDate: excelDateTime(
-        valueAt(row, headers, TASK_COLUMNS.businessApprovalDate),
+        temporalValueAt(row, headers, TASK_COLUMNS.businessApprovalDate),
+        startDate,
       ),
       handoffRating: normalize(
         valueAt(row, headers, TASK_COLUMNS.handoffRating),

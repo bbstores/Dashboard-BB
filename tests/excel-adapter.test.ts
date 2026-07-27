@@ -215,12 +215,61 @@ test("normalizes supported Excel date values", () => {
   assert.equal(dateTime?.getMinutes(), 25);
   assert.equal(formatDateTime(dateTime), "16:25 11/05/2026");
 
-  const typedExcelDate = excelDateTime(new Date(2026, 4, 11, 16, 25));
+  const typedExcelDate = excelDateTime(
+    new Date(Date.UTC(2026, 4, 11, 16, 25)),
+  );
   assert.equal(formatDateTime(typedExcelDate), "16:25 11/05/2026");
 
   assert.equal(excelDateTime("11/05/2026 16:25"), null);
   assert.equal(excelDate("2026/05/11"), null);
   assert.equal(excelDateTime("2026/02/30 09:00"), null);
+});
+
+test("resolves swapped Excel date serials against the task start date", () => {
+  const workbook = new ExcelJS.Workbook();
+  const taskSheet = addSheet(
+    workbook,
+    DASHBOARD_SHEETS.tasks,
+    TASK_REQUIRED_HEADERS,
+  );
+
+  const values: Record<string, ExcelJS.CellValue> = {
+    [TASK_COLUMNS.code]: "TSK-DATE-ORDER",
+    [TASK_COLUMNS.title]: "Date order regression",
+    [TASK_COLUMNS.status]: "Done",
+    [TASK_COLUMNS.startDate]: "11/5/2026",
+  };
+  const row = taskSheet.addRow(
+    TASK_REQUIRED_HEADERS.map((header) => values[header] ?? ""),
+  );
+  for (const columnName of [
+    TASK_COLUMNS.inspectionDate,
+    TASK_COLUMNS.completedDate,
+  ]) {
+    const column = TASK_REQUIRED_HEADERS.indexOf(columnName) + 1;
+    const cell = row.getCell(column);
+    // The exporter stored 5 November even though the original y/m/d input
+    // represented 11 May. The cell format alone does not expose the swap.
+    cell.value = new Date(Date.UTC(2026, 10, 5, 0, 0));
+    cell.numFmt = "yyyy/mm/dd hh:mm";
+  }
+
+  const tasks = parseTasks(taskSheet);
+  assert.equal(formatDateTime(tasks[0].inspectionDate), "00:00 11/05/2026");
+  assert.equal(formatDateTime(tasks[0].completedDate), "00:00 11/05/2026");
+
+  const july27 = new Date(2026, 6, 27);
+  const daily = calculateDailyTaskChart(
+    {
+      fileName: "date-order-regression.xlsx",
+      tasks,
+      feedback: [],
+      norms: [],
+    },
+    "",
+    { from: july27, to: july27, hasFilter: true },
+  );
+  assert.equal(daily.rows[0].backlog, 0);
 });
 
 test("reads a valid workbook through the client adapter", async () => {
