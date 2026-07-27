@@ -7,7 +7,7 @@ export type KpiCardProps = {
   value: string;
   help: DashboardHelp;
   children: ReactNode;
-  variant?: "dark" | "lime";
+  variant?: "dark" | "lime" | "warning";
   onClick: () => void;
 };
 

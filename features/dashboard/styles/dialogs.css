@@ -136,22 +136,6 @@
   font-size: 8px; line-height: 1.35; white-space: normal;
 }
 .detailTable tbody tr:hover { background: rgba(217,255,114,.18); }
-.attentionTaskHeading td {
-  padding: 15px 18px;
-  border-top: 2px solid #d39a3a;
-  background: #fff2d8;
-  white-space: normal;
-}
-.attentionTaskHeading strong,
-.attentionTaskHeading span { display: block; }
-.attentionTaskHeading strong {
-  color: #8a4d12; font-size: 11px; letter-spacing: .07em;
-  text-transform: uppercase;
-}
-.attentionTaskHeading span {
-  margin-top: 4px; color: #865f38; font-size: 9px;
-}
-.attentionTaskGroup tr:not(.attentionTaskHeading) { background: #fffaf0; }
 .detailEmpty { padding: 30px; color: var(--muted); text-align: center; }
 @media (max-width: 520px) {
   .detailDrawer { width: 100%; padding: 20px 14px; }

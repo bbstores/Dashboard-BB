@@ -11,10 +11,7 @@ import type {
   DailyTaskDatum,
   DateWindow,
 } from "../model/types";
-import {
-  isBacklogAttentionTask,
-  isBacklogTask,
-} from "./calculateBacklog";
+import { isBacklogTask } from "./calculateBacklog";
 
 export function calculateDailyTaskChart(
   data: DashboardData,
@@ -82,9 +79,6 @@ export function calculateDailyTaskChart(
     const backlogTasks = tasks.filter((task) =>
       isBacklogTask(task, cutoff),
     );
-    const attentionTasks = tasks.filter((task) =>
-      isBacklogAttentionTask(task, cutoff),
-    );
 
     rows.push({
       date: day,
@@ -96,7 +90,6 @@ export function calculateDailyTaskChart(
       handedSameDayTasks,
       handedBacklogTasks,
       backlogTasks,
-      attentionTasks,
     });
   }
   return { rows, assignees };

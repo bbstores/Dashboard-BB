@@ -94,7 +94,7 @@ export function DailyTaskChart({
               purpose: "Theo dõi đồng thời lượng việc đi vào, lượng việc thoát ra và backlog cuối từng ngày.",
               objective: "Nếu đường tồn tăng liên tục trong khi số bàn giao thấp hơn số được giao, nhóm đang tích lũy quá tải.",
               calculation: "Được giao theo Ngày Bắt Đầu; bàn giao theo Ngày Kiểm Duyệt. Tồn cuối ngày gồm task đã bắt đầu trước 23:59, chưa có Ngày Kiểm Duyệt và chưa Done; hoặc đã kiểm duyệt nhưng trạng thái hiện tại vẫn In Progress. Done và công đoạn Trainning không tính là task tồn.",
-              example: "Task đã kiểm duyệt nhưng vẫn In Progress tiếp tục nằm trong tồn. Task Done không tăng đường tồn; task Done có thứ tự ngày sai chỉ xuất hiện ở nhóm Dữ liệu cần lưu ý.",
+              example: "Task đã kiểm duyệt nhưng vẫn In Progress tiếp tục nằm trong tồn. Task Done không tăng đường tồn; task Done có thứ tự ngày sai được đếm ở metric Dữ liệu cần lưu ý riêng.",
             }}
           />
         </div>

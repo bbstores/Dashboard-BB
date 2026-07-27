@@ -92,11 +92,26 @@ export function DashboardKpis({
             title: "Task tồn tại mốc chọn",
             subtitle: `Các task tồn tính đến ${formatDate(inputDate(backlogDate))}`,
             tasks: viewModel.backlogTasks,
-            attentionTasks: viewModel.backlogAttentionTasks,
           })
         }
       >
         Chưa kiểm duyệt và chưa Done, hoặc vẫn In Progress
+      </KpiCard>
+
+      <KpiCard
+        label="Dữ liệu cần lưu ý"
+        value={formatNumber(viewModel.backlogAttentionTasks.length)}
+        help={dashboardHelp("Dữ liệu cần lưu ý")}
+        variant="warning"
+        onClick={() =>
+          onOpenDetail({
+            title: "Dữ liệu cần lưu ý",
+            subtitle: `Task Done có Ngày Bắt Đầu sau Ngày Kiểm Duyệt tính đến ${formatDate(inputDate(backlogDate))}`,
+            tasks: viewModel.backlogAttentionTasks,
+          })
+        }
+      >
+        Done có Ngày Bắt Đầu sau Ngày Kiểm Duyệt
       </KpiCard>
     </section>
   );

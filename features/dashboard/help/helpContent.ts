@@ -7,6 +7,7 @@ export function dashboardObjective(title: string) {
     "Task trong kỳ": "Giúp quản lý biết quy mô công việc thực sự phát sinh hoặc được hoàn tất trong kỳ, tránh bỏ sót task carry-in khi đánh giá khối lượng.",
     "Task thiếu thông tin": "Phát hiện dữ liệu chưa đủ để giao việc, quy trách nhiệm hoặc tính các chỉ số thời gian; từ đó yêu cầu đội ngũ bổ sung trước khi báo cáo.",
     "Task tồn tại mốc chọn": "Theo dõi lượng việc còn treo đến một mốc và ưu tiên xử lý backlog trước khi tiếp tục nhận thêm việc.",
+    "Dữ liệu cần lưu ý": "Tách riêng các task Done có thứ tự ngày bất hợp lý để sửa dữ liệu mà không làm sai tổng Task tồn.",
     "Leaderboard thời gian": "So sánh tải công việc dự kiến giữa nhân sự, nhận diện người quá tải hoặc còn năng lực để điều phối lại task.",
     "Tiến độ hoàn thành": "Giúp quản lý biết BST nào có nguy cơ trễ theo cả số đầu việc lẫn khối lượng phút, thay vì chỉ nhìn số task.",
     "Số task thực hiện & số lần trả về": "Đối chiếu sản lượng với mức độ phải sửa lại; người có nhiều task nhưng cũng nhiều lần trả về cần được xem sâu về chất lượng hoặc quy trình giao nhận.",
@@ -57,6 +58,12 @@ export function dashboardHelp(title: string): DashboardHelp {
       example: "Mốc 01/08: task chưa kiểm duyệt và chưa Done được tính tồn; task đã kiểm duyệt nhưng còn In Progress vẫn tính tồn; task Done không tính tồn.",
       note: "Archived, Pending/Cancel và task có Công đoạn Trainning không tính vào tồn. Task chưa có ngày bắt đầu không nằm trong chỉ số này.",
     },
+    "Dữ liệu cần lưu ý": {
+      purpose: "Đếm riêng task Done có thứ tự mốc thời gian bất hợp lý.",
+      calculation: "Lấy task Done/Kinh Doanh Done có Ngày Bắt Đầu ≤ mốc đang chọn, có Ngày Kiểm Duyệt và Ngày Bắt Đầu sau Ngày Kiểm Duyệt. Công đoạn Trainning/Training được bỏ qua.",
+      example: "Task bắt đầu 06/05 nhưng kiểm duyệt 04/05 và trạng thái Done → không tính Task tồn, nhưng tăng metric Dữ liệu cần lưu ý thêm 1.",
+      note: "Bấm metric để mở danh sách riêng phục vụ kiểm tra và sửa dữ liệu nguồn.",
+    },
     "Leaderboard thời gian": {
       purpose: "Xếp hạng tải công việc dự kiến theo nhân sự.",
       calculation: "Cộng toàn bộ Số phút dự kiến của task vào từng Assignee. Thanh được tách thành task trong kỳ đang hoạt động, carry-in và nhóm To Do/Pending-Cancel; ba nhóm không đếm trùng. Task nhiều người được cộng nguyên số phút cho từng người.",
@@ -104,7 +111,7 @@ export function dashboardHelp(title: string): DashboardHelp {
       purpose: "Cơ cấu các task tồn tại mốc theo trạng thái hiện tại.",
       calculation: "Lấy task có Ngày Bắt Đầu ≤ mốc, chưa có Ngày Kiểm Duyệt tại mốc và chưa Done; hoặc đã kiểm duyệt nhưng trạng thái vẫn In Progress. Sau đó nhóm theo trạng thái hiện tại.",
       example: "Có 40 task tồn theo điều kiện kiểm duyệt, trong đó 18 In Progress → lát In Progress là 18 và 45%.",
-      note: "Mọi task Done/Kinh Doanh Done và task có Công đoạn Trainning đều không tính vào task tồn. Done có Ngày Bắt Đầu sau Ngày Kiểm Duyệt được tách thành Dữ liệu cần lưu ý.",
+      note: "Mọi task Done/Kinh Doanh Done và task có Công đoạn Trainning đều không tính vào task tồn. Done có Ngày Bắt Đầu sau Ngày Kiểm Duyệt được đếm ở metric Dữ liệu cần lưu ý riêng.",
     },
     "Task theo Type": {
       purpose: "Biểu đồ số lượng task được phân loại theo cột Type.",

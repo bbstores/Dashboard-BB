@@ -288,10 +288,6 @@ test("restores yyyy/mm/dd even when it exposes invalid task chronology", () => {
     { from: july27, to: july27, hasFilter: true },
   );
   assert.equal(daily.rows[0].backlog, 0);
-  assert.deepEqual(
-    daily.rows[0].attentionTasks.map((task) => task.code),
-    ["TSK-DATE-ORDER"],
-  );
 });
 
 test("reads a valid workbook through the client adapter", async () => {

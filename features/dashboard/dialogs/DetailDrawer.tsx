@@ -126,8 +126,7 @@ export function DetailDrawer({
   onClose: () => void;
 }) {
   const count = detail.feedback?.length ?? detail.tasks?.length ?? 0;
-  const attentionTasks = detail.attentionTasks ?? [];
-  const hasRecords = count > 0 || attentionTasks.length > 0;
+  const hasRecords = count > 0;
   return (
     <div className="detailOverlay" role="presentation" onMouseDown={onClose}>
       <aside
@@ -206,27 +205,6 @@ export function DetailDrawer({
                   />
                 ))}
               </tbody>
-              {attentionTasks.length > 0 && (
-                <tbody className="attentionTaskGroup">
-                  <tr className="attentionTaskHeading">
-                    <td colSpan={detail.taskMetric ? 7 : 6}>
-                      <strong>Dữ liệu cần lưu ý</strong>
-                      <span>
-                        {formatNumber(attentionTasks.length)} task Done có
-                        Ngày Bắt Đầu sau Ngày Kiểm Duyệt
-                      </span>
-                    </td>
-                  </tr>
-                  {attentionTasks.map((task, index) => (
-                    <TaskDetailRow
-                      detail={detail}
-                      index={(detail.tasks?.length ?? 0) + index}
-                      key={`attention-${task.code}-${index}`}
-                      task={task}
-                    />
-                  ))}
-                </tbody>
-              )}
             </table>
           )}
           {!hasRecords && (

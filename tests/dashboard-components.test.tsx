@@ -157,7 +157,7 @@ test("KPI selection opens the matching detail data", () => {
   assert.equal(closed, true);
 });
 
-test("DetailDrawer puts invalid Done chronology in an attention group", () => {
+test("attention KPI opens invalid Done chronology as standalone detail", () => {
   const backlogTask = task();
   const attentionTask = {
     ...task(),
@@ -168,29 +168,49 @@ test("DetailDrawer puts invalid Done chronology in an attention group", () => {
     inspectionDate: new Date(2026, 6, 19),
     completedDate: new Date(2026, 6, 19),
   };
+  const stats = calculateDashboardStats(
+    {
+      fileName: "attention.xlsx",
+      tasks: [backlogTask, attentionTask],
+      feedback: [],
+      norms: [],
+    },
+    {
+      dateWindow: { from: null, to: null, hasFilter: false },
+      collectionMonth: "",
+      backlogDate: "2026-07-20",
+    },
+  );
+  const detailState: { current: DetailView | null } = { current: null };
 
   render(
-    <DetailDrawer
-      detail={{
-        title: "Tồn cuối ngày",
-        subtitle: "20/07/2026",
-        tasks: [backlogTask],
-        attentionTasks: [attentionTask],
+    <DashboardKpis
+      viewModel={stats}
+      allTasks={[backlogTask, attentionTask]}
+      backlogDate="2026-07-20"
+      onOpenDetail={(detail) => {
+        detailState.current = detail;
       }}
+    />,
+  );
+
+  const attentionKpi = screen
+    .getByText("Dữ liệu cần lưu ý")
+    .closest("button");
+  assert.ok(attentionKpi);
+  fireEvent.click(attentionKpi);
+  assert.ok(detailState.current);
+  assert.equal(detailState.current.title, "Dữ liệu cần lưu ý");
+  assert.deepEqual(detailState.current.tasks, [attentionTask]);
+
+  cleanup();
+  render(
+    <DetailDrawer
+      detail={detailState.current}
       onClose={() => undefined}
     />,
   );
 
-  assert.ok(screen.getByText("Dữ liệu cần lưu ý"));
-  assert.ok(
-    screen.getByText(
-      "1 task Done có Ngày Bắt Đầu sau Ngày Kiểm Duyệt",
-    ),
-  );
-  const backlogCode = screen.getByText("ANON-DETAIL-001");
-  const attentionCode = screen.getByText("ANON-ATTENTION-001");
-  assert.ok(
-    backlogCode.compareDocumentPosition(attentionCode) &
-      Node.DOCUMENT_POSITION_FOLLOWING,
-  );
+  assert.ok(screen.getByText("ANON-ATTENTION-001"));
+  assert.equal(screen.queryByText("ANON-DETAIL-001"), null);
 });

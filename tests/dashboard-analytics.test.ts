@@ -278,11 +278,6 @@ test("separates backlog rules from invalid Done chronology", () => {
     chart.rows[0].backlogTasks.map((item) => item.code),
     ["NO-INSPECTION-OPEN", "INSPECTED-IN-PROGRESS"],
   );
-  assert.deepEqual(
-    chart.rows[0].attentionTasks.map((item) => item.code),
-    ["INVALID-DONE"],
-  );
-
   const stats = calculateDashboardStats(data, {
     dateWindow: { from: null, to: null, hasFilter: false },
     collectionMonth: "",
