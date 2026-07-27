@@ -1,18 +1,80 @@
 import { normalize } from "../../model/taskUtils";
 
-export function excelDate(value: unknown): Date | null {
-  if (!value) return null;
+type TextDateParser = (value: string) => Date | null;
+
+function localDate(
+  year: number,
+  month: number,
+  day: number,
+  hour = 0,
+  minute = 0,
+  second = 0,
+  millisecond = 0,
+) {
+  const date = new Date(
+    year,
+    month - 1,
+    day,
+    hour,
+    minute,
+    second,
+    millisecond,
+  );
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day ||
+    date.getHours() !== hour ||
+    date.getMinutes() !== minute ||
+    date.getSeconds() !== second ||
+    date.getMilliseconds() !== millisecond
+  ) {
+    return null;
+  }
+  return date;
+}
+
+function parseDayFirstDate(value: string) {
+  const match = value.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (!match) return null;
+  return localDate(Number(match[3]), Number(match[2]), Number(match[1]));
+}
+
+function parseYearFirstDateTime(value: string) {
+  const match = value.match(
+    /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})[ T]+(\d{1,2}):(\d{2})(?::(\d{2})(?:[.,](\d{1,3}))?)?$/,
+  );
+  if (!match) return null;
+  const milliseconds = match[7]
+    ? Number(match[7].padEnd(3, "0"))
+    : 0;
+  return localDate(
+    Number(match[1]),
+    Number(match[2]),
+    Number(match[3]),
+    Number(match[4]),
+    Number(match[5]),
+    Number(match[6] ?? 0),
+    milliseconds,
+  );
+}
+
+function excelTemporalValue(
+  value: unknown,
+  parseText: TextDateParser,
+): Date | null {
+  if (value == null || value === "") return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    // Excel serial dates do not carry a timezone. ExcelJS exposes them as UTC
-    // Date objects, so preserve their UTC wall-clock fields as local time.
+    // Excel dates are timezone-free wall-clock values. ExcelJS has already
+    // materialized that wall clock in the browser's local timezone.
     return new Date(
-      value.getUTCFullYear(),
-      value.getUTCMonth(),
-      value.getUTCDate(),
-      value.getUTCHours(),
-      value.getUTCMinutes(),
-      value.getUTCSeconds(),
-      value.getUTCMilliseconds(),
+      value.getFullYear(),
+      value.getMonth(),
+      value.getDate(),
+      value.getHours(),
+      value.getMinutes(),
+      value.getSeconds(),
+      value.getMilliseconds(),
     );
   }
 
@@ -36,28 +98,30 @@ export function excelDate(value: unknown): Date | null {
       text?: string;
       richText?: Array<{ text?: string }>;
     };
-    if (candidate.result != null) return excelDate(candidate.result);
-    if (candidate.text) return excelDate(candidate.text);
+    if (candidate.result != null) {
+      return excelTemporalValue(candidate.result, parseText);
+    }
+    if (candidate.text) {
+      return excelTemporalValue(candidate.text, parseText);
+    }
     if (candidate.richText) {
-      return excelDate(
+      return excelTemporalValue(
         candidate.richText.map((item) => item.text ?? "").join(""),
+        parseText,
       );
     }
   }
 
   const text = normalize(value);
-  const dmy = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
-  if (dmy) {
-    const date = new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
-    return Number.isNaN(date.getTime()) ? null : date;
-  }
+  return text ? parseText(text) : null;
+}
 
-  const ymd = text.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
-  if (ymd) {
-    const date = new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
-    return Number.isNaN(date.getTime()) ? null : date;
-  }
+/** Parses the Ngày Bắt Đầu text format: d/mm/yyyy. */
+export function excelDate(value: unknown): Date | null {
+  return excelTemporalValue(value, parseDayFirstDate);
+}
 
-  const parsed = new Date(text);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+/** Parses Excel milestones that include a time: yyyy/mm/dd hh:mm. */
+export function excelDateTime(value: unknown): Date | null {
+  return excelTemporalValue(value, parseYearFirstDateTime);
 }

@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import ExcelJS from "exceljs";
-import { excelDate } from "../features/dashboard/data/excel/excelDate";
+import { calculateDailyTaskChart } from "../features/dashboard/analytics/calculateDailyTaskChart";
+import {
+  excelDate,
+  excelDateTime,
+} from "../features/dashboard/data/excel/excelDate";
 import { parseFeedback } from "../features/dashboard/data/excel/parseFeedback";
 import { parseTasks } from "../features/dashboard/data/excel/parseTasks";
 import { readDashboardWorkbook } from "../features/dashboard/data/excel/readWorkbook";
@@ -18,6 +22,7 @@ import {
   validateDashboardWorkbook,
   WorkbookValidationError,
 } from "../features/dashboard/data/excel/validateWorkbook";
+import { formatDateTime } from "../shared/formatting/format";
 
 function addSheet(
   workbook: ExcelJS.Workbook,
@@ -130,8 +135,9 @@ test("parses validated task and feedback sheets", () => {
     [TASK_COLUMNS.expectedMinutes]: 120,
     [TASK_COLUMNS.status]: "Done",
     [TASK_COLUMNS.assignee]: "An",
-    [TASK_COLUMNS.startDate]: "15/07/2026",
-    [TASK_COLUMNS.completedDate]: "16/07/2026",
+    [TASK_COLUMNS.startDate]: "11/5/2026",
+    [TASK_COLUMNS.inspectionDate]: "2026/05/11 16:15",
+    [TASK_COLUMNS.completedDate]: "2026/05/11 17:30",
   };
   taskSheet.addRow(
     TASK_REQUIRED_HEADERS.map((header) => taskValues[header] ?? ""),
@@ -139,7 +145,7 @@ test("parses validated task and feedback sheets", () => {
 
   const feedbackValues: Record<string, string> = {
     [FEEDBACK_COLUMNS.taskCode]: "TSK-001",
-    [FEEDBACK_COLUMNS.at]: "16/07/2026",
+    [FEEDBACK_COLUMNS.at]: "2026/05/11 15:45",
     [FEEDBACK_COLUMNS.assignee]: "An",
   };
   feedbackSheet.addRow(
@@ -154,9 +160,40 @@ test("parses validated task and feedback sheets", () => {
   assert.equal(tasks[0].code, "TSK-001");
   assert.equal(tasks[0].expectedMinutes, 120);
   assert.equal(tasks[0].startDate?.getFullYear(), 2026);
+  assert.equal(tasks[0].startDate?.getMonth(), 4);
+  assert.equal(tasks[0].startDate?.getDate(), 11);
+  assert.equal(tasks[0].inspectionDate?.getMonth(), 4);
+  assert.equal(tasks[0].inspectionDate?.getDate(), 11);
+  assert.equal(tasks[0].inspectionDate?.getHours(), 16);
+  assert.equal(tasks[0].inspectionDate?.getMinutes(), 15);
+  assert.equal(tasks[0].completedDate?.getMonth(), 4);
+  assert.equal(tasks[0].completedDate?.getDate(), 11);
+  assert.equal(tasks[0].completedDate?.getHours(), 17);
+  assert.equal(tasks[0].completedDate?.getMinutes(), 30);
   assert.equal(feedback.length, 1);
   assert.equal(feedback[0].taskCode, "TSK-001");
   assert.equal(feedback[0].assignee, "An");
+  assert.equal(feedback[0].at?.getMonth(), 4);
+  assert.equal(feedback[0].at?.getDate(), 11);
+  assert.equal(feedback[0].at?.getHours(), 15);
+  assert.equal(feedback[0].at?.getMinutes(), 45);
+
+  const july27 = new Date(2026, 6, 27);
+  const daily = calculateDailyTaskChart(
+    {
+      fileName: "date-format-fixture.xlsx",
+      tasks,
+      feedback,
+      norms: [],
+    },
+    "",
+    {
+      from: july27,
+      to: july27,
+      hasFilter: true,
+    },
+  );
+  assert.equal(daily.rows[0].backlog, 0);
 });
 
 test("normalizes supported Excel date values", () => {
@@ -169,6 +206,21 @@ test("normalizes supported Excel date values", () => {
   assert.equal(serialDate?.getFullYear(), 1970);
   assert.equal(serialDate?.getMonth(), 0);
   assert.equal(serialDate?.getDate(), 1);
+
+  const dateTime = excelDateTime("2026/05/11 16:25");
+  assert.equal(dateTime?.getFullYear(), 2026);
+  assert.equal(dateTime?.getMonth(), 4);
+  assert.equal(dateTime?.getDate(), 11);
+  assert.equal(dateTime?.getHours(), 16);
+  assert.equal(dateTime?.getMinutes(), 25);
+  assert.equal(formatDateTime(dateTime), "16:25 11/05/2026");
+
+  const typedExcelDate = excelDateTime(new Date(2026, 4, 11, 16, 25));
+  assert.equal(formatDateTime(typedExcelDate), "16:25 11/05/2026");
+
+  assert.equal(excelDateTime("11/05/2026 16:25"), null);
+  assert.equal(excelDate("2026/05/11"), null);
+  assert.equal(excelDateTime("2026/02/30 09:00"), null);
 });
 
 test("reads a valid workbook through the client adapter", async () => {

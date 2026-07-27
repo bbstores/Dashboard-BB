@@ -1,6 +1,6 @@
 import { normalize, numberValue } from "../../model/taskUtils";
 import type { Task } from "../../model/types";
-import { excelDate } from "./excelDate";
+import { excelDate, excelDateTime } from "./excelDate";
 import { TASK_COLUMNS } from "./workbookSchema";
 import { headersFor, valueAt } from "./worksheetUtils";
 
@@ -24,13 +24,13 @@ export function parseTasks(sheet: import("exceljs").Worksheet): Task[] {
       status: normalize(valueAt(row, headers, TASK_COLUMNS.status)),
       assignee: normalize(valueAt(row, headers, TASK_COLUMNS.assignee)),
       startDate: excelDate(valueAt(row, headers, TASK_COLUMNS.startDate)),
-      completedDate: excelDate(
+      completedDate: excelDateTime(
         valueAt(row, headers, TASK_COLUMNS.completedDate),
       ),
-      inspectionDate: excelDate(
+      inspectionDate: excelDateTime(
         valueAt(row, headers, TASK_COLUMNS.inspectionDate),
       ),
-      businessApprovalDate: excelDate(
+      businessApprovalDate: excelDateTime(
         valueAt(row, headers, TASK_COLUMNS.businessApprovalDate),
       ),
       handoffRating: normalize(

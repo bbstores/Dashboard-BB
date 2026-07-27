@@ -38,8 +38,8 @@ test("reads an anonymized workbook end-to-end", async () => {
       [TASK_COLUMNS.status]: "Done",
       [TASK_COLUMNS.assignee]: "Nhân sự A",
       [TASK_COLUMNS.startDate]: "20/07/2026",
-      [TASK_COLUMNS.inspectionDate]: "20/07/2026 16:00",
-      [TASK_COLUMNS.completedDate]: "21/07/2026 10:00",
+      [TASK_COLUMNS.inspectionDate]: "2026/07/20 16:00",
+      [TASK_COLUMNS.completedDate]: "2026/07/21 10:00",
       [TASK_COLUMNS.type]: "Social",
     }),
   );
@@ -53,7 +53,7 @@ test("reads an anonymized workbook end-to-end", async () => {
   feedback.addRow(
     rowFrom(FEEDBACK_REQUIRED_HEADERS, {
       [FEEDBACK_COLUMNS.taskCode]: "ANON-TASK-001",
-      [FEEDBACK_COLUMNS.at]: "20/07/2026 15:00",
+      [FEEDBACK_COLUMNS.at]: "2026/07/20 15:00",
       [FEEDBACK_COLUMNS.assignee]: "Nhân sự A",
     }),
   );
@@ -97,5 +97,12 @@ test("reads an anonymized workbook end-to-end", async () => {
     },
   );
   assert.equal(result.feedback[0].taskCode, "ANON-TASK-001");
+  assert.equal(result.tasks[0].inspectionDate?.getFullYear(), 2026);
+  assert.equal(result.tasks[0].inspectionDate?.getMonth(), 6);
+  assert.equal(result.tasks[0].inspectionDate?.getDate(), 20);
+  assert.equal(result.tasks[0].inspectionDate?.getHours(), 16);
+  assert.equal(result.tasks[0].completedDate?.getDate(), 21);
+  assert.equal(result.tasks[0].completedDate?.getHours(), 10);
+  assert.equal(result.feedback[0].at?.getHours(), 15);
   assert.equal(result.norms[0].editMinutes, 90);
 });

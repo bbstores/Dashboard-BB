@@ -1,6 +1,6 @@
 import { normalize } from "../../model/taskUtils";
 import type { Feedback } from "../../model/types";
-import { excelDate } from "./excelDate";
+import { excelDateTime } from "./excelDate";
 import { FEEDBACK_COLUMNS } from "./workbookSchema";
 import { headersFor, valueAt } from "./worksheetUtils";
 
@@ -17,7 +17,7 @@ export function parseFeedback(
     if (!taskCode) continue;
     feedback.push({
       taskCode,
-      at: excelDate(valueAt(row, headers, FEEDBACK_COLUMNS.at)),
+      at: excelDateTime(valueAt(row, headers, FEEDBACK_COLUMNS.at)),
       assignee: normalize(
         valueAt(row, headers, FEEDBACK_COLUMNS.assignee),
       ),

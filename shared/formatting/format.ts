@@ -34,13 +34,11 @@ export function formatDate(value: Date | null) {
 
 export function formatDateTime(value: Date | null) {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(value);
+  const twoDigits = (part: number) => String(part).padStart(2, "0");
+  return [
+    `${twoDigits(value.getHours())}:${twoDigits(value.getMinutes())}`,
+    `${twoDigits(value.getDate())}/${twoDigits(value.getMonth() + 1)}/${value.getFullYear()}`,
+  ].join(" ");
 }
 
 export function formatSlaMinutes(minutes: number) {
