@@ -90,7 +90,7 @@ export function DashboardKpis({
         onClick={() =>
           onOpenDetail({
             title: "Task tồn tại mốc chọn",
-            subtitle: `Các task tồn tính đến ${formatDate(inputDate(backlogDate))}`,
+            subtitle: `Các task tồn bắt đầu trước ${formatDate(inputDate(backlogDate))}`,
             tasks: viewModel.backlogTasks,
           })
         }

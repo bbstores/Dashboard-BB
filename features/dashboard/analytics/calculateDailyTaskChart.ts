@@ -11,7 +11,7 @@ import type {
   DailyTaskDatum,
   DateWindow,
 } from "../model/types";
-import { isBacklogTask } from "./calculateBacklog";
+import { isEndOfDayBacklogTask } from "./calculateBacklog";
 
 export function calculateDailyTaskChart(
   data: DashboardData,
@@ -77,7 +77,7 @@ export function calculateDailyTaskChart(
         startOfDay(task.startDate) < startOfDay(task.inspectionDate),
     );
     const backlogTasks = tasks.filter((task) =>
-      isBacklogTask(task, cutoff),
+      isEndOfDayBacklogTask(task, cutoff),
     );
 
     rows.push({

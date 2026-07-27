@@ -195,6 +195,7 @@ test("calculates the daily chart as a pure function", () => {
   );
   const july12 = chart.rows.find((row) => row.date.getDate() === 12);
   const july15 = chart.rows.find((row) => row.date.getDate() === 15);
+  const july16 = chart.rows.find((row) => row.date.getDate() === 16);
 
   assert.equal(chart.rows.length, 11);
   assert.deepEqual(chart.assignees, [
@@ -214,6 +215,10 @@ test("calculates the daily chart as a pure function", () => {
     july15?.backlogTasks.map((item) => item.code),
     ["T3"],
   );
+  assert.deepEqual(
+    july16?.backlogTasks.map((item) => item.code),
+    ["T3"],
+  );
 });
 
 test("separates backlog rules from invalid Done chronology", () => {
@@ -231,6 +236,11 @@ test("separates backlog rules from invalid Done chronology", () => {
       task("NO-INSPECTION-OPEN", {
         status: "To Do",
         startDate: date(10),
+        inspectionDate: null,
+      }),
+      task("SAME-DAY-OPEN", {
+        status: "In Progress",
+        startDate: date(20),
         inspectionDate: null,
       }),
       task("TRAINNING-OPEN", {
@@ -276,7 +286,11 @@ test("separates backlog rules from invalid Done chronology", () => {
   });
   assert.deepEqual(
     chart.rows[0].backlogTasks.map((item) => item.code),
-    ["NO-INSPECTION-OPEN", "INSPECTED-IN-PROGRESS"],
+    [
+      "NO-INSPECTION-OPEN",
+      "SAME-DAY-OPEN",
+      "INSPECTED-IN-PROGRESS",
+    ],
   );
   const stats = calculateDashboardStats(data, {
     dateWindow: { from: null, to: null, hasFilter: false },

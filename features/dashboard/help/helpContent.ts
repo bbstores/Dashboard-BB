@@ -53,9 +53,9 @@ export function dashboardHelp(title: string): DashboardHelp {
       example: "200 task chỉ thiếu ngày, 0 task chỉ thiếu assignee và 92 task thiếu cả hai → tổng 292.",
     },
     "Task tồn tại mốc chọn": {
-      purpose: "Cho biết lượng task còn tồn trước ngày mốc độc lập.",
-      calculation: "Ngày Bắt Đầu ≤ mốc và thỏa một trong hai điều kiện: chưa có Ngày Kiểm Duyệt tại mốc và trạng thái chưa Done; hoặc đã có Ngày Kiểm Duyệt nhưng trạng thái hiện tại vẫn là In Progress. Mọi task Done được loại khỏi tổng tồn.",
-      example: "Mốc 01/08: task chưa kiểm duyệt và chưa Done được tính tồn; task đã kiểm duyệt nhưng còn In Progress vẫn tính tồn; task Done không tính tồn.",
+      purpose: "Cho biết lượng task còn tồn từ trước ngày mốc độc lập.",
+      calculation: "Ngày Bắt Đầu phải trước ngày mốc và thỏa một trong hai điều kiện: chưa có Ngày Kiểm Duyệt tại mốc và trạng thái chưa Done; hoặc đã có Ngày Kiểm Duyệt nhưng trạng thái hiện tại vẫn là In Progress. Task bắt đầu đúng ngày mốc và mọi task Done được loại khỏi tổng tồn.",
+      example: "Mốc 01/08: task bắt đầu 31/07 chưa kiểm duyệt được tính tồn; task bắt đầu đúng 01/08 không tính tồn tại mốc này.",
       note: "Archived, Pending/Cancel và task có Công đoạn Trainning không tính vào tồn. Task chưa có ngày bắt đầu không nằm trong chỉ số này.",
     },
     "Dữ liệu cần lưu ý": {
@@ -109,7 +109,7 @@ export function dashboardHelp(title: string): DashboardHelp {
     },
     "Trạng thái task tồn": {
       purpose: "Cơ cấu các task tồn tại mốc theo trạng thái hiện tại.",
-      calculation: "Lấy task có Ngày Bắt Đầu ≤ mốc, chưa có Ngày Kiểm Duyệt tại mốc và chưa Done; hoặc đã kiểm duyệt nhưng trạng thái vẫn In Progress. Sau đó nhóm theo trạng thái hiện tại.",
+      calculation: "Lấy task có Ngày Bắt Đầu trước ngày mốc, chưa có Ngày Kiểm Duyệt tại mốc và chưa Done; hoặc đã kiểm duyệt nhưng trạng thái vẫn In Progress. Task bắt đầu đúng ngày mốc bị loại. Sau đó nhóm theo trạng thái hiện tại.",
       example: "Có 40 task tồn theo điều kiện kiểm duyệt, trong đó 18 In Progress → lát In Progress là 18 và 45%.",
       note: "Mọi task Done/Kinh Doanh Done và task có Công đoạn Trainning đều không tính vào task tồn. Done có Ngày Bắt Đầu sau Ngày Kiểm Duyệt được đếm ở metric Dữ liệu cần lưu ý riêng.",
     },
@@ -135,7 +135,7 @@ export function dashboardHelp(title: string): DashboardHelp {
     },
     "Aging task đang mở": {
       purpose: "Nhận diện task mở lâu tính đến Mốc task tồn đang chọn.",
-      calculation: "Task có ngày bắt đầu không sau mốc, trạng thái hiện tại chưa hoàn tất; Aging = Mốc task tồn − Ngày Bắt Đầu.",
+      calculation: "Task có ngày bắt đầu trước ngày mốc, trạng thái hiện tại chưa hoàn tất; Aging = Mốc task tồn − Ngày Bắt Đầu.",
       example: "Chọn mốc 11/08, task bắt đầu 01/08 và hiện vẫn In Progress → Aging 10 ngày.",
       note: "Đây là tuổi task theo trạng thái hiện tại, không phải thời gian thực tế nhân sự thao tác và không tái dựng trạng thái lịch sử.",
     },
