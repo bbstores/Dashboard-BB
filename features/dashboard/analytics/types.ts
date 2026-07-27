@@ -33,7 +33,7 @@ export type LeaderboardRow = {
   waitingTasks: Task[];
 };
 
-export type StaffRow = {
+type StaffRow = {
   name: string;
   total: number;
   totalTasks: Task[];

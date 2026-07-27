@@ -6,15 +6,16 @@ const STORE_VERSION = 1;
 
 type StorageReader = Pick<Storage, "getItem">;
 type StorageWriter = Pick<Storage, "setItem">;
+type StorageAdapter = StorageReader & Partial<StorageWriter>;
 
 type SavedReportStore = {
   version: typeof STORE_VERSION;
   reports: SavedReport[];
 };
 
-function decodeStore(value: unknown): SavedReport[] {
+function decodeStore(value: unknown) {
   if (Array.isArray(value)) {
-    return validSavedReports(value);
+    return { reports: validSavedReports(value), needsMigration: true };
   }
   if (
     typeof value === "object" &&
@@ -23,16 +24,23 @@ function decodeStore(value: unknown): SavedReport[] {
     value.version === STORE_VERSION &&
     "reports" in value
   ) {
-    return validSavedReports(value.reports);
+    return {
+      reports: validSavedReports(value.reports),
+      needsMigration: false,
+    };
   }
-  return [];
+  return { reports: [], needsMigration: false };
 }
 
-export function loadSavedReports(storage: StorageReader): SavedReport[] {
+export function loadSavedReports(storage: StorageAdapter): SavedReport[] {
   const stored = storage.getItem(SAVED_REPORTS_KEY);
   if (!stored) return [];
   try {
-    return decodeStore(JSON.parse(stored));
+    const decoded = decodeStore(JSON.parse(stored));
+    if (decoded.needsMigration && storage.setItem) {
+      saveSavedReports(storage as StorageWriter, decoded.reports);
+    }
+    return decoded.reports;
   } catch {
     return [];
   }

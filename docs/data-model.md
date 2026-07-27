@@ -2,6 +2,15 @@
 
 Nguồn phân tích: `BB Store_ Quản lý Task - dự án.xlsx`.
 
+## Hạ tầng đã chốt
+
+- Database: PostgreSQL trên Neon.
+- ORM và migration: Drizzle ORM / Drizzle Kit.
+- Runtime serverless dùng `@neondatabase/serverless` qua HTTP.
+- Migration ưu tiên `DATABASE_URL_UNPOOLED`; runtime dùng pooled
+  `DATABASE_URL`.
+- Tất cả mốc thời gian được lưu bằng `timestamp with time zone`.
+
 ## Trọng tâm
 
 - `tasks` ánh xạ từ sheet `2.6 Tasklist` (3.758 dòng dữ liệu, 54 cột).
@@ -39,4 +48,3 @@ Nguồn phân tích: `BB Store_ Quản lý Task - dự án.xlsx`.
   `Tasklist.Công việc` vẫn là khóa nghiệp vụ chính.
 - `Đăng Bài.Book Task` đôi khi có thể trống; khóa ngoại được phép null để không
   làm hỏng cả batch import.
-

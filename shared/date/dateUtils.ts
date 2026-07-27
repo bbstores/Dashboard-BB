@@ -96,7 +96,7 @@ export function operationalMinute(value: Date) {
     : clockMinute + 1440 - workdayStart;
 }
 
-export function operationalDayStart(value: Date) {
+function operationalDayStart(value: Date) {
   const date = startOfDay(value);
   const clockMinute = value.getHours() * 60 + value.getMinutes();
   if (clockMinute < 8 * 60 + 30) date.setDate(date.getDate() - 1);
@@ -112,7 +112,7 @@ export function operationalDayLag(start: Date | null, end: Date | null) {
   );
 }
 
-export function isWorkingDay(date: Date) {
+function isWorkingDay(date: Date) {
   return (
     date.getDay() !== 0 && !VIETNAM_HOLIDAYS_2026.has(dateKey(date))
   );

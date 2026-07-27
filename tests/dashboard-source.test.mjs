@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 const root = new URL("../", import.meta.url);
@@ -192,5 +192,75 @@ test("keeps phase 7 CSS scoped by dashboard ownership", async () => {
         import.meta.url,
       ),
     ),
+  );
+});
+
+test("targets Neon PostgreSQL for phase 8 persistence", async () => {
+  const schema = await readFile(
+    new URL("../db/schema.ts", import.meta.url),
+    "utf8",
+  );
+  const client = await readFile(
+    new URL("../db/client.ts", import.meta.url),
+    "utf8",
+  );
+  const config = await readFile(
+    new URL("../drizzle.config.ts", import.meta.url),
+    "utf8",
+  );
+  const packageJson = JSON.parse(
+    await readFile(new URL("../package.json", import.meta.url), "utf8"),
+  );
+  const migrationFiles = (
+    await readdir(new URL("../drizzle", import.meta.url))
+  ).filter((name) => name.endsWith(".sql"));
+  assert.equal(migrationFiles.length, 1);
+  const migration = await readFile(
+    new URL(`../drizzle/${migrationFiles[0]}`, import.meta.url),
+    "utf8",
+  );
+
+  assert.match(schema, /drizzle-orm\/pg-core/);
+  assert.match(schema, /pgTable/);
+  assert.doesNotMatch(schema, /sqlite/);
+  assert.match(config, /dialect:\s*"postgresql"/);
+  assert.match(config, /DATABASE_URL_UNPOOLED/);
+  assert.match(client, /@neondatabase\/serverless/);
+  assert.match(client, /drizzle-orm\/neon-http/);
+  assert.ok(packageJson.dependencies["@neondatabase/serverless"]);
+  assert.equal(packageJson.dependencies.postgres, undefined);
+  assert.match(migration, /timestamp with time zone/);
+  assert.match(migration, /boolean DEFAULT true/);
+});
+
+test("keeps phase 9 tests and generated files clean", async () => {
+  const gitignore = await readFile(
+    new URL("../.gitignore", import.meta.url),
+    "utf8",
+  );
+  const packageJson = JSON.parse(
+    await readFile(new URL("../package.json", import.meta.url), "utf8"),
+  );
+  const requiredTests = [
+    "dashboard-analytics.test.ts",
+    "date-sla.test.ts",
+    "excel-adapter.test.ts",
+    "saved-reports.test.ts",
+    "workbook-integration.test.ts",
+    "dashboard-components.test.tsx",
+    "database-schema.test.ts",
+  ];
+
+  assert.match(gitignore, /tsconfig\.tsbuildinfo/);
+  assert.match(gitignore, /tsc_errors\.log/);
+  assert.match(packageJson.scripts["check:unused"], /knip/);
+  for (const name of requiredTests) {
+    await access(new URL(`../tests/${name}`, import.meta.url));
+  }
+  await assert.rejects(
+    access(new URL("../tsconfig.tsbuildinfo", import.meta.url)),
+  );
+  await assert.rejects(
+    access(new URL("../tsc_errors.log", import.meta.url)),
   );
 });

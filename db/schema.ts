@@ -1,23 +1,25 @@
-import { sql } from "drizzle-orm";
 import {
+  boolean,
   index,
   integer,
   primaryKey,
+  pgTable,
   real,
-  sqliteTable,
+  serial,
   text,
+  timestamp,
   uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+} from "drizzle-orm/pg-core";
 
-const importedAt = () =>
-  integer("imported_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`);
+const instant = (name: string) =>
+  timestamp(name, { withTimezone: true });
 
-export const importBatches = sqliteTable(
+const importedAt = () => instant("imported_at").notNull().defaultNow();
+
+export const importBatches = pgTable(
   "import_batches",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     sourceFileName: text("source_file_name").notNull(),
     sourceFileHash: text("source_file_hash").notNull(),
     status: text("status", {
@@ -33,7 +35,7 @@ export const importBatches = sqliteTable(
     errorRows: integer("error_rows").notNull().default(0),
     errorSummary: text("error_summary"),
     createdAt: importedAt(),
-    completedAt: integer("completed_at", { mode: "timestamp" }),
+    completedAt: instant("completed_at"),
   },
   (table) => [
     uniqueIndex("import_batches_file_hash_uidx").on(table.sourceFileHash),
@@ -41,15 +43,15 @@ export const importBatches = sqliteTable(
   ],
 );
 
-export const people = sqliteTable(
+export const people = pgTable(
   "people",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     displayName: text("display_name").notNull(),
     normalizedName: text("normalized_name").notNull(),
     role: text("role"),
     department: text("department"),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    isActive: boolean("is_active").notNull().default(true),
   },
   (table) => [
     uniqueIndex("people_normalized_name_uidx").on(table.normalizedName),
@@ -57,21 +59,21 @@ export const people = sqliteTable(
   ],
 );
 
-export const channels = sqliteTable(
+export const channels = pgTable(
   "channels",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     name: text("name").notNull(),
     slug: text("slug").notNull(),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    isActive: boolean("is_active").notNull().default(true),
   },
   (table) => [uniqueIndex("channels_slug_uidx").on(table.slug)],
 );
 
-export const contentFormats = sqliteTable(
+export const contentFormats = pgTable(
   "content_formats",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     name: text("name").notNull(),
     standardRecordMinutes: integer("standard_record_minutes"),
     standardEditMinutes: integer("standard_edit_minutes"),
@@ -84,7 +86,7 @@ export const contentFormats = sqliteTable(
   (table) => [uniqueIndex("content_formats_name_uidx").on(table.name)],
 );
 
-export const collections = sqliteTable(
+export const collections = pgTable(
   "collections",
   {
     code: text("code").primaryKey(),
@@ -92,16 +94,16 @@ export const collections = sqliteTable(
     collectionType: text("collection_type"),
     style: text("style"),
     name: text("name"),
-    orderDate: integer("order_date", { mode: "timestamp" }),
-    productionDate: integer("production_date", { mode: "timestamp" }),
-    launchDate: integer("launch_date", { mode: "timestamp" }),
+    orderDate: instant("order_date"),
+    productionDate: instant("production_date"),
+    launchDate: instant("launch_date"),
     budgetVnd: integer("budget_vnd"),
     status: text("status"),
     sourceRowHash: text("source_row_hash").notNull(),
     lastSeenBatchId: integer("last_seen_batch_id").references(
       () => importBatches.id,
     ),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    isActive: boolean("is_active").notNull().default(true),
     importedAt: importedAt(),
   },
   (table) => [
@@ -110,21 +112,21 @@ export const collections = sqliteTable(
   ],
 );
 
-export const products = sqliteTable(
+export const products = pgTable(
   "products",
   {
     sku: text("sku").primaryKey(),
     collectionCode: text("collection_code").references(() => collections.code),
     saleStatus: text("sale_status"),
     launchMonth: text("launch_month"),
-    launchDate: integer("launch_date", { mode: "timestamp" }),
+    launchDate: instant("launch_date"),
     driveSourceUrl: text("drive_source_url"),
     driveFinalUrl: text("drive_final_url"),
     sourceRowHash: text("source_row_hash").notNull(),
     lastSeenBatchId: integer("last_seen_batch_id").references(
       () => importBatches.id,
     ),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    isActive: boolean("is_active").notNull().default(true),
     importedAt: importedAt(),
   },
   (table) => [
@@ -133,7 +135,7 @@ export const products = sqliteTable(
   ],
 );
 
-export const marketingPlans = sqliteTable(
+export const marketingPlans = pgTable(
   "marketing_plans",
   {
     code: text("code").primaryKey(),
@@ -148,7 +150,7 @@ export const marketingPlans = sqliteTable(
     lastSeenBatchId: integer("last_seen_batch_id").references(
       () => importBatches.id,
     ),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    isActive: boolean("is_active").notNull().default(true),
     importedAt: importedAt(),
   },
   (table) => [
@@ -157,7 +159,7 @@ export const marketingPlans = sqliteTable(
   ],
 );
 
-export const marketingOrders = sqliteTable(
+export const marketingOrders = pgTable(
   "marketing_orders",
   {
     code: text("code").primaryKey(),
@@ -169,15 +171,15 @@ export const marketingOrders = sqliteTable(
     formatName: text("format_name"),
     priority: text("priority"),
     progressPercent: real("progress_percent"),
-    plannedPostDate: integer("planned_post_date", { mode: "timestamp" }),
-    orderDate: integer("order_date", { mode: "timestamp" }),
-    receivedDate: integer("received_date", { mode: "timestamp" }),
+    plannedPostDate: instant("planned_post_date"),
+    orderDate: instant("order_date"),
+    receivedDate: instant("received_date"),
     channelId: integer("channel_id").references(() => channels.id),
     sourceRowHash: text("source_row_hash").notNull(),
     lastSeenBatchId: integer("last_seen_batch_id").references(
       () => importBatches.id,
     ),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    isActive: boolean("is_active").notNull().default(true),
     importedAt: importedAt(),
   },
   (table) => [
@@ -186,7 +188,7 @@ export const marketingOrders = sqliteTable(
   ],
 );
 
-export const reorderRequests = sqliteTable(
+export const reorderRequests = pgTable(
   "reorder_requests",
   {
     code: text("code").primaryKey(),
@@ -195,15 +197,15 @@ export const reorderRequests = sqliteTable(
     priority: text("priority"),
     demand: text("demand"),
     channelId: integer("channel_id").references(() => channels.id),
-    orderDate: integer("order_date", { mode: "timestamp" }),
-    receivedDate: integer("received_date", { mode: "timestamp" }),
-    plannedPostDate: integer("planned_post_date", { mode: "timestamp" }),
+    orderDate: instant("order_date"),
+    receivedDate: instant("received_date"),
+    plannedPostDate: instant("planned_post_date"),
     status: text("status"),
     sourceRowHash: text("source_row_hash").notNull(),
     lastSeenBatchId: integer("last_seen_batch_id").references(
       () => importBatches.id,
     ),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    isActive: boolean("is_active").notNull().default(true),
     importedAt: importedAt(),
   },
   (table) => [
@@ -212,11 +214,11 @@ export const reorderRequests = sqliteTable(
   ],
 );
 
-export const shootSessions = sqliteTable(
+export const shootSessions = pgTable(
   "shoot_sessions",
   {
     code: text("code").primaryKey(),
-    shootDate: integer("shoot_date", { mode: "timestamp" }),
+    shootDate: instant("shoot_date"),
     timeSlot: text("time_slot"),
     durationLabel: text("duration_label"),
     requirements: text("requirements"),
@@ -227,13 +229,13 @@ export const shootSessions = sqliteTable(
     lastSeenBatchId: integer("last_seen_batch_id").references(
       () => importBatches.id,
     ),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    isActive: boolean("is_active").notNull().default(true),
     importedAt: importedAt(),
   },
   (table) => [index("shoot_sessions_date_idx").on(table.shootDate)],
 );
 
-export const tasks = sqliteTable(
+export const tasks = pgTable(
   "tasks",
   {
     code: text("code").primaryKey(),
@@ -255,16 +257,16 @@ export const tasks = sqliteTable(
     creatorId: integer("creator_id").references(() => people.id),
     expectedMinutes: integer("expected_minutes"),
     status: text("status").notNull(),
-    isOutsourced: integer("is_outsourced", { mode: "boolean" })
+    isOutsourced: boolean("is_outsourced")
       .notNull()
       .default(false),
-    startDate: integer("start_date", { mode: "timestamp" }),
-    executionDate: integer("execution_date", { mode: "timestamp" }),
-    checkingDate: integer("checking_date", { mode: "timestamp" }),
-    completedDate: integer("completed_date", { mode: "timestamp" }),
-    expectedPostDate: integer("expected_post_date", { mode: "timestamp" }),
-    shootDate: integer("shoot_date", { mode: "timestamp" }),
-    milestoneDeadline: integer("milestone_deadline", { mode: "timestamp" }),
+    startDate: instant("start_date"),
+    executionDate: instant("execution_date"),
+    checkingDate: instant("checking_date"),
+    completedDate: instant("completed_date"),
+    expectedPostDate: instant("expected_post_date"),
+    shootDate: instant("shoot_date"),
+    milestoneDeadline: instant("milestone_deadline"),
     description: text("description"),
     notes: text("notes"),
     inputUrl: text("input_url"),
@@ -275,12 +277,12 @@ export const tasks = sqliteTable(
     personalScore: real("personal_score"),
     costVnd: integer("cost_vnd"),
     weekLabel: text("week_label"),
-    sourceCreatedAt: integer("source_created_at", { mode: "timestamp" }),
+    sourceCreatedAt: instant("source_created_at"),
     sourceRowHash: text("source_row_hash").notNull(),
     lastSeenBatchId: integer("last_seen_batch_id").references(
       () => importBatches.id,
     ),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    isActive: boolean("is_active").notNull().default(true),
     importedAt: importedAt(),
   },
   (table) => [
@@ -294,12 +296,12 @@ export const tasks = sqliteTable(
   ],
 );
 
-export const posts = sqliteTable(
+export const posts = pgTable(
   "posts",
   {
     code: text("code").primaryKey(),
     bookedTaskCode: text("booked_task_code").references(() => tasks.code),
-    postDate: integer("post_date", { mode: "timestamp" }),
+    postDate: instant("post_date"),
     timeSlot: text("time_slot"),
     channelId: integer("channel_id").references(() => channels.id),
     title: text("title"),
@@ -307,7 +309,7 @@ export const posts = sqliteTable(
     detailedNotes: text("detailed_notes"),
     productUrl: text("product_url"),
     publishedUrl: text("published_url"),
-    isPublished: integer("is_published", { mode: "boolean" })
+    isPublished: boolean("is_published")
       .notNull()
       .default(false),
     postCategory: text("post_category"),
@@ -329,7 +331,7 @@ export const posts = sqliteTable(
     lastSeenBatchId: integer("last_seen_batch_id").references(
       () => importBatches.id,
     ),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    isActive: boolean("is_active").notNull().default(true),
     importedAt: importedAt(),
   },
   (table) => [
@@ -340,7 +342,7 @@ export const posts = sqliteTable(
   ],
 );
 
-export const taskProducts = sqliteTable(
+export const taskProducts = pgTable(
   "task_products",
   {
     taskCode: text("task_code")
@@ -356,7 +358,7 @@ export const taskProducts = sqliteTable(
   ],
 );
 
-export const postProducts = sqliteTable(
+export const postProducts = pgTable(
   "post_products",
   {
     postCode: text("post_code")
@@ -372,7 +374,7 @@ export const postProducts = sqliteTable(
   ],
 );
 
-export const taskDependencies = sqliteTable(
+export const taskDependencies = pgTable(
   "task_dependencies",
   {
     taskCode: text("task_code")
@@ -388,15 +390,15 @@ export const taskDependencies = sqliteTable(
   ],
 );
 
-export const taskFeedback = sqliteTable(
+export const taskFeedback = pgTable(
   "task_feedback",
   {
     code: text("code").primaryKey(),
     taskCode: text("task_code")
       .notNull()
       .references(() => tasks.code, { onDelete: "cascade" }),
-    rejectedAt: integer("rejected_at", { mode: "timestamp" }),
-    fixedAt: integer("fixed_at", { mode: "timestamp" }),
+    rejectedAt: instant("rejected_at"),
+    fixedAt: instant("fixed_at"),
     fixMinutes: integer("fix_minutes"),
     rejectedById: integer("rejected_by_id").references(() => people.id),
     assigneeId: integer("assignee_id").references(() => people.id),
@@ -413,7 +415,7 @@ export const taskFeedback = sqliteTable(
   ],
 );
 
-export const expenseRequests = sqliteTable(
+export const expenseRequests = pgTable(
   "expense_requests",
   {
     code: text("code").primaryKey(),
@@ -426,14 +428,14 @@ export const expenseRequests = sqliteTable(
     category: text("category"),
     requestedAmountVnd: integer("requested_amount_vnd"),
     paymentStatus: text("payment_status"),
-    dueDate: integer("due_date", { mode: "timestamp" }),
-    paidDate: integer("paid_date", { mode: "timestamp" }),
+    dueDate: instant("due_date"),
+    paidDate: instant("paid_date"),
     requesterId: integer("requester_id").references(() => people.id),
     sourceRowHash: text("source_row_hash").notNull(),
     lastSeenBatchId: integer("last_seen_batch_id").references(
       () => importBatches.id,
     ),
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    isActive: boolean("is_active").notNull().default(true),
     importedAt: importedAt(),
   },
   (table) => [
@@ -441,4 +443,3 @@ export const expenseRequests = sqliteTable(
     index("expense_requests_payment_status_idx").on(table.paymentStatus),
   ],
 );
-

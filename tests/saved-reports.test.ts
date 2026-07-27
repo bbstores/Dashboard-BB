@@ -61,6 +61,10 @@ test("loads legacy arrays and filters invalid reports", () => {
   );
 
   assert.deepEqual(loadSavedReports(storage), [report]);
+  assert.deepEqual(JSON.parse(storage.getItem(SAVED_REPORTS_KEY) ?? ""), {
+    version: 1,
+    reports: [report],
+  });
 });
 
 test("returns an empty list for corrupt or unsupported storage", () => {

@@ -54,7 +54,7 @@ function isSavedReportFilters(value: unknown): value is SavedReportFilters {
   );
 }
 
-export function isSavedReport(value: unknown): value is SavedReport {
+function isSavedReport(value: unknown): value is SavedReport {
   if (!isRecord(value)) return false;
   const departments: ReportDepartment[] = ["media", "business"];
   return (

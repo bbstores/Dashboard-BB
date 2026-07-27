@@ -1,0 +1,14 @@
+{
+  "entry": [
+    "app/**/*.{ts,tsx}",
+    "tests/**/*.test.{ts,tsx}"
+  ],
+  "project": [
+    "app/**/*.{ts,tsx,css}",
+    "db/**/*.ts",
+    "features/**/*.{ts,tsx,css}",
+    "shared/**/*.ts",
+    "tests/**/*.{ts,tsx}",
+    "*.config.{ts,mjs}"
+  ]
+}

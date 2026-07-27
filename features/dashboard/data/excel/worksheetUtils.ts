@@ -2,7 +2,7 @@ import { normalizedKey } from "../../model/taskUtils";
 
 export type HeaderIndex = Map<string, number>;
 
-export function cellValue(value: unknown): unknown {
+function cellValue(value: unknown): unknown {
   if (value == null) return "";
   if (value instanceof Date || typeof value !== "object") return value;
   const cell = value as {
