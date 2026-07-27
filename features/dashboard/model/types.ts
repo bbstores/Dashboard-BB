@@ -50,6 +50,7 @@ export type DateWindow = {
 export type PieDatum = { label: string; value: number };
 export type PieScope = "started" | "inspectionCarry" | "completionCarry" | "combined";
 export type ReportDepartment = "media" | "business";
+export type LeaderboardUnit = "minutes" | "hours" | "days";
 
 export type DailyTaskDatum = {
   date: Date;
@@ -76,15 +77,17 @@ export type SavedReport = {
   name: string;
   department: ReportDepartment;
   createdAt: string;
-  filters: {
-    dateFrom: string;
-    dateTo: string;
-    backlogDate: string;
-    collectionMonth: string;
-    leaderboardUnit: "minutes" | "hours" | "days";
-    pieScopes: Record<string, PieScope>;
-    pieExcludeOutsource: Record<string, boolean>;
-  };
+  filters: SavedReportFilters;
+};
+
+export type SavedReportFilters = {
+  dateFrom: string;
+  dateTo: string;
+  backlogDate: string;
+  collectionMonth: string;
+  leaderboardUnit: LeaderboardUnit;
+  pieScopes: Record<string, PieScope>;
+  pieExcludeOutsource: Record<string, boolean>;
 };
 
 export type PercentileDetail = {

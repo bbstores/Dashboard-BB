@@ -1,24 +1,7 @@
 "use client";
 
 import "./styles/sla.css";
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-
-import type {
-  DashboardData,
-  DateWindow,
-  PieScope,
-  ReportDepartment,
-  SavedReport,
-  DetailView,
-  PercentileDetail,
-} from "./model/types";
-
-import { SAVED_REPORTS_KEY } from "./model/constants";
+import type { SavedReport } from "./model/types";
 
 import {
   inputDate,
@@ -55,12 +38,14 @@ import {
   outsourceName,
 } from "./model/taskUtils";
 
-import { readDashboardWorkbook } from "./data/excel/readWorkbook";
-
 import { dashboardHelp } from "./help/helpContent";
 import { HelpProvider } from "./help/HelpProvider";
+import { useDashboardDialogs } from "./hooks/useDashboardDialogs";
+import { useDashboardFilters } from "./hooks/useDashboardFilters";
 import { useDashboardStats } from "./hooks/useDashboardStats";
 import { useDailyTaskChart } from "./hooks/useDailyTaskChart";
+import { useWorkbookData } from "./hooks/useWorkbookData";
+import { useSavedReports } from "./saved-reports/useSavedReports";
 
 import { HelpButton } from "./components/HelpButton";
 import { PieChart } from "./components/PieChart";
@@ -77,140 +62,78 @@ import { PercentileDialog } from "./components/PercentileDialog";
 // ─── Main Dashboard Component ───────────────────────────────────────────────
 
 export function Dashboard() {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [dailyAssignee, setDailyAssignee] = useState("");
-  const [collectionMonth, setCollectionMonth] = useState("");
-  const [leaderboardUnit, setLeaderboardUnit] = useState<
-    "minutes" | "hours" | "days"
-  >("minutes");
-  const [pieScopes, setPieScopes] = useState<Record<string, PieScope>>({});
-  const [pieExcludeOutsource, setPieExcludeOutsource] = useState<
-    Record<string, boolean>
-  >({});
-  const [backlogDate, setBacklogDate] = useState(
-    new Date().toISOString().slice(0, 10),
-  );
-  const [detail, setDetail] = useState<DetailView | null>(null);
-  const [percentileDetail, setPercentileDetail] =
-    useState<PercentileDetail | null>(null);
-  const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
-  const [reportDepartment, setReportDepartment] =
-    useState<ReportDepartment | null>(null);
-  const [saveReportOpen, setSaveReportOpen] = useState(false);
-  const [reportName, setReportName] = useState("");
-  const [saveDepartment, setSaveDepartment] =
-    useState<ReportDepartment>("media");
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      try {
-        const stored = window.localStorage.getItem(SAVED_REPORTS_KEY);
-        if (stored) setSavedReports(JSON.parse(stored) as SavedReport[]);
-      } catch {
-        // Dữ liệu cũ/hỏng không được phép làm gián đoạn dashboard.
-      }
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  function persistReports(reports: SavedReport[]) {
-    setSavedReports(reports);
-    window.localStorage.setItem(SAVED_REPORTS_KEY, JSON.stringify(reports));
-  }
+  const {
+    dateFrom,
+    setDateFrom,
+    dateTo,
+    setDateTo,
+    dailyAssignee,
+    setDailyAssignee,
+    collectionMonth,
+    setCollectionMonth,
+    leaderboardUnit,
+    setLeaderboardUnit,
+    pieExcludeOutsource,
+    backlogDate,
+    setBacklogDate,
+    dateWindow,
+    savedReportFilters,
+    clearDateWindow,
+    resetWorkbookFilters,
+    applySavedReportFilters,
+    chartScope,
+    setChartScope,
+    setChartExcludeOutsource,
+  } = useDashboardFilters();
+  const { fileRef, data, loading, error, loadWorkbook } =
+    useWorkbookData(resetWorkbookFilters);
+  const {
+    detail,
+    setDetail,
+    percentileDetail,
+    setPercentileDetail,
+    reportDepartment,
+    setReportDepartment,
+    saveReportOpen,
+    reportName,
+    setReportName,
+    saveDepartment,
+    setSaveDepartment,
+    openSaveReport,
+    closeSaveReport,
+    finishSaveReport,
+  } = useDashboardDialogs();
+  const {
+    savedReports,
+    saveReport,
+    deleteReport: deleteSavedReport,
+  } = useSavedReports();
 
   function saveCurrentReport() {
     const name = reportName.trim();
     if (!name) return;
-    const report: SavedReport = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    saveReport({
       name,
       department: saveDepartment,
-      createdAt: new Date().toISOString(),
-      filters: {
-        dateFrom,
-        dateTo,
-        backlogDate,
-        collectionMonth,
-        leaderboardUnit,
-        pieScopes,
-        pieExcludeOutsource,
-      },
-    };
-    persistReports([report, ...savedReports]);
-    setReportName("");
-    setSaveReportOpen(false);
-    setReportDepartment(saveDepartment);
+      filters: savedReportFilters,
+    });
+    finishSaveReport(saveDepartment);
   }
 
   function applySavedReport(report: SavedReport) {
-    setDateFrom(report.filters.dateFrom);
-    setDateTo(report.filters.dateTo);
-    setBacklogDate(report.filters.backlogDate);
-    setCollectionMonth(report.filters.collectionMonth);
-    setLeaderboardUnit(report.filters.leaderboardUnit);
-    setPieScopes(report.filters.pieScopes);
-    setPieExcludeOutsource(report.filters.pieExcludeOutsource);
+    applySavedReportFilters(report.filters);
     setReportDepartment(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function deleteSavedReport(id: string) {
-    persistReports(savedReports.filter((report) => report.id !== id));
-  }
-
-  const dateWindow = useMemo<DateWindow>(
-    () => ({
-      from: inputDate(dateFrom),
-      to: inputDate(dateTo, true),
-      hasFilter: Boolean(dateFrom || dateTo),
-    }),
-    [dateFrom, dateTo],
-  );
-
-  async function loadWorkbook(file: File) {
-    setLoading(true);
-    setError("");
-    try {
-      setData(await readDashboardWorkbook(file));
-      setCollectionMonth("");
-      setDailyAssignee("");
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Không thể đọc file Excel này.",
-      );
-    } finally {
-      setLoading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
   }
 
   const analytics = useDashboardStats(data, dateWindow, collectionMonth, backlogDate);
 
   const dailyTaskChart = useDailyTaskChart(data, dailyAssignee, dateWindow);
 
-  function chartScope(key: string): PieScope {
-    return pieScopes[key] ?? "combined";
-  }
-
-  function setChartScope(key: string, scope: PieScope) {
-    setPieScopes((current) => ({ ...current, [key]: scope }));
-  }
-
   function chartMetrics(key: string) {
     if (!analytics) throw new Error("Dashboard data is not loaded.");
     const metrics = analytics!.pieMetrics[chartScope(key)];
     return pieExcludeOutsource[key] ? metrics.withoutOutsource : metrics.all;
-  }
-
-  function setChartExcludeOutsource(key: string, checked: boolean) {
-    setPieExcludeOutsource((current) => ({ ...current, [key]: checked }));
   }
 
   return (
@@ -325,20 +248,14 @@ export function Dashboard() {
             <button
               className="clearButton"
               disabled={!dateWindow.hasFilter}
-              onClick={() => {
-                setDateFrom("");
-                setDateTo("");
-              }}
+              onClick={clearDateWindow}
             >
               Xóa lọc
             </button>
             <button
               type="button"
               className="saveReportButton"
-              onClick={() => {
-                setSaveDepartment(reportDepartment ?? "media");
-                setSaveReportOpen(true);
-              }}
+              onClick={() => openSaveReport(reportDepartment ?? "media")}
             >
               <span>＋</span> Lưu báo cáo
             </button>
@@ -1280,7 +1197,7 @@ export function Dashboard() {
         <div
           className="saveReportOverlay"
           role="presentation"
-          onMouseDown={() => setSaveReportOpen(false)}
+          onMouseDown={closeSaveReport}
         >
           <form
             className="saveReportModal"
@@ -1322,7 +1239,7 @@ export function Dashboard() {
               </button>
             </fieldset>
             <div className="saveReportActions">
-              <button type="button" onClick={() => setSaveReportOpen(false)}>Hủy</button>
+              <button type="button" onClick={closeSaveReport}>Hủy</button>
               <button type="submit" disabled={!reportName.trim()}>Lưu báo cáo</button>
             </div>
           </form>

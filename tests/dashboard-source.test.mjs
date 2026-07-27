@@ -64,3 +64,28 @@ test("keeps dashboard analytics independent from React", async () => {
   assert.match(dashboardHook, /calculateDashboardStats/);
   assert.doesNotMatch(dashboardHook, /classifyTask|groupCount|evaluateHandoff/);
 });
+
+test("delegates dashboard state and persistence to feature hooks", async () => {
+  const dashboardSource = await readFile(
+    new URL("../features/dashboard/Dashboard.tsx", import.meta.url),
+    "utf8",
+  );
+  const savedReportHook = await readFile(
+    new URL(
+      "../features/dashboard/saved-reports/useSavedReports.ts",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.doesNotMatch(
+    dashboardSource,
+    /useState|useEffect|useMemo|useRef|localStorage|readDashboardWorkbook/,
+  );
+  assert.match(dashboardSource, /useDashboardFilters/);
+  assert.match(dashboardSource, /useWorkbookData/);
+  assert.match(dashboardSource, /useDashboardDialogs/);
+  assert.match(dashboardSource, /useSavedReports/);
+  assert.match(savedReportHook, /loadSavedReports/);
+  assert.match(savedReportHook, /saveSavedReports/);
+});
