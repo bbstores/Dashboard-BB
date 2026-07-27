@@ -1,0 +1,53 @@
+/*  Dashboard filters.  */
+.filterBar {
+  position: sticky; top: 10px; z-index: 20;
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 16px; margin-bottom: 20px;
+  border: 1px solid var(--line); border-radius: 18px;
+  background: rgba(253,251,245,.92); backdrop-filter: blur(14px);
+  box-shadow: 0 12px 35px rgba(20,32,28,.07);
+}
+.filterIntro { min-width: 210px; margin-right: auto; }
+.filterIntro .chartKicker { display: block; margin-bottom: 4px; }
+.filterIntro strong { font-size: 13px; }
+.filterBar label {
+  display: grid; gap: 5px; color: var(--muted); font-size: 9px;
+  font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+}
+.filterBar .backlogFilter {
+  position: relative; padding-left: 16px; border-left: 1px solid var(--line);
+}
+.backlogFilter small {
+  position: absolute; top: 49px; left: 16px; white-space: nowrap;
+  color: #8a928e; font-size: 8px; font-weight: 600;
+  letter-spacing: 0; text-transform: none;
+}
+.filterBar input {
+  height: 38px; padding: 0 11px; border: 1px solid var(--line);
+  border-radius: 9px; color: var(--ink); background: white;
+  font-size: 12px; text-transform: none; letter-spacing: 0;
+}
+.filterArrow { color: #9ca39f; }
+.clearButton {
+  height: 38px; padding: 0 14px; border: 1px solid var(--line);
+  border-radius: 9px; color: var(--green); background: transparent;
+  font-size: 10px; font-weight: 850; letter-spacing: .06em;
+}
+.clearButton:disabled { cursor: default; opacity: .35; }
+.saveReportButton {
+  height: 38px; padding: 0 15px; border: 0; border-radius: 9px;
+  color: white; background: var(--green); white-space: nowrap;
+  font-size: 10px; font-weight: 850; letter-spacing: .04em;
+}
+.saveReportButton span { color: var(--lime); font-size: 15px; vertical-align: -1px; }
+@media (max-width: 820px) {
+  .filterBar { position: static; display: grid; grid-template-columns: 1fr 1fr; }
+  .filterIntro { grid-column: 1 / -1; }
+  .clearButton,
+.saveReportButton { width: 100%; }
+  .filterBar .backlogFilter {
+    grid-column: 1 / -1; padding: 12px 0 0; border-left: 0; border-top: 1px solid var(--line);
+  }
+  .backlogFilter small { position: static; }
+  .filterArrow { display: none; }
+}

@@ -1,0 +1,153 @@
+/*  Collection section.  */
+
+.collectionCard select {
+  height: 38px; padding: 0 11px; border: 1px solid var(--line);
+  border-radius: 9px; color: var(--ink); background: white;
+  font-size: 12px; text-transform: none; letter-spacing: 0;
+}
+
+.collectionCard {
+  position: relative; z-index: 3;
+  color: white; border-color: var(--green); background: var(--green);
+}
+
+.collectionCard:has(.metricHoverGroup:hover) {
+  z-index: 100;
+}
+
+.collectionCard .chartKicker { color: var(--lime); }
+
+.collectionCard select { min-width: 185px; border-color: rgba(255,255,255,.2); color: white; background: rgba(255,255,255,.1); }
+
+.progressGrid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  align-items: stretch;
+}
+
+.collectionProgressArea { position: relative; }
+
+.metricHoverGroup { height: 100%; }
+
+.progressPanel {
+  height: 100%; min-height: 230px; padding: 22px; border: 1px solid rgba(255,255,255,.16);
+  border-radius: 16px; display: flex; align-items: center; gap: 24px;
+  background: rgba(255,255,255,.04);
+}
+
+.progressPanel.interactive:hover { border-color: rgba(217,255,114,.55); }
+
+.progressDonut[role="button"] { cursor: pointer; }
+
+.progressSummary {
+  min-width: 0; padding: 0; border: 0;
+  color: inherit; text-align: left; background: transparent;
+}
+
+.progressSummary:hover h3 { color: var(--lime); }
+
+.progressDonut {
+  flex: 0 0 auto; width: 130px; height: 130px; border-radius: 50%;
+  padding: 14px;
+}
+
+.progressDonut > div {
+  width: 100%; height: 100%; border-radius: 50%; background: var(--green);
+  display: grid; place-items: center; align-content: center;
+}
+
+.progressDonut strong { font-size: 27px; letter-spacing: -.04em; }
+
+.progressDonut span { color: #b9cbc4; font-size: 9px; }
+
+.progressPanel h3 {
+  margin: 8px 0 0; white-space: nowrap;
+  font-size: clamp(19px, 1.65vw, 24px);
+}
+
+.progressPanel h3 small {
+  color: #b9cbc4; font-size: 10px; font-weight: 500; white-space: nowrap;
+}
+
+.selectPrompt {
+  min-height: 210px; display: grid; place-items: center; align-content: center;
+  text-align: center; color: #c2d0cb;
+}
+
+.selectPrompt span { color: var(--lime); font: 12px monospace; }
+
+.selectPrompt p { max-width: 390px; line-height: 1.6; font-size: 13px; }
+
+.metricHoverGroup { position: relative; min-width: 0; }
+
+.metricChildren {
+  position: absolute; top: calc(100% + 12px); z-index: 50;
+  width: calc(200% + 16px); padding: 22px;
+  border: 1px solid rgba(217,255,114,.45); border-radius: 16px;
+  color: white; background: #123f31;
+  box-shadow: 0 22px 55px rgba(6,24,18,.35);
+  opacity: 0; visibility: hidden; transform: translateY(-6px);
+  transition: opacity .16s ease, transform .16s ease, visibility .16s;
+  pointer-events: none;
+}
+
+.metricHoverGroup.tasks .metricChildren { left: 0; }
+
+.metricHoverGroup.minutes .metricChildren { right: 0; }
+
+.metricHoverGroup:hover .metricChildren {
+  opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto;
+}
+
+.metricChildrenHeader { padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,.13); }
+
+.metricChildrenHeader .chartKicker { display: block; margin-bottom: 4px; color: var(--lime); }
+
+.metricChildrenHeader strong { font-size: 15px; }
+
+.metricChildrenGrid {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px; padding-top: 16px;
+}
+
+.metricChild {
+  min-width: 0; padding: 16px; border: 1px solid rgba(255,255,255,.13);
+  border-radius: 12px; color: white; text-align: center;
+  background: rgba(255,255,255,.045);
+}
+
+.metricChild:hover { border-color: var(--lime); background: rgba(255,255,255,.08); }
+
+.metricChild > strong {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 12px;
+}
+
+.miniProgress { display: grid; justify-items: center; gap: 5px; margin-top: 12px; }
+
+.miniDonut {
+  width: 82px; height: 82px; padding: 9px; border-radius: 50%;
+}
+
+.miniDonut > div {
+  width: 100%; height: 100%; border-radius: 50%;
+  display: grid; place-items: center; color: white; background: #123f31;
+  font-size: 13px; font-weight: 800;
+}
+
+.miniProgress > span { margin-top: 3px; color: #d7e2dd; font-size: 10px; font-weight: 750; }
+
+.miniProgress > small { color: #9fb8ae; font-size: 9px; }
+
+@media (max-width: 1100px) {
+  .progressPanel { flex-direction: column; align-items: flex-start; }
+  .metricChildrenGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 820px) {
+  .progressGrid { grid-template-columns: 1fr; }
+  .metricChildren {
+    position: static; display: none; width: 100%; margin-top: 12px;
+  }
+  .metricHoverGroup:hover .metricChildren { display: block; }
+  .metricChildrenGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

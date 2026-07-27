@@ -1,0 +1,712 @@
+/*  SLA section.  */
+.backlogCard label {
+  display: grid; gap: 5px; color: var(--muted); font-size: 9px;
+  font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+}
+.backlogCard input {
+  height: 38px; padding: 0 11px; border: 1px solid var(--line);
+  border-radius: 9px; color: var(--ink); background: white;
+  font-size: 12px; text-transform: none; letter-spacing: 0;
+}
+.backlogCard { padding: 0; overflow: hidden; }
+.backlogCard > .chartTitle { padding: 24px 24px 0; }
+.backlogCard > .pieCard { border: 0; border-top: 1px solid var(--line); border-radius: 0; }
+.slaSection {
+  padding: 24px; border: 1px solid #b8c7c0; border-radius: 24px;
+  background: #e6ebe5;
+}
+.slaHeader {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 24px; padding: 4px 4px 22px;
+}
+.slaHeader .chartKicker { display: block; margin-bottom: 7px; }
+.slaHeader h2 { margin: 0; font-size: 30px; letter-spacing: -.045em; }
+.slaHeader p {
+  max-width: 720px; margin: 8px 0 0; color: var(--muted);
+  font-size: 11px; line-height: 1.5;
+}
+.slaMode {
+  padding: 7px 10px; border: 1px solid #aabdb4; border-radius: 999px;
+  color: var(--green); background: rgba(255,255,255,.5);
+  font-size: 8px; font-weight: 850; letter-spacing: .08em; white-space: nowrap;
+}
+.slaMetrics,
+.checkingMetrics {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
+}
+.slaMetric {
+  min-height: 166px; padding: 18px; border: 1px solid #c8d1cc;
+  border-radius: 16px; color: var(--ink); text-align: left;
+  background: rgba(253,251,245,.78);
+}
+.slaMetric > .slaMetricKicker {
+  display: block; color: var(--green); font-size: 8px;
+  font-weight: 850; letter-spacing: .13em;
+}
+.slaMetric > small {
+  display: block; margin-top: 7px; color: var(--muted); font-size: 10px;
+}
+.slaMetric > strong {
+  display: block; margin-top: 18px; font-size: 30px; letter-spacing: -.045em;
+}
+.slaMetric > p {
+  margin: 7px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45;
+}
+.slaChartGrid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px; margin-top: 12px;
+}
+.slaChartGrid > .chartCard { height: 100%; }
+.checkingCard {
+  margin-top: 12px; padding: 20px; border-radius: 18px;
+  color: white; background: var(--green);
+}
+.checkingHeader {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 22px; padding-bottom: 16px;
+}
+.checkingHeader .chartKicker { display: block; margin-bottom: 6px; color: var(--lime); }
+.checkingHeader h3 { margin: 0; font-size: 20px; }
+.checkingHeader > small {
+  max-width: 410px; color: #b9cbc4; font-size: 9px; line-height: 1.45;
+  text-align: right;
+}
+.checkingCard .slaMetric {
+  border-color: rgba(255,255,255,.15); color: white;
+  background: rgba(255,255,255,.055);
+}
+.checkingCard .slaMetric > .slaMetricKicker { color: var(--lime); }
+.checkingCard .slaMetric > small,
+.checkingCard .slaMetric > p { color: #b9cbc4; }
+.normSummary {
+  padding: 24px; border: 1px solid var(--line); border-radius: 20px;
+  background: var(--card);
+}
+.normSummary .chartKicker { display: block; }
+.normSummary h3 { margin: 0; font-size: 20px; }
+.normSummary > div {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px;
+}
+.normSummary > div > span {
+  padding: 17px; border-radius: 14px; background: #e7e9e1;
+}
+.normSummary small,
+.normSummary strong,
+.normSummary em { display: block; }
+.normSummary small { color: var(--muted); font-size: 8px; font-weight: 800; }
+.normSummary strong { margin-top: 12px; font-size: 29px; letter-spacing: -.04em; }
+.normSummary em {
+  margin-top: 4px; color: var(--green); font-size: 10px; font-style: normal;
+}
+.normSummary p {
+  margin: 16px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5;
+}
+@media (max-width: 1100px) {
+  .slaMetrics,
+.checkingMetrics { grid-template-columns: 1fr; }
+}
+@media (max-width: 820px) {
+  .slaChartGrid { grid-template-columns: 1fr; }
+  .slaHeader,
+.checkingHeader { flex-direction: column; }
+  .checkingHeader > small { text-align: left; }
+}
+.slaSection {
+  padding: 24px;
+  border: 1px solid #b8c7c0;
+  border-radius: 24px;
+  background: #e6ebe5;
+}
+.slaHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 4px 4px 22px;
+}
+.slaHeader .chartKicker {
+  display: block;
+  margin-bottom: 7px;
+}
+.slaHeader h2 {
+  margin: 0;
+  font-size: 30px;
+  letter-spacing: -.045em;
+}
+.slaHeader p {
+  max-width: 720px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.slaMode {
+  padding: 7px 10px;
+  border: 1px solid #aabdb4;
+  border-radius: 999px;
+  color: var(--green);
+  background: rgba(255,255,255,.5);
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+.slaMetrics,
+.checkingMetrics {
+  display: grid;
+  gap: 12px;
+}
+.slaMetrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.handoffSlaBlock {
+  background: #edf8df;
+  border: 1px solid rgba(23, 79, 61, 0.16);
+  border-radius: 20px;
+  margin: 18px 0;
+  padding: 18px;
+}
+.staffTimeCard {
+  background: #fbfaf5;
+  border: 1px solid rgba(23, 79, 61, .16);
+  border-radius: 20px;
+  margin: 18px 0;
+  padding: 22px;
+}
+.staffTimeHeader,
+.staffTimeLegend,
+.staffTimeLegend span,
+.staffTimeValues,
+.staffTimeValues button {
+  align-items: center;
+  display: flex;
+}
+.staffTimeHeader {
+  align-items: flex-start;
+  gap: 24px;
+  justify-content: space-between;
+}
+.staffTimeHeader h3 {
+  font-size: 20px;
+  margin: 6px 0 0;
+}
+.staffTimeHeader p {
+  color: var(--muted);
+  font-size: 10px;
+  margin: 6px 0 0;
+}
+.staffTimeLegend {
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+.staffTimeMetricSwitch {
+  background: #e6ebe5;
+  border: 1px solid rgba(23, 79, 61, .14);
+  border-radius: 999px;
+  display: flex;
+  padding: 3px;
+}
+.staffTimeCohortSwitch {
+  display: flex;
+  gap: 3px;
+}
+.staffTimeMetricSwitch button,
+.staffTimeCohortSwitch button {
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 7px 11px;
+}
+.staffTimeCohortSwitch {
+  background: #f0f1eb;
+  border: 1px solid rgba(23, 79, 61, .12);
+  border-radius: 999px;
+  padding: 3px;
+}
+.staffTimeMetricSwitch button.active,
+.staffTimeCohortSwitch button.active {
+  background: #174f3d;
+  color: white;
+}
+.staffTimeLegend span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 750;
+  gap: 6px;
+}
+.staffTimeLegend i,
+.staffTimeValues i {
+  border-radius: 50%;
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+}
+.staffTimeLegend i.inspection,
+.staffTimeValues i.inspection,
+.staffTimeMarker.inspection {
+  background: #8fbf45;
+}
+.staffTimeLegend i.completion,
+.staffTimeValues i.completion,
+.staffTimeMarker.completion {
+  background: #d46b5f;
+}
+.staffTimeScale {
+  color: var(--muted);
+  display: grid;
+  font-size: 8px;
+  grid-template-columns: auto 1fr auto;
+  margin: 26px 295px 5px 170px;
+}
+.staffTimeScale span {
+  text-align: center;
+}
+.staffTimeScale span:first-child {
+  text-align: left;
+}
+.staffTimeScale span:last-child {
+  text-align: right;
+}
+.staffTimeRows {
+  display: grid;
+  gap: 8px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+.staffTimeRow {
+  align-items: center;
+  border-top: 1px solid rgba(23, 79, 61, .09);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 154px minmax(320px, 1fr) 280px;
+  min-height: 82px;
+}
+.staffTimeRow > strong {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.staffTimeTrack {
+  background: #d9ddd4;
+  height: 2px;
+  position: relative;
+}
+.staffTimeActiveRange {
+  background: #174f3d;
+  border-radius: 999px;
+  height: 4px;
+  opacity: 0;
+  position: absolute;
+  top: -1px;
+  transition:
+    width .48s cubic-bezier(.2, .8, .2, 1),
+    opacity .18s ease;
+  z-index: 1;
+}
+.staffTimeActiveRange.active {
+  opacity: 1;
+}
+.staffTimeGrid {
+  background: rgba(23, 79, 61, .1);
+  height: 26px;
+  position: absolute;
+  top: -12px;
+  width: 1px;
+}
+.staffTimeMarker {
+  border: 3px solid #fbfaf5;
+  border-radius: 50%;
+  cursor: pointer;
+  height: 16px;
+  padding: 0;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  z-index: 1;
+}
+.staffTimeMarker:first-of-type b,
+.staffTimeMarker:first-of-type > small {
+  left: 0;
+  transform: none;
+}
+.staffTimeMarker:last-of-type b,
+.staffTimeMarker:last-of-type > small {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+.staffTimeMarker b {
+  background: transparent;
+  bottom: 18px;
+  color: var(--green);
+  display: block;
+  font-size: 8px;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.staffTimeMarker > small {
+  color: var(--muted);
+  font-size: 7px;
+  font-weight: 850;
+  left: 50%;
+  position: absolute;
+  top: 17px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.staffTimeMarker.median {
+  height: 20px;
+  outline: 3px solid rgba(143, 191, 69, .2);
+  width: 20px;
+}
+.staffTimeMarker.median b,
+.staffTimeMarker.median > small {
+  color: #174f3d;
+  font-weight: 900;
+}
+.staffTimeMarker.active {
+  box-shadow: 0 0 0 5px rgba(217, 255, 114, .42);
+  transform: translate(-50%, -50%) scale(1.18);
+  z-index: 3;
+}
+.staffTimeValues {
+  gap: 6px;
+  justify-content: flex-end;
+}
+.staffTimeContext {
+  border-left: 1px solid rgba(23, 79, 61, .14);
+  display: grid;
+  gap: 2px;
+  padding-left: 8px;
+  text-align: left;
+}
+.staffTimeContext b {
+  color: var(--green);
+  font-size: 9px;
+}
+.staffTimeContext small {
+  color: var(--muted);
+  font-size: 7px;
+  white-space: nowrap;
+}
+.staffTimeValues button {
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  cursor: pointer;
+  gap: 5px;
+  padding: 4px;
+}
+.staffTimeValues button > strong {
+  font-size: 10px;
+}
+.staffTimeValues button > small {
+  color: var(--muted);
+  font-size: 8px;
+}
+@media (max-width: 900px) {
+  .staffTimeScale {
+    display: none;
+  }
+
+  .staffTimeHeader {
+    flex-direction: column;
+  }
+
+  .staffTimeLegend {
+    justify-content: flex-start;
+  }
+
+  .staffTimeRow {
+    grid-template-columns: 120px minmax(260px, 1fr) 250px;
+    min-width: 720px;
+  }
+
+  .staffTimeRows {
+    overflow-x: auto;
+  }
+}
+.handoffSlaHeader {
+  align-items: flex-start;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+}
+.handoffSlaHeader h3 {
+  font-size: 22px;
+  margin: 6px 0;
+}
+.handoffSlaHeader p {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 0;
+}
+.handoffKpis {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 16px;
+}
+.handoffKpis .slaMetric {
+  background: #fbfaf5;
+}
+.handoffLateChart {
+  margin-top: 12px;
+}
+.checkingMetrics {
+  grid-template-columns: minmax(0, 1fr);
+}
+.slaMetric {
+  min-height: 166px;
+  padding: 18px;
+  border: 1px solid #c8d1cc;
+  border-radius: 16px;
+  color: var(--ink);
+  text-align: left;
+  background: rgba(253,251,245,.78);
+}
+.slaMetric > .slaMetricKicker {
+  display: block;
+  color: var(--green);
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .13em;
+}
+.slaMetric > small {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.slaMetric > strong {
+  display: block;
+  margin-top: 18px;
+  font-size: 30px;
+  letter-spacing: -.045em;
+}
+.slaMetric > p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+.expandMetricButton {
+  position: absolute;
+  right: 48px;
+  top: 16px;
+  width: 26px;
+  height: 26px;
+  border: 1px solid #c8d1cc;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--green);
+  background: rgba(255,255,255,.72);
+  font-size: 13px;
+  font-weight: 850;
+  transition: transform .16s ease, background .16s ease;
+}
+.expandMetricButton:hover {
+  transform: scale(1.08);
+  background: var(--lime);
+}
+.checkingCard .expandMetricButton {
+  border-color: rgba(255,255,255,.25);
+  color: var(--lime);
+  background: rgba(255,255,255,.08);
+}
+.slaChartGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.slaChartGrid > .chartCard {
+  height: 100%;
+}
+.cycleChartRow > .chartCard {
+  grid-column: 1 / -1;
+}
+.agingBacklogRow > .pieCard {
+  overflow: visible;
+  position: relative;
+}
+.checkingCard {
+  margin-top: 12px;
+  padding: 20px;
+  border-radius: 18px;
+  color: white;
+  background: var(--green);
+}
+.checkingCard .slaMetric > p {
+  font-size: 12px;
+  line-height: 1.55;
+  max-width: 54ch;
+}
+.checkingCard .slaMetric > small {
+  font-size: 12px;
+  line-height: 1.4;
+}
+.checkingHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 22px;
+  padding-bottom: 16px;
+}
+.checkingHeader .chartKicker {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--lime);
+}
+.checkingHeader h3 {
+  margin: 0;
+  font-size: 20px;
+}
+.checkingHeader > small {
+  max-width: 410px;
+  color: #b9cbc4;
+  font-size: 9px;
+  line-height: 1.45;
+  text-align: right;
+}
+.checkingCard .slaMetric {
+  border-color: rgba(255,255,255,.15);
+  color: white;
+  background: rgba(255,255,255,.055);
+}
+.checkingCard .slaMetric > .slaMetricKicker {
+  color: var(--lime);
+}
+.checkingCard .slaMetric > small,
+.checkingCard .slaMetric > p {
+  color: #b9cbc4;
+}
+.normSummary {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+}
+.normSummary .chartKicker {
+  display: block;
+}
+.normSummary h3 {
+  margin: 0;
+  font-size: 20px;
+}
+.normSummary > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 24px;
+}
+.normSummary > div > span {
+  padding: 17px;
+  border-radius: 14px;
+  background: #e7e9e1;
+}
+.normSummary small,
+.normSummary strong,
+.normSummary em {
+  display: block;
+}
+.normSummary small {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+}
+.normSummary strong {
+  margin-top: 12px;
+  font-size: 29px;
+  letter-spacing: -.04em;
+}
+.normSummary em {
+  margin-top: 4px;
+  color: var(--green);
+  font-size: 10px;
+  font-style: normal;
+}
+.normSummary p {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+@media (max-width: 1100px) {
+  .handoffKpis {
+    grid-template-columns: 1fr;
+  }
+
+  .slaMetrics,
+.checkingMetrics {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 820px) {
+  .slaChartGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .slaHeader,
+.checkingHeader {
+    flex-direction: column;
+  }
+
+  .checkingHeader > small {
+    text-align: left;
+  }
+}
+.slaMetric,
+.normSummary {
+  position: relative;
+}
+.slaMetric > .helpButton,
+.normSummary > .helpButton {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+}
+.checkingHeader {
+  position: relative;
+}
+.checkingHeader > .helpButton {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+.checkingHeader > small {
+  margin-right: 42px;
+}
+.normDisclaimer {
+  align-items: flex-start;
+  background: #fff0d6;
+  border: 1px solid #e9b85e;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 16px 0;
+  padding: 14px 16px;
+}
+.normDisclaimer strong {
+  color: #7a4300;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.normDisclaimer span {
+  color: #654e31;
+  font-size: 12px;
+  line-height: 1.5;
+}

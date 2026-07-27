@@ -1,6 +1,12 @@
 "use client";
 
-import "./styles/sla.css";
+import "./styles/dashboard.css";
+import "./styles/filters.css";
+import "./styles/charts.css";
+import "./sections/collection/collection.css";
+import "./sections/publication/publication.css";
+import "./sections/sla/sla.css";
+import "./styles/dialogs.css";
 import {
   formatDistributionValue,
   formatNumber,
@@ -27,7 +33,6 @@ import { OverviewSection } from "./sections/OverviewSection";
 import { PeopleSection } from "./sections/PeopleSection";
 import { PublicationSection } from "./sections/PublicationSection";
 import { SlaSection } from "./sections/SlaSection";
-
 export function Dashboard() {
   const filters = useDashboardFilters();
   const workbook = useWorkbookData(filters.resetWorkbookFilters);
@@ -44,7 +49,6 @@ export function Dashboard() {
     filters.dailyAssignee,
     filters.dateWindow,
   );
-
   function chartMetrics(key: string) {
     if (!analytics) throw new Error("Dashboard data is not loaded.");
     const metrics = analytics.pieMetrics[filters.chartScope(key)];
@@ -52,13 +56,11 @@ export function Dashboard() {
       ? metrics.withoutOutsource
       : metrics.all;
   }
-
   function toggleReportDepartment(department: ReportDepartment) {
     dialogs.setReportDepartment(
       dialogs.reportDepartment === department ? null : department,
     );
   }
-
   function saveCurrentReport() {
     const name = dialogs.reportName.trim();
     if (!name) return;
@@ -69,7 +71,6 @@ export function Dashboard() {
     });
     dialogs.finishSaveReport(dialogs.saveDepartment);
   }
-
   function applySavedReport(report: SavedReport) {
     filters.applySavedReportFilters(report.filters);
     dialogs.setReportDepartment(null);

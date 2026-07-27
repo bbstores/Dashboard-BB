@@ -144,3 +144,53 @@ test("keeps phase 6 UI sections isolated behind typed view models", async () => 
     ),
   );
 });
+
+test("keeps phase 7 CSS scoped by dashboard ownership", async () => {
+  const dashboardSource = await readFile(
+    new URL("../features/dashboard/Dashboard.tsx", import.meta.url),
+    "utf8",
+  );
+  const globalsSource = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
+  const scopedStyles = [
+    "features/dashboard/styles/dashboard.css",
+    "features/dashboard/styles/filters.css",
+    "features/dashboard/styles/charts.css",
+    "features/dashboard/styles/dialogs.css",
+    "features/dashboard/sections/sla/sla.css",
+    "features/dashboard/sections/collection/collection.css",
+    "features/dashboard/sections/publication/publication.css",
+  ];
+
+  assert.ok(
+    globalsSource.split("\n").length - 1 <= 80,
+    "globals.css should only contain reset, base styles and tokens",
+  );
+  assert.match(globalsSource, /:root/);
+  assert.match(globalsSource, /box-sizing/);
+  assert.doesNotMatch(
+    globalsSource,
+    /\.(?:dashboard|filterBar|chartCard|detailDrawer|slaSection)/,
+  );
+  for (const path of scopedStyles) {
+    await access(new URL(`../${path}`, import.meta.url));
+    assert.match(
+      dashboardSource,
+      new RegExp(
+        path
+          .replace("features/dashboard/", "./")
+          .replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+      ),
+    );
+  }
+  await assert.rejects(
+    access(
+      new URL(
+        "../features/dashboard/styles/sla.css",
+        import.meta.url,
+      ),
+    ),
+  );
+});
