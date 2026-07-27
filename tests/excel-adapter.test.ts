@@ -190,10 +190,9 @@ test("reads a valid workbook through the client adapter", async () => {
   );
 
   const bytes = await workbook.xlsx.writeBuffer();
-  const arrayBuffer = bytes.buffer.slice(
-    bytes.byteOffset,
-    bytes.byteOffset + bytes.byteLength,
-  ) as ArrayBuffer;
+  const arrayBuffer = new Uint8Array(
+    bytes as unknown as ArrayLike<number>,
+  ).buffer;
   const file = {
     name: "dashboard-fixture.xlsx",
     arrayBuffer: async () => arrayBuffer,

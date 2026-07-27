@@ -49,3 +49,18 @@ test("reads the workbook locally without embedding employee data", async () => {
   await assert.rejects(access(new URL("../.openai/hosting.json", import.meta.url)));
   await assert.rejects(access(new URL("../public/data", root)));
 });
+
+test("keeps dashboard analytics independent from React", async () => {
+  const { execSync } = await import("child_process");
+  const analyticsSource = execSync(
+    "find features/dashboard/analytics -type f -name '*.ts' -print0 | xargs -0 cat",
+  ).toString();
+  const dashboardHook = await readFile(
+    new URL("../features/dashboard/hooks/useDashboardStats.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.doesNotMatch(analyticsSource, /from [\"']react[\"']/);
+  assert.match(dashboardHook, /calculateDashboardStats/);
+  assert.doesNotMatch(dashboardHook, /classifyTask|groupCount|evaluateHandoff/);
+});
