@@ -2,7 +2,7 @@ import { COLORS } from "../model/constants";
 import type { PieDatum, PieScope, DashboardHelp } from "../model/types";
 import { formatNumber, formatPercent } from "@/shared/formatting/format";
 import { HelpButton } from "./HelpButton";
-import { dashboardHelp } from "../model/helpContent";
+import { dashboardHelp } from "../help/helpContent";
 
 export function PieChart({
   title,

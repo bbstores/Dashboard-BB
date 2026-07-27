@@ -1,6 +1,6 @@
 // ─── Dashboard Help Content ─────────────────────────────────────────────────
 
-import type { DashboardHelp } from "./types";
+import type { DashboardHelp } from "../model/types";
 
 export function dashboardObjective(title: string) {
   const objectives: Record<string, string> = {

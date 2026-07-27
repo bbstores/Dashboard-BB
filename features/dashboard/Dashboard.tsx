@@ -2,7 +2,6 @@
 
 import "./styles/sla.css";
 import {
-  createContext,
   useEffect,
   useMemo,
   useRef,
@@ -16,7 +15,6 @@ import type {
   ReportDepartment,
   SavedReport,
   DetailView,
-  DashboardHelp,
   PercentileDetail,
 } from "./model/types";
 
@@ -59,12 +57,12 @@ import {
 
 import { parseTasks, parseFeedback, parseNorms } from "./data/excelParser";
 
-import { dashboardHelp } from "./model/helpContent";
+import { dashboardHelp } from "./help/helpContent";
+import { HelpProvider } from "./help/HelpProvider";
 import { useDashboardStats } from "./hooks/useDashboardStats";
 import { useDailyTaskChart } from "./hooks/useDailyTaskChart";
 
 import { HelpButton } from "./components/HelpButton";
-import { HelpDialog } from "./components/HelpDialog";
 import { PieChart } from "./components/PieChart";
 import { ProgressDonut } from "./components/ProgressDonut";
 import { CollectionChildrenPanel } from "./components/CollectionPanel";
@@ -75,10 +73,6 @@ import { DailyTaskChart } from "./components/DailyTaskChart";
 import { DetailDrawer } from "./components/DetailDrawer";
 import { SlaMetricCard } from "./components/SlaMetricCard";
 import { PercentileDialog } from "./components/PercentileDialog";
-
-// ─── Context ────────────────────────────────────────────────────────────────
-
-export const HelpContext = createContext<(help: DashboardHelp) => void>(() => {});
 
 // ─── Main Dashboard Component ───────────────────────────────────────────────
 
@@ -102,7 +96,6 @@ export function Dashboard() {
     new Date().toISOString().slice(0, 10),
   );
   const [detail, setDetail] = useState<DetailView | null>(null);
-  const [activeHelp, setActiveHelp] = useState<DashboardHelp | null>(null);
   const [percentileDetail, setPercentileDetail] =
     useState<PercentileDetail | null>(null);
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
@@ -237,7 +230,7 @@ export function Dashboard() {
   }
 
   return (
-    <HelpContext.Provider value={setActiveHelp}>
+    <HelpProvider>
     <main className="dashboard">
       <header className="dashboardHeader">
         <div className="dashboardBrand">
@@ -1215,7 +1208,6 @@ export function Dashboard() {
         </>
       )}
       {detail && <DetailDrawer detail={detail} onClose={() => setDetail(null)} />}
-      {activeHelp && <HelpDialog help={activeHelp} onClose={() => setActiveHelp(null)} />}
       {percentileDetail && (
         <PercentileDialog
           detail={percentileDetail}
@@ -1353,6 +1345,6 @@ export function Dashboard() {
         </div>
       )}
     </main>
-    </HelpContext.Provider>
+    </HelpProvider>
   );
 }
