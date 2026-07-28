@@ -44,8 +44,22 @@ export function isVideoPublication(task: Task) {
 
 export function isGraphicPublication(task: Task) {
   return (
+    Boolean(normalizedKey(task.formatType)) &&
     !normalizedKey(task.formatType).includes("video") &&
     normalizedKey(task.stage) === "graphic design"
+  );
+}
+
+export function isFinalPublicationTask(task: Task) {
+  return isVideoPublication(task) || isGraphicPublication(task);
+}
+
+export function publicationReadyDate(task: Task) {
+  return (
+    task.businessApprovalDate ??
+    task.completedDate ??
+    task.inspectionDate ??
+    task.startDate
   );
 }
 

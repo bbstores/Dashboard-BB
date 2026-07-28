@@ -1,139 +1,118 @@
 import { useMemo, useState } from "react";
 import {
   calculatePublicationStats,
-  type PublicationBreakdownRow,
+  OLD_ASSET_CUTOFF,
   type PublicationDailyRow,
+  type PublicationPlatformRow,
 } from "../analytics/calculatePublicationStats";
+import { PieChart } from "../components/PieChart";
 import type {
   DateWindow,
+  DetailView,
   PublicationPost,
+  Task,
 } from "../model/types";
-import { formatNumber, formatPercent } from "@/shared/formatting/format";
+import {
+  isGraphicPublication,
+  isVideoPublication,
+  publicationReadyDate,
+} from "../model/taskUtils";
+import {
+  formatDate,
+  formatNumber,
+  formatPercent,
+} from "@/shared/formatting/format";
 
-function PlatformColumnChart({
-  rows,
+type AssetFilter = "all" | "video" | "graphic" | "old";
+
+function PostingKpi({
+  label,
+  value,
+  note,
+  variant = "",
+  onClick,
 }: {
-  rows: PublicationBreakdownRow[];
+  label: string;
+  value: number;
+  note: string;
+  variant?: string;
+  onClick?: () => void;
 }) {
-  const width = Math.max(820, rows.length * 96);
-  const height = 330;
-  const left = 48;
-  const right = 18;
-  const top = 24;
-  const bottom = 82;
-  const plotWidth = width - left - right;
-  const plotHeight = height - top - bottom;
-  const max = Math.max(1, ...rows.map((row) => row.total));
-  const groupWidth = plotWidth / Math.max(rows.length, 1);
-  const barWidth = Math.min(26, groupWidth * 0.28);
-
-  return (
-    <div className="postingChartScroller">
-      <svg
-        className="postingPlatformChart"
-        viewBox={`0 0 ${width} ${height}`}
-        style={{ minWidth: `${width}px` }}
-        role="img"
-        aria-label="Tổng bài đăng và số bài đã đăng theo nền tảng"
-      >
-        {[0, 0.5, 1].map((ratio) => {
-          const y = top + plotHeight - ratio * plotHeight;
-          return (
-            <g key={ratio}>
-              <line
-                className="postingGridLine"
-                x1={left}
-                x2={width - right}
-                y1={y}
-                y2={y}
-              />
-              <text
-                className="postingAxisText"
-                x={left - 9}
-                y={y + 4}
-                textAnchor="end"
-              >
-                {Math.round(max * ratio)}
-              </text>
-            </g>
-          );
-        })}
-        {rows.map((row, index) => {
-          const center = left + groupWidth * (index + 0.5);
-          const totalHeight = (row.total / max) * plotHeight;
-          const postedHeight = (row.posted / max) * plotHeight;
-          return (
-            <g key={row.label}>
-              <rect
-                className="postingBar total"
-                x={center - barWidth - 2}
-                y={top + plotHeight - totalHeight}
-                width={barWidth}
-                height={totalHeight}
-                rx="5"
-              />
-              <rect
-                className="postingBar posted"
-                x={center + 2}
-                y={top + plotHeight - postedHeight}
-                width={barWidth}
-                height={postedHeight}
-                rx="5"
-              />
-              <text
-                className="postingPlatformLabel"
-                x={center}
-                y={height - 54}
-                textAnchor="end"
-                transform={`rotate(-32 ${center} ${height - 54})`}
-              >
-                {row.label}
-              </text>
-              <title>
-                {row.label} · Tổng {row.total} · Đã đăng {row.posted}
-              </title>
-            </g>
-          );
-        })}
-      </svg>
+  const content = (
+    <>
+      <span>{label}</span>
+      <strong>{formatNumber(value)}</strong>
+      <small>{note}</small>
+    </>
+  );
+  return onClick ? (
+    <button
+      type="button"
+      className={`postingKpiCard interactive ${variant}`.trim()}
+      onClick={onClick}
+    >
+      {content}
+    </button>
+  ) : (
+    <div className={`postingKpiCard ${variant}`.trim()}>
+      {content}
     </div>
   );
 }
 
-function PostTypeChart({
+function PlatformMixChart({
   rows,
 }: {
-  rows: PublicationBreakdownRow[];
+  rows: PublicationPlatformRow[];
 }) {
   const max = Math.max(1, ...rows.map((row) => row.total));
   return (
-    <article className="postingSubchart postingTypeChart">
+    <article className="postingPlatformPanel">
       <div className="postingSubchartTitle">
         <div>
-          <span className="chartKicker">CƠ CẤU NỘI DUNG</span>
-          <h3>Theo loại bài đăng</h3>
+          <span className="chartKicker">CƠ CẤU THEO KÊNH</span>
+          <h3>Nguồn bài đăng theo nền tảng</h3>
         </div>
         <div className="postingLegend">
-          <span><i className="total" />Tổng bài</span>
-          <span><i className="posted" />Đã đăng</span>
+          <span><i className="reup" />Reup</span>
+          <span><i className="video" />Video</span>
+          <span><i className="graphic" />Hình ảnh</span>
+          <span><i className="unknown" />Chưa xác định</span>
         </div>
       </div>
-      <div className="postingTypeRows">
+      <p className="postingChartNote">
+        Mỗi dòng trong bảng Đăng Bài được tính là một bài. Một task đăng
+        Facebook và TikTok sẽ được tính thành hai bài ở hai nền tảng.
+      </p>
+      <div className="postingPlatformRows">
         {rows.map((row) => (
-          <div className="postingTypeRow" key={row.label}>
+          <div className="postingPlatformRow" key={row.label}>
             <span title={row.label}>{row.label}</span>
-            <div className="postingTypeTrack">
+            <div className="postingPlatformTrack">
               <i
-                className="total"
-                style={{ width: `${(row.total / max) * 100}%` }}
+                className="reup"
+                title={`Reup: ${row.reup}`}
+                style={{ width: `${(row.reup / max) * 100}%` }}
               />
               <i
-                className="posted"
-                style={{ width: `${(row.posted / max) * 100}%` }}
+                className="video"
+                title={`Video: ${row.video}`}
+                style={{ width: `${(row.video / max) * 100}%` }}
               />
+              <i
+                className="graphic"
+                title={`Hình ảnh: ${row.graphic}`}
+                style={{ width: `${(row.graphic / max) * 100}%` }}
+              />
+              {row.unknown > 0 && (
+                <i
+                  className="unknown"
+                  title={`Chưa xác định: ${row.unknown}`}
+                  style={{ width: `${(row.unknown / max) * 100}%` }}
+                />
+              )}
             </div>
             <strong>{formatNumber(row.total)}</strong>
-            <small>{formatNumber(row.posted)} đã đăng</small>
           </div>
         ))}
         {!rows.length && (
@@ -174,10 +153,7 @@ function PostingDailyLineChart({
     1,
     ...rows.flatMap((row) => [row.total, row.posted]),
   );
-  const pointFor = (
-    value: number,
-    index: number,
-  ) => ({
+  const pointFor = (value: number, index: number) => ({
     x:
       left +
       (rows.length <= 1
@@ -293,101 +269,255 @@ function PostingDailyLineChart({
   );
 }
 
+function assetType(task: Task) {
+  if (isVideoPublication(task)) return "Video";
+  if (isGraphicPublication(task)) return "Hình ảnh";
+  return "Chưa xác định";
+}
+
+function UnscheduledAssets({
+  tasks,
+  videoTasks,
+  graphicTasks,
+  oldAssets,
+  onOpenDetail,
+}: {
+  tasks: Task[];
+  videoTasks: Task[];
+  graphicTasks: Task[];
+  oldAssets: Task[];
+  onOpenDetail: (detail: DetailView) => void;
+}) {
+  const [filter, setFilter] = useState<AssetFilter>("all");
+  const oldCodes = useMemo(
+    () => new Set(oldAssets.map((task) => task.code)),
+    [oldAssets],
+  );
+  const selectedTasks =
+    filter === "video"
+      ? videoTasks
+      : filter === "graphic"
+        ? graphicTasks
+        : filter === "old"
+          ? oldAssets
+          : tasks;
+  const sortedTasks = [...selectedTasks].sort((left, right) => {
+    const leftOld = oldCodes.has(left.code) ? 0 : 1;
+    const rightOld = oldCodes.has(right.code) ? 0 : 1;
+    if (leftOld !== rightOld) return leftOld - rightOld;
+    return (
+      (publicationReadyDate(left)?.getTime() ?? Number.MAX_SAFE_INTEGER) -
+      (publicationReadyDate(right)?.getTime() ?? Number.MAX_SAFE_INTEGER)
+    );
+  });
+
+  const filters: Array<{
+    key: AssetFilter;
+    label: string;
+    count: number;
+  }> = [
+    { key: "all", label: "Tất cả", count: tasks.length },
+    { key: "video", label: "Video", count: videoTasks.length },
+    { key: "graphic", label: "Hình ảnh", count: graphicTasks.length },
+    { key: "old", label: "Ấn phẩm cũ", count: oldAssets.length },
+  ];
+
+  return (
+    <article className="unscheduledPanel">
+      <div className="postingSubchartTitle">
+        <div>
+          <span className="chartKicker">TASKLIST CHƯA CÓ ĐĂNG BÀI</span>
+          <h3>Ấn phẩm chưa lên lịch</h3>
+        </div>
+        <button
+          type="button"
+          className="postingDetailButton"
+          onClick={() =>
+            onOpenDetail({
+              title: "Ấn phẩm chưa lên lịch",
+              subtitle:
+                filter === "old"
+                  ? "Ấn phẩm cuối chưa có lịch, sẵn sàng trước 01/07/2026"
+                  : `Nhóm đang chọn: ${filters.find((item) => item.key === filter)?.label}`,
+              tasks: sortedTasks,
+            })
+          }
+        >
+          Xem toàn bộ {formatNumber(sortedTasks.length)}
+        </button>
+      </div>
+      <div className="assetFilterTabs" role="group" aria-label="Lọc ấn phẩm chưa lên lịch">
+        {filters.map((item) => (
+          <button
+            type="button"
+            className={filter === item.key ? "active" : ""}
+            key={item.key}
+            onClick={() => setFilter(item.key)}
+          >
+            {item.label}
+            <strong>{formatNumber(item.count)}</strong>
+          </button>
+        ))}
+      </div>
+      <div className="unscheduledTableWrap">
+        <table className="unscheduledTable">
+          <thead>
+            <tr>
+              <th>Loại</th>
+              <th>Task</th>
+              <th>Format Type</th>
+              <th>Trạng thái</th>
+              <th>Assignee</th>
+              <th>Mốc sẵn sàng</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedTasks.slice(0, 12).map((task) => (
+              <tr key={task.code}>
+                <td>
+                  <span className={`assetKind ${assetType(task) === "Video" ? "video" : "graphic"}`}>
+                    {assetType(task)}
+                  </span>
+                </td>
+                <td>
+                  <strong>{task.code}</strong>
+                  <small>{task.title || "Chưa có tên task"}</small>
+                </td>
+                <td>{task.formatType || "Chưa xác định"}</td>
+                <td><span className="statusPill">{task.status || "Chưa xác định"}</span></td>
+                <td>{task.assignee || "Chưa có assignee"}</td>
+                <td>
+                  {formatDate(publicationReadyDate(task))}
+                  {oldCodes.has(task.code) && <b className="oldAssetFlag">Cũ</b>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!sortedTasks.length && (
+          <p className="emptyText">Không có ấn phẩm phù hợp.</p>
+        )}
+      </div>
+    </article>
+  );
+}
+
 export function PostingSection({
+  tasks,
   publications,
   dateWindow,
+  onOpenDetail,
 }: {
+  tasks: Task[];
   publications: PublicationPost[];
   dateWindow: DateWindow;
+  onOpenDetail: (detail: DetailView) => void;
 }) {
-  const [platform, setPlatform] = useState("");
-  const overview = useMemo(
-    () =>
-      calculatePublicationStats(
-        publications,
-        dateWindow,
-        "",
-      ),
-    [publications, dateWindow],
-  );
-  const activePlatform = overview.platforms.includes(platform)
-    ? platform
-    : "";
-  const detail = useMemo(
-    () =>
-      calculatePublicationStats(
-        publications,
-        dateWindow,
-        activePlatform,
-      ),
-    [publications, dateWindow, activePlatform],
+  const stats = useMemo(
+    () => calculatePublicationStats(tasks, publications, dateWindow),
+    [tasks, publications, dateWindow],
   );
 
   return (
     <section className="postingSection fullWidth groupProduction">
       <div className="postingHeader">
         <div>
-          <span className="chartKicker">SHEET 2.7 ĐĂNG BÀI</span>
-          <h2>Hiệu suất đăng bài</h2>
+          <span className="chartKicker">KINH DOANH · ĐĂNG BÀI</span>
+          <h2>Điều phối ấn phẩm & lịch đăng</h2>
           <p>
-            Đếm theo Ngày Đăng trong khoảng thời gian đang lọc.
+            Bài đăng đếm theo từng dòng và từng nền tảng; ấn phẩm chưa
+            lên lịch đếm theo task thành phẩm cuối.
           </p>
         </div>
-        <div className="postingKpis">
-          <div>
-            <span>Tổng bài trong kỳ</span>
-            <strong>{formatNumber(overview.total)}</strong>
-          </div>
-          <div>
-            <span>Đã đăng</span>
-            <strong>{formatNumber(overview.posted)}</strong>
-            <small>
-              {formatPercent(overview.posted, overview.total)}
-            </small>
-          </div>
-        </div>
       </div>
 
-      <article className="postingPlatformPanel">
-        <div className="postingSubchartTitle">
-          <div>
-            <span className="chartKicker">SO SÁNH NỀN TẢNG</span>
-            <h3>Tổng bài và bài đã đăng</h3>
-          </div>
-          <div className="postingLegend">
-            <span><i className="total" />Tổng bài</span>
-            <span><i className="posted" />Đã đăng</span>
-          </div>
-        </div>
-        <PlatformColumnChart rows={overview.platformRows} />
-      </article>
-
-      <div className="postingDrilldownHeader">
-        <div>
-          <span className="chartKicker">PHÂN TÍCH CHI TIẾT</span>
-          <h3>
-            {activePlatform || "Tất cả nền tảng"}
-          </h3>
-        </div>
-        <label>
-          <span>Nền tảng</span>
-          <select
-            value={activePlatform}
-            onChange={(event) => setPlatform(event.target.value)}
-            aria-label="Chọn nền tảng đăng bài"
-          >
-            <option value="">Tất cả nền tảng</option>
-            {overview.platforms.map((name) => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
-        </label>
+      <div className="postingKpis">
+        <PostingKpi
+          label="Tổng bài trong kỳ"
+          value={stats.total}
+          note={`${formatNumber(stats.posted)} bài đã đăng`}
+        />
+        <PostingKpi
+          label="Bài reup"
+          value={stats.reup}
+          note={formatPercent(stats.reup, stats.total)}
+        />
+        <PostingKpi
+          label="Dùng ấn phẩm media"
+          value={stats.media}
+          note={`${formatNumber(stats.video)} video · ${formatNumber(stats.graphic)} hình`}
+        />
+        <PostingKpi
+          label="Chưa lên lịch"
+          value={stats.unscheduledTasks.length}
+          note={`${formatNumber(stats.unscheduledVideoTasks.length)} video · ${formatNumber(stats.unscheduledGraphicTasks.length)} hình`}
+          onClick={() =>
+            onOpenDetail({
+              title: "Ấn phẩm chưa lên lịch",
+              subtitle:
+                "Task thành phẩm cuối có cột 2.7 Đăng Bài để trống",
+              tasks: stats.unscheduledTasks,
+            })
+          }
+        />
+        <PostingKpi
+          label="Ấn phẩm cũ"
+          value={stats.oldAssets.length}
+          note={`Sẵn sàng trước ${formatDate(OLD_ASSET_CUTOFF)}`}
+          variant="warning"
+          onClick={() =>
+            onOpenDetail({
+              title: "Ấn phẩm cũ",
+              subtitle:
+                "Ấn phẩm cuối chưa có lịch, sẵn sàng trước 01/07/2026",
+              tasks: stats.oldAssets,
+            })
+          }
+        />
       </div>
 
-      <div className="postingDrilldownGrid">
-        <PostTypeChart rows={detail.postTypeRows} />
-        <PostingDailyLineChart rows={detail.dailyRows} />
+      <div className="postingOverviewGrid">
+        <PieChart
+          className="postingSourceMix"
+          title="Nguồn bài đăng"
+          data={stats.postMix}
+          totalLabel="Bài đăng"
+          help={{
+            title: "Nguồn bài đăng",
+            purpose:
+              "Phân biệt bài reup và bài sử dụng ấn phẩm media trong khoảng ngày lọc.",
+            objective:
+              "Cho biết tỷ trọng nội dung tái sử dụng so với sản xuất mới, đồng thời tách media video và hình ảnh.",
+            calculation:
+              "Book Task trống là Reup. Book Task nối tới task Video + Edit là Media Video; nối tới task không phải Video + Graphic Design là Media Hình ảnh. Mỗi dòng đăng ở một nền tảng được tính là một bài.",
+            example:
+              "Một video có hai dòng Facebook và TikTok sẽ đóng góp hai bài Media Video.",
+            note:
+              "Book Task không khớp quy tắc ấn phẩm cuối được đưa vào Chưa xác định để tổng luôn đối soát được.",
+          }}
+        />
+        <PlatformMixChart rows={stats.platformRows} />
       </div>
+
+      {stats.unknown > 0 && (
+        <div className="postingDataAlert">
+          <strong>{formatNumber(stats.unknown)} bài cần kiểm tra dữ liệu</strong>
+          <span>
+            Có Book Task nhưng task liên kết không khớp quy tắc Video–Edit
+            hoặc Hình ảnh–Graphic Design.
+          </span>
+        </div>
+      )}
+
+      <UnscheduledAssets
+        tasks={stats.unscheduledTasks}
+        videoTasks={stats.unscheduledVideoTasks}
+        graphicTasks={stats.unscheduledGraphicTasks}
+        oldAssets={stats.oldAssets}
+        onOpenDetail={onOpenDetail}
+      />
+
+      <PostingDailyLineChart rows={stats.dailyRows} />
     </section>
   );
 }

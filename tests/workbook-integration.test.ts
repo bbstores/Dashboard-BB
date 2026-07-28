@@ -46,6 +46,8 @@ test("reads an anonymized workbook end-to-end", async () => {
       [TASK_COLUMNS.inspectionDate]: "2026/07/20 16:00",
       [TASK_COLUMNS.completedDate]: "2026/07/21 10:00",
       [TASK_COLUMNS.type]: "Social",
+      [TASK_COLUMNS.publicationIds]:
+        "ANON-POST-001, ANON-POST-002",
     }),
   );
   tasks.addRow(
@@ -74,6 +76,7 @@ test("reads an anonymized workbook end-to-end", async () => {
       [PUBLICATION_COLUMNS.posted]: "1",
       [PUBLICATION_COLUMNS.postType]: "Reels",
       [PUBLICATION_COLUMNS.title]: "Anonymous launch post",
+      [PUBLICATION_COLUMNS.bookTaskCode]: "ANON-TASK-001",
     }),
   );
 
@@ -122,6 +125,10 @@ test("reads an anonymized workbook end-to-end", async () => {
   assert.equal(result.tasks[0].inspectionDate?.getHours(), 16);
   assert.equal(result.tasks[0].completedDate?.getDate(), 21);
   assert.equal(result.tasks[0].completedDate?.getHours(), 10);
+  assert.deepEqual(result.tasks[0].publicationIds, [
+    "ANON-POST-001",
+    "ANON-POST-002",
+  ]);
   assert.equal(result.feedback[0].at?.getHours(), 15);
   assert.equal(result.norms[0].editMinutes, 90);
   assert.equal(result.publications.length, 1);
@@ -129,6 +136,10 @@ test("reads an anonymized workbook end-to-end", async () => {
   assert.equal(result.publications[0].platform, "Facebook");
   assert.equal(result.publications[0].posted, true);
   assert.equal(result.publications[0].postType, "Reels");
+  assert.equal(
+    result.publications[0].bookTaskCode,
+    "ANON-TASK-001",
+  );
   assert.equal(result.publications[0].scheduledAt?.getDate(), 20);
   assert.equal(result.publications[0].scheduledAt?.getHours(), 13);
 });

@@ -60,6 +60,12 @@ export function parseTasks(sheet: import("exceljs").Worksheet): Task[] {
       ),
       type: normalize(valueAt(row, headers, TASK_COLUMNS.type)),
       outsource: normalize(valueAt(row, headers, TASK_COLUMNS.outsource)),
+      publicationIds: normalize(
+        valueAt(row, headers, TASK_COLUMNS.publicationIds),
+      )
+        .split(",")
+        .map(normalize)
+        .filter(Boolean),
     });
   }
   return tasks;

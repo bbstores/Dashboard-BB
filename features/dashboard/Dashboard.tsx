@@ -252,8 +252,10 @@ export function Dashboard() {
             ) : (
               <section className="dashboardGrid businessDashboard">
                 <PostingSection
+                  tasks={workbook.data.tasks}
                   publications={workbook.data.publications}
                   dateWindow={filters.dateWindow}
+                  onOpenDetail={dialogs.setDetail}
                 />
               </section>
             )}

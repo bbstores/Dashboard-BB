@@ -19,6 +19,7 @@ export type Task = {
   overallRating: string;
   type: string;
   outsource: string;
+  publicationIds?: string[];
 };
 
 export type WorkNorm = {
@@ -42,6 +43,7 @@ export type PublicationPost = {
   posted: boolean;
   postType: string;
   title: string;
+  bookTaskCode?: string;
 };
 
 export type DashboardData = {

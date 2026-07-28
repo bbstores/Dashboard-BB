@@ -345,7 +345,27 @@ test("separates backlog rules from invalid Done chronology", () => {
   );
 });
 
-test("calculates publication totals, platforms, types and daily rows", () => {
+test("calculates publication source mix, multi-platform rows and unscheduled assets", () => {
+  const publicationTasks = [
+    task("VIDEO-1", {
+      publicationIds: ["POST-1"],
+      completedDate: date(9),
+      status: "Done",
+    }),
+    task("VIDEO-2", {
+      publicationIds: ["POST-3"],
+      completedDate: date(9),
+      status: "Done",
+    }),
+    task("GRAPHIC-OLD", {
+      stage: "Graphic Design",
+      formatType: "Ảnh Post",
+      startDate: new Date(2026, 4, 1),
+      completedDate: new Date(2026, 4, 2),
+      publicationIds: [],
+      status: "Done",
+    }),
+  ];
   const publications: PublicationPost[] = [
     {
       id: "POST-1",
@@ -354,6 +374,7 @@ test("calculates publication totals, platforms, types and daily rows", () => {
       posted: true,
       postType: "Reels",
       title: "Post 1",
+      bookTaskCode: "VIDEO-1",
     },
     {
       id: "POST-2",
@@ -362,6 +383,7 @@ test("calculates publication totals, platforms, types and daily rows", () => {
       posted: false,
       postType: "Ảnh Post",
       title: "Post 2",
+      bookTaskCode: "",
     },
     {
       id: "POST-3",
@@ -370,6 +392,7 @@ test("calculates publication totals, platforms, types and daily rows", () => {
       posted: true,
       postType: "Video",
       title: "Post 3",
+      bookTaskCode: "VIDEO-2",
     },
     {
       id: "POST-OUTSIDE",
@@ -378,39 +401,63 @@ test("calculates publication totals, platforms, types and daily rows", () => {
       posted: true,
       postType: "Video",
       title: "Outside",
+      bookTaskCode: "VIDEO-2",
     },
   ];
 
-  const overview = calculatePublicationStats(
+  const stats = calculatePublicationStats(
+    publicationTasks,
     publications,
     dateWindow,
-    "",
   );
-  assert.equal(overview.total, 3);
-  assert.equal(overview.posted, 2);
-  assert.deepEqual(overview.platformRows, [
-    { label: "Facebook", total: 2, posted: 1 },
-    { label: "TikTok", total: 1, posted: 1 },
+  assert.equal(stats.total, 3);
+  assert.equal(stats.posted, 2);
+  assert.equal(stats.reup, 1);
+  assert.equal(stats.video, 2);
+  assert.equal(stats.graphic, 0);
+  assert.deepEqual(stats.postMix, [
+    { label: "Bài reup", value: 1 },
+    { label: "Media · Video", value: 2 },
+    { label: "Media · Hình ảnh", value: 0 },
   ]);
-
-  const facebook = calculatePublicationStats(
-    publications,
-    dateWindow,
-    "Facebook",
-  );
-  assert.deepEqual(facebook.postTypeRows, [
-    { label: "Ảnh Post", total: 1, posted: 0 },
-    { label: "Reels", total: 1, posted: 1 },
+  assert.deepEqual(stats.platformRows, [
+    {
+      label: "Facebook",
+      total: 2,
+      reup: 1,
+      video: 1,
+      graphic: 0,
+      unknown: 0,
+    },
+    {
+      label: "TikTok",
+      total: 1,
+      reup: 0,
+      video: 1,
+      graphic: 0,
+      unknown: 0,
+    },
   ]);
-  assert.equal(facebook.dailyRows.length, 11);
   assert.deepEqual(
-    facebook.dailyRows
+    stats.unscheduledTasks.map((item) => item.code),
+    ["GRAPHIC-OLD"],
+  );
+  assert.deepEqual(
+    stats.oldAssets.map((item) => item.code),
+    ["GRAPHIC-OLD"],
+  );
+  assert.equal(stats.dailyRows.length, 11);
+  assert.deepEqual(
+    stats.dailyRows
       .filter((row) => row.total)
       .map((row) => ({
         day: row.date.getDate(),
         total: row.total,
         posted: row.posted,
       })),
-    [{ day: 10, total: 2, posted: 1 }],
+    [
+      { day: 10, total: 2, posted: 1 },
+      { day: 11, total: 1, posted: 1 },
+    ],
   );
 });

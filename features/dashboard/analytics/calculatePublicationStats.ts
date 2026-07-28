@@ -5,14 +5,22 @@ import {
 import type {
   DateWindow,
   PublicationPost,
+  Task,
 } from "../model/types";
-import { inWindow, normalize } from "../model/taskUtils";
+import {
+  inWindow,
+  isFinalPublicationTask,
+  isGraphicPublication,
+  isVideoPublication,
+  normalize,
+  publicationReadyDate,
+} from "../model/taskUtils";
 
-export type PublicationBreakdownRow = {
-  label: string;
-  total: number;
-  posted: number;
-};
+export type PublicationSource =
+  | "reup"
+  | "video"
+  | "graphic"
+  | "unknown";
 
 export type PublicationDailyRow = {
   date: Date;
@@ -20,33 +28,28 @@ export type PublicationDailyRow = {
   posted: number;
 };
 
-const UNKNOWN_LABEL = "Chưa xác định";
+export type PublicationPlatformRow = {
+  label: string;
+  total: number;
+  reup: number;
+  video: number;
+  graphic: number;
+  unknown: number;
+};
 
-function labelFor(value: string) {
-  return normalize(value) || UNKNOWN_LABEL;
-}
+export const OLD_ASSET_CUTOFF = new Date(2026, 6, 1);
 
-function groupedRows(
-  posts: PublicationPost[],
-  key: (post: PublicationPost) => string,
-) {
-  const rows = new Map<string, PublicationBreakdownRow>();
-  for (const post of posts) {
-    const label = labelFor(key(post));
-    const row = rows.get(label) ?? {
-      label,
-      total: 0,
-      posted: 0,
-    };
-    row.total += 1;
-    if (post.posted) row.posted += 1;
-    rows.set(label, row);
-  }
-  return Array.from(rows.values()).sort(
-    (left, right) =>
-      right.total - left.total ||
-      left.label.localeCompare(right.label, "vi"),
-  );
+function classifyPublicationSource(
+  post: PublicationPost,
+  taskByCode: Map<string, Task>,
+): PublicationSource {
+  const bookTaskCode = normalize(post.bookTaskCode);
+  if (!bookTaskCode) return "reup";
+  const task = taskByCode.get(bookTaskCode);
+  if (!task) return "unknown";
+  if (isVideoPublication(task)) return "video";
+  if (isGraphicPublication(task)) return "graphic";
+  return "unknown";
 }
 
 function dailyRows(
@@ -110,36 +113,86 @@ function dailyRows(
 }
 
 export function calculatePublicationStats(
+  tasks: Task[],
   publications: PublicationPost[],
   dateWindow: DateWindow,
-  platform: string,
 ) {
-  const filtered = publications.filter(
+  const taskByCode = new Map(
+    tasks.map((task) => [normalize(task.code), task]),
+  );
+  const filteredPosts = publications.filter(
     (post) =>
       post.scheduledAt &&
       inWindow(post.scheduledAt, dateWindow),
   );
-  const platformRows = groupedRows(
-    filtered,
-    (post) => post.platform,
+  const classifiedPosts = filteredPosts.map((post) => ({
+    post,
+    source: classifyPublicationSource(post, taskByCode),
+  }));
+  const sourceCounts = classifiedPosts.reduce(
+    (counts, item) => ({
+      ...counts,
+      [item.source]: counts[item.source] + 1,
+    }),
+    { reup: 0, video: 0, graphic: 0, unknown: 0 },
   );
-  const platforms = platformRows.map((row) => row.label);
-  const selectedPosts = platform
-    ? filtered.filter(
-        (post) => labelFor(post.platform) === platform,
-      )
-    : filtered;
+
+  const platformMap = new Map<string, PublicationPlatformRow>();
+  for (const item of classifiedPosts) {
+    const label = normalize(item.post.platform) || "Chưa xác định";
+    const row = platformMap.get(label) ?? {
+      label,
+      total: 0,
+      reup: 0,
+      video: 0,
+      graphic: 0,
+      unknown: 0,
+    };
+    row.total += 1;
+    row[item.source] += 1;
+    platformMap.set(label, row);
+  }
+
+  const unscheduledTasks = tasks.filter(
+    (task) =>
+      isFinalPublicationTask(task) &&
+      !(task.publicationIds?.length),
+  );
+  const oldAssets = unscheduledTasks.filter((task) => {
+    const readyAt = publicationReadyDate(task);
+    return Boolean(readyAt && readyAt < OLD_ASSET_CUTOFF);
+  });
 
   return {
-    total: filtered.length,
-    posted: filtered.filter((post) => post.posted).length,
-    platforms,
-    platformRows,
-    selectedPosts,
-    postTypeRows: groupedRows(
-      selectedPosts,
-      (post) => post.postType,
+    total: filteredPosts.length,
+    posted: filteredPosts.filter((post) => post.posted).length,
+    reup: sourceCounts.reup,
+    media: sourceCounts.video + sourceCounts.graphic,
+    video: sourceCounts.video,
+    graphic: sourceCounts.graphic,
+    unknown: sourceCounts.unknown,
+    postMix: [
+      { label: "Bài reup", value: sourceCounts.reup },
+      { label: "Media · Video", value: sourceCounts.video },
+      { label: "Media · Hình ảnh", value: sourceCounts.graphic },
+      ...(sourceCounts.unknown
+        ? [{ label: "Chưa xác định", value: sourceCounts.unknown }]
+        : []),
+    ],
+    platformRows: Array.from(platformMap.values()).sort(
+      (left, right) =>
+        right.total - left.total ||
+        left.label.localeCompare(right.label, "vi"),
     ),
-    dailyRows: dailyRows(selectedPosts, dateWindow),
+    dailyRows: dailyRows(filteredPosts, dateWindow),
+    unscheduledTasks,
+    unscheduledVideoTasks:
+      unscheduledTasks.filter(isVideoPublication),
+    unscheduledGraphicTasks:
+      unscheduledTasks.filter(isGraphicPublication),
+    oldAssets,
+    unknownPosts: classifiedPosts
+      .filter((item) => item.source === "unknown")
+      .map((item) => item.post),
   };
 }

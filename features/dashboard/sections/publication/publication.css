@@ -85,7 +85,7 @@
 /* Sheet 2.7 Đăng Bài */
 .postingSection {
   background:
-    radial-gradient(circle at 88% 4%, rgba(217, 255, 114, .18), transparent 28%),
+    radial-gradient(circle at 88% 2%, rgba(217, 255, 114, .19), transparent 25%),
     var(--card);
   border: 1px solid var(--line);
   border-radius: 24px;
@@ -93,8 +93,6 @@
 }
 .postingHeader,
 .postingSubchartTitle,
-.postingDrilldownHeader,
-.postingKpis,
 .postingLegend,
 .postingLegend span {
   align-items: center;
@@ -102,11 +100,9 @@
 }
 .postingHeader {
   align-items: flex-start;
-  gap: 24px;
   justify-content: space-between;
 }
 .postingHeader h2,
-.postingDrilldownHeader h3,
 .postingSubchartTitle h3 {
   letter-spacing: -.04em;
   margin: 4px 0 0;
@@ -114,64 +110,96 @@
 .postingHeader h2 {
   font-size: 30px;
 }
-.postingHeader p {
+.postingHeader p,
+.postingChartNote {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.55;
   margin: 8px 0 0;
 }
 .postingKpis {
-  align-items: stretch;
+  display: grid;
   gap: 10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 20px;
 }
-.postingKpis > div {
-  background: rgba(251, 250, 245, .84);
+.postingKpiCard {
+  background: rgba(251, 250, 245, .86);
   border: 1px solid var(--line);
   border-radius: 18px;
+  color: inherit;
   display: grid;
-  min-width: 160px;
-  padding: 14px 18px;
+  min-width: 0;
+  padding: 15px 17px;
+  text-align: left;
 }
-.postingKpis span,
-.postingDrilldownHeader label > span {
+.postingKpiCard.interactive {
+  cursor: pointer;
+}
+.postingKpiCard.interactive:hover {
+  border-color: rgba(23, 79, 61, .35);
+  box-shadow: 0 10px 26px rgba(20, 32, 28, .08);
+  transform: translateY(-1px);
+}
+.postingKpiCard.warning {
+  background: linear-gradient(145deg, #fff3e7, #fbfaf5);
+  border-color: rgba(212, 107, 95, .35);
+}
+.postingKpiCard > span {
   color: var(--muted);
   font-size: 9px;
   font-weight: 850;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
-.postingKpis strong {
+.postingKpiCard > strong {
   font-size: 31px;
   line-height: 1;
-  margin-top: 7px;
+  margin-top: 8px;
 }
-.postingKpis small {
+.postingKpiCard > small {
   color: var(--green);
   font-size: 10px;
-  font-weight: 800;
-  margin-top: 5px;
+  font-weight: 750;
+  margin-top: 7px;
+}
+.postingKpiCard.warning > small {
+  color: var(--red);
+}
+.postingOverviewGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(330px, .72fr) minmax(0, 1.28fr);
+  margin-top: 18px;
+}
+.postingOverviewGrid > * {
+  height: 100%;
 }
 .postingPlatformPanel,
-.postingSubchart {
-  background: rgba(251, 250, 245, .7);
+.postingSubchart,
+.unscheduledPanel {
+  background: rgba(251, 250, 245, .72);
   border: 1px solid var(--line);
   border-radius: 20px;
-}
-.postingPlatformPanel {
-  margin-top: 18px;
+  min-width: 0;
   padding: 20px;
+}
+.postingSubchart,
+.unscheduledPanel {
+  margin-top: 18px;
 }
 .postingSubchartTitle {
   align-items: flex-start;
   gap: 18px;
   justify-content: space-between;
 }
-.postingSubchartTitle h3,
-.postingDrilldownHeader h3 {
+.postingSubchartTitle h3 {
   font-size: 20px;
 }
 .postingLegend {
   flex-wrap: wrap;
   gap: 13px;
+  justify-content: flex-end;
 }
 .postingLegend span {
   color: var(--muted);
@@ -186,6 +214,22 @@
   height: 7px;
   width: 20px;
 }
+.postingLegend i.reup,
+.postingPlatformTrack .reup {
+  background: #174f3d;
+}
+.postingLegend i.video,
+.postingPlatformTrack .video {
+  background: #8fbf45;
+}
+.postingLegend i.graphic,
+.postingPlatformTrack .graphic {
+  background: #d9ff72;
+}
+.postingLegend i.unknown,
+.postingPlatformTrack .unknown {
+  background: #d46b5f;
+}
 .postingLegend i.posted {
   background: var(--lime);
 }
@@ -195,124 +239,181 @@
 .postingLegend i.posted.line {
   background: #8fbf45;
 }
-.postingChartScroller {
-  margin-top: 14px;
-  overflow-x: auto;
-  padding-bottom: 5px;
-  scrollbar-gutter: stable;
-}
-.postingPlatformChart,
-.postingDailySvg {
-  display: block;
-  width: 100%;
-}
-.postingPlatformChart {
-  height: 330px;
-}
-.postingDailySvg {
-  height: 300px;
-}
-.postingGridLine {
-  stroke: rgba(23, 79, 61, .13);
-  stroke-dasharray: 4 7;
-  stroke-width: 1;
-}
-.postingAxisText,
-.postingPlatformLabel {
-  fill: var(--muted);
-  font-size: 9px;
-  font-weight: 750;
-}
-.postingBar {
-  opacity: .92;
-}
-.postingBar.total {
-  fill: #8fbf45;
-}
-.postingBar.posted {
-  fill: #d9ff72;
-}
-.postingDrilldownHeader {
-  align-items: flex-end;
-  gap: 20px;
-  justify-content: space-between;
+.postingPlatformRows {
+  display: grid;
+  gap: 13px;
   margin-top: 24px;
 }
-.postingDrilldownHeader label {
-  align-items: center;
-  display: flex;
-  gap: 9px;
-}
-.postingDrilldownHeader select {
-  background: #fbfaf5;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--ink);
-  font: inherit;
-  font-size: 12px;
-  min-width: 230px;
-  padding: 9px 34px 9px 14px;
-}
-.postingDrilldownGrid {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: minmax(320px, .72fr) minmax(0, 1.28fr);
-  margin-top: 14px;
-}
-.postingSubchart {
-  min-width: 0;
-  padding: 20px;
-}
-.postingTypeRows {
-  display: grid;
-  gap: 14px;
-  margin-top: 26px;
-}
-.postingTypeRow {
+.postingPlatformRow {
   align-items: center;
   display: grid;
-  gap: 8px;
-  grid-template-columns: minmax(88px, 130px) minmax(100px, 1fr) 38px;
+  gap: 11px;
+  grid-template-columns: minmax(105px, 165px) minmax(150px, 1fr) 42px;
 }
-.postingTypeRow > span {
+.postingPlatformRow > span {
   font-size: 11px;
   font-weight: 750;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.postingTypeRow > strong {
-  font-size: 12px;
+.postingPlatformRow > strong {
+  font-size: 11px;
   text-align: right;
 }
-.postingTypeRow > small {
+.postingPlatformTrack {
+  background: rgba(23, 79, 61, .08);
+  border-radius: 999px;
+  display: flex;
+  height: 13px;
+  overflow: hidden;
+}
+.postingPlatformTrack i {
+  display: block;
+  height: 100%;
+  min-width: 0;
+}
+.postingDataAlert {
+  align-items: center;
+  background: #fff3e7;
+  border: 1px solid rgba(212, 107, 95, .25);
+  border-radius: 14px;
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 11px 14px;
+}
+.postingDataAlert strong {
+  color: var(--red);
+  font-size: 11px;
+}
+.postingDataAlert span {
+  color: var(--muted);
+  font-size: 10px;
+}
+.assetFilterTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+.assetFilterTabs button,
+.postingDetailButton {
+  background: #fbfaf5;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 750;
+  padding: 8px 12px;
+}
+.assetFilterTabs button {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+}
+.assetFilterTabs button strong {
+  background: rgba(23, 79, 61, .08);
+  border-radius: 999px;
+  padding: 2px 6px;
+}
+.assetFilterTabs button.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+.assetFilterTabs button.active strong {
+  background: rgba(255, 255, 255, .16);
+}
+.postingDetailButton:hover {
+  border-color: var(--green);
+}
+.unscheduledTableWrap {
+  margin-top: 14px;
+  overflow-x: auto;
+}
+.unscheduledTable {
+  border-collapse: collapse;
+  min-width: 900px;
+  width: 100%;
+}
+.unscheduledTable th {
   color: var(--muted);
   font-size: 9px;
-  grid-column: 2 / 4;
-  margin-top: -5px;
+  font-weight: 850;
+  letter-spacing: .07em;
+  padding: 10px;
+  text-align: left;
+  text-transform: uppercase;
 }
-.postingTypeTrack {
-  background: rgba(23, 79, 61, .09);
-  border-radius: 999px;
-  height: 12px;
-  overflow: hidden;
-  position: relative;
+.unscheduledTable td {
+  border-top: 1px solid rgba(23, 79, 61, .09);
+  font-size: 10px;
+  padding: 11px 10px;
+  vertical-align: middle;
 }
-.postingTypeTrack i {
-  bottom: 0;
+.unscheduledTable td:nth-child(2) {
+  max-width: 320px;
+}
+.unscheduledTable td:nth-child(2) strong,
+.unscheduledTable td:nth-child(2) small {
   display: block;
-  left: 0;
-  position: absolute;
-  top: 0;
 }
-.postingTypeTrack i.total {
-  background: #8fbf45;
+.unscheduledTable td:nth-child(2) strong {
+  font-size: 11px;
+}
+.unscheduledTable td:nth-child(2) small {
+  color: var(--muted);
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.assetKind,
+.oldAssetFlag {
   border-radius: 999px;
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 4px 7px;
+  white-space: nowrap;
 }
-.postingTypeTrack i.posted {
-  background: #d9ff72;
-  bottom: 3px;
-  top: 3px;
+.assetKind.video {
+  background: rgba(143, 191, 69, .16);
+  color: #527b23;
+}
+.assetKind.graphic {
+  background: rgba(23, 79, 61, .11);
+  color: var(--green);
+}
+.oldAssetFlag {
+  background: rgba(212, 107, 95, .13);
+  color: var(--red);
+  margin-left: 7px;
+  padding: 3px 6px;
+}
+.postingChartScroller {
+  margin-top: 14px;
+  overflow-x: auto;
+  padding-bottom: 5px;
+  scrollbar-gutter: stable;
+}
+.postingDailySvg {
+  display: block;
+  height: 300px;
+  width: 100%;
+}
+.postingGridLine {
+  stroke: rgba(23, 79, 61, .13);
+  stroke-dasharray: 4 7;
+  stroke-width: 1;
+}
+.postingAxisText {
+  fill: var(--muted);
+  font-size: 9px;
+  font-weight: 750;
 }
 .postingTrend {
   fill: none;
@@ -339,29 +440,35 @@
   stroke: #8fbf45;
   stroke-width: 2;
 }
-@media (max-width: 1050px) {
-  .postingDrilldownGrid {
+@media (max-width: 1120px) {
+  .postingKpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .postingOverviewGrid {
     grid-template-columns: 1fr;
   }
 }
 @media (max-width: 720px) {
-  .postingHeader,
-  .postingDrilldownHeader {
+  .postingSection {
+    padding: 18px;
+  }
+  .postingKpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .postingSubchartTitle,
+  .postingDataAlert {
     align-items: stretch;
     flex-direction: column;
   }
+  .postingLegend {
+    justify-content: flex-start;
+  }
+  .postingPlatformRow {
+    grid-template-columns: 95px minmax(120px, 1fr) 36px;
+  }
+}
+@media (max-width: 460px) {
   .postingKpis {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .postingKpis > div {
-    min-width: 0;
-  }
-  .postingDrilldownHeader label {
-    justify-content: space-between;
-  }
-  .postingDrilldownHeader select {
-    min-width: 0;
-    width: min(100%, 280px);
+    grid-template-columns: 1fr;
   }
 }

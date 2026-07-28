@@ -24,6 +24,7 @@ export const TASK_COLUMNS = {
   overallRating: "Đánh Giá Tổng",
   type: "Type",
   outsource: "Outsource",
+  publicationIds: "2.7 Đăng Bài",
 } as const;
 
 export const FEEDBACK_COLUMNS = {
@@ -39,6 +40,7 @@ export const PUBLICATION_COLUMNS = {
   posted: "Đã Đăng",
   postType: "Loại Bài Đăng",
   title: "Tên Bài Đăng",
+  bookTaskCode: "Book Task",
 } as const;
 
 export const NORM_COLUMNS = {

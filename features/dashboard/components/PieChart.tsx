@@ -16,6 +16,7 @@ export function PieChart({
   hoverBreakdown,
   help,
   onSelect,
+  totalLabel = "Task",
 }: {
   title: string;
   data: PieDatum[];
@@ -28,6 +29,7 @@ export function PieChart({
   hoverBreakdown?: (label: string) => { title: string; data: PieDatum[] };
   help?: DashboardHelp;
   onSelect?: (label: string) => void;
+  totalLabel?: string;
 }) {
   const total = data.reduce((sum, item) => sum + item.value, 0);
   const slices = data.reduce<{
@@ -106,7 +108,7 @@ export function PieChart({
           )}
           <div className="pieTotal">
             <strong>{formatNumber(total)}</strong>
-            <small>Task</small>
+            <small>{totalLabel}</small>
           </div>
         </div>
         <div className="legend">

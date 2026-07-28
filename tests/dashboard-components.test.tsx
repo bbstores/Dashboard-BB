@@ -356,7 +356,12 @@ test("monthly daily chart keeps all 31 date labels readable", () => {
   assert.ok(screen.getByText("31/07"));
 });
 
-test("posting section filters child charts by platform", () => {
+test("posting section shows source mix and counts multi-platform posts independently", () => {
+  const videoTask = {
+    ...task(),
+    code: "VIDEO-POST",
+    publicationIds: ["POST-1", "POST-3"],
+  };
   const publications: PublicationPost[] = [
     {
       id: "POST-1",
@@ -365,6 +370,7 @@ test("posting section filters child charts by platform", () => {
       posted: true,
       postType: "Reels",
       title: "Facebook reel",
+      bookTaskCode: "VIDEO-POST",
     },
     {
       id: "POST-2",
@@ -373,6 +379,7 @@ test("posting section filters child charts by platform", () => {
       posted: false,
       postType: "Ảnh Post",
       title: "Facebook photo",
+      bookTaskCode: "",
     },
     {
       id: "POST-3",
@@ -381,32 +388,31 @@ test("posting section filters child charts by platform", () => {
       posted: true,
       postType: "Video",
       title: "TikTok video",
+      bookTaskCode: "VIDEO-POST",
     },
   ];
   const { container } = render(
     <PostingSection
+      tasks={[videoTask]}
       publications={publications}
       dateWindow={{
         from: new Date(2026, 6, 10),
         to: new Date(2026, 6, 11, 23, 59, 59, 999),
         hasFilter: true,
       }}
+      onOpenDetail={() => undefined}
     />,
   );
 
-  const platformSelect = screen.getByLabelText(
-    "Chọn nền tảng đăng bài",
+  assert.ok(screen.getByText("Nguồn bài đăng"));
+  assert.ok(screen.getAllByText("Bài reup").length >= 1);
+  assert.ok(screen.getAllByText("Media · Video").length >= 1);
+  assert.ok(screen.getByText("Facebook"));
+  assert.ok(screen.getByText("TikTok"));
+  assert.match(
+    screen.getByText(/Một task đăng Facebook và TikTok/).textContent ?? "",
+    /hai bài/,
   );
-  fireEvent.change(platformSelect, {
-    target: { value: "Facebook" },
-  });
-
-  assert.ok(
-    screen.getByRole("heading", { name: "Facebook" }),
-  );
-  assert.ok(screen.getByText("Ảnh Post"));
-  assert.ok(screen.getByText("Reels"));
-  assert.equal(screen.queryByText("Video"), null);
   assert.match(
     container
       .querySelector(".postingTrend.total")

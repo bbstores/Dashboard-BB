@@ -43,6 +43,9 @@ export function parsePublications(
       title: normalize(
         valueAt(row, headers, PUBLICATION_COLUMNS.title),
       ),
+      bookTaskCode: normalize(
+        valueAt(row, headers, PUBLICATION_COLUMNS.bookTaskCode),
+      ),
     });
   }
 
