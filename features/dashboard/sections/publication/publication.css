@@ -282,6 +282,17 @@
   gap: 12px;
   margin-top: 14px;
   padding: 11px 14px;
+  text-align: left;
+  width: 100%;
+}
+.postingDataAlert.interactive {
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+.postingDataAlert.interactive:hover {
+  border-color: rgba(212, 107, 95, .52);
+  box-shadow: 0 8px 22px rgba(212, 107, 95, .09);
 }
 .postingDataAlert strong {
   color: var(--red);
@@ -290,6 +301,13 @@
 .postingDataAlert span {
   color: var(--muted);
   font-size: 10px;
+}
+.postingDataAlert small {
+  color: var(--red);
+  font-size: 9px;
+  font-weight: 800;
+  margin-left: auto;
+  white-space: nowrap;
 }
 .assetFilterTabs {
   display: flex;

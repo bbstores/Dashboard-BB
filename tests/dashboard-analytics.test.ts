@@ -415,6 +415,7 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
   assert.equal(stats.reup, 1);
   assert.equal(stats.video, 2);
   assert.equal(stats.graphic, 0);
+  assert.equal(stats.uniqueMediaTasks, 2);
   assert.deepEqual(stats.postMix, [
     { label: "Bài reup", value: 1 },
     { label: "Media · Video", value: 2 },
@@ -459,5 +460,36 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
       { day: 10, total: 2, posted: 1 },
       { day: 11, total: 1, posted: 1 },
     ],
+  );
+});
+
+test("explains publication rows whose Book Task is not a final asset", () => {
+  const nonFinalTask = task("XAO-SOURCE", {
+    stage: "Edit",
+    formatType: "Xào Source",
+    publicationIds: ["POST-ISSUE"],
+  });
+  const stats = calculatePublicationStats(
+    [nonFinalTask],
+    [
+      {
+        id: "POST-ISSUE",
+        scheduledAt: date(10),
+        platform: "Facebook",
+        posted: true,
+        postType: "Reels",
+        title: "Xào source",
+        bookTaskCode: "XAO-SOURCE",
+      },
+    ],
+    dateWindow,
+  );
+
+  assert.equal(stats.unknown, 1);
+  assert.equal(stats.unknownPostDetails.length, 1);
+  assert.equal(stats.unknownPostDetails[0].task?.code, "XAO-SOURCE");
+  assert.match(
+    stats.unknownPostDetails[0].reason,
+    /không phải Graphic Design/,
   );
 });

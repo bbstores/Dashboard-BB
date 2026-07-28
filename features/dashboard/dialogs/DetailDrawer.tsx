@@ -127,7 +127,11 @@ export function DetailDrawer({
   detail: DetailView;
   onClose: () => void;
 }) {
-  const count = detail.feedback?.length ?? detail.tasks?.length ?? 0;
+  const count =
+    detail.publicationEvidence?.length ??
+    detail.feedback?.length ??
+    detail.tasks?.length ??
+    0;
   const hasRecords = count > 0;
   return (
     <div className="detailOverlay" role="presentation" onMouseDown={onClose}>
@@ -148,10 +152,67 @@ export function DetailDrawer({
         </header>
         <div className="detailCount">
           <strong>{formatNumber(count)}</strong>
-          <span>{detail.feedback ? "lần phản hồi" : "task"}</span>
+          <span>
+            {detail.publicationEvidence
+              ? "bài đăng"
+              : detail.feedback
+                ? "lần phản hồi"
+                : "task"}
+          </span>
         </div>
         <div className="detailTableWrap">
-          {detail.feedback ? (
+          {detail.publicationEvidence ? (
+            <table className="detailTable publicationEvidenceTable">
+              <thead>
+                <tr>
+                  <th>STT</th>
+                  <th>Bài đăng</th>
+                  <th>Ngày đăng</th>
+                  <th>Nền tảng</th>
+                  <th>Book Task</th>
+                  <th>Format / Công đoạn</th>
+                  <th>Lý do</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detail.publicationEvidence.map(
+                  ({ post, task, reason }, index) => (
+                    <tr key={`${post.id}-${index}`}>
+                      <td data-label="STT" className="detailRowNumber">
+                        {index + 1}
+                      </td>
+                      <td data-label="Bài đăng" className="taskIdentity">
+                        <strong>{post.id}</strong>
+                        <span>{post.title || "Chưa có tên bài"}</span>
+                      </td>
+                      <td data-label="Ngày đăng">
+                        {formatDate(post.scheduledAt)}
+                      </td>
+                      <td data-label="Nền tảng">
+                        {post.platform || "Chưa xác định"}
+                      </td>
+                      <td data-label="Book Task" className="taskIdentity">
+                        <strong>
+                          {post.bookTaskCode || "Không có"}
+                        </strong>
+                        <span>
+                          {task?.title || "Không tìm thấy task liên kết"}
+                        </span>
+                      </td>
+                      <td data-label="Format / Công đoạn">
+                        <strong>{task?.formatType || "Trống"}</strong>
+                        <br />
+                        <small>{task?.stage || "Trống"}</small>
+                      </td>
+                      <td data-label="Lý do" className="publicationIssueReason">
+                        {reason}
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          ) : detail.feedback ? (
             <table className="detailTable feedbackDetailTable">
               <thead>
                 <tr>

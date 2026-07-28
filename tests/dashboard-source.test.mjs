@@ -46,7 +46,14 @@ test("reads the workbook locally without embedding employee data", async () => {
   assert.doesNotMatch(dashboardSource, /filters:\s*\{[^}]*tasks/s);
   assert.match(readme, /không được tải lên server/i);
 
-  await assert.rejects(access(new URL("../.openai/hosting.json", import.meta.url)));
+  const hosting = JSON.parse(
+    await readFile(
+      new URL("../.openai/hosting.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  assert.match(hosting.project_id, /^appgprj_/);
+  assert.deepEqual(Object.keys(hosting), ["project_id"]);
   await assert.rejects(access(new URL("../public/data", root)));
 });
 

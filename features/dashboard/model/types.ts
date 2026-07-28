@@ -116,6 +116,11 @@ export type DetailView = {
   subtitle: string;
   tasks?: Task[];
   feedback?: Array<Feedback & { task?: Task }>;
+  publicationEvidence?: Array<{
+    post: PublicationPost;
+    task?: Task;
+    reason: string;
+  }>;
   taskMetric?: {
     label: string;
     value: (task: Task) => number;

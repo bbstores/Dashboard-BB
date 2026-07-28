@@ -52,6 +52,22 @@ function classifyPublicationSource(
   return "unknown";
 }
 
+function publicationIssueReason(
+  post: PublicationPost,
+  taskByCode: Map<string, Task>,
+) {
+  const bookTaskCode = normalize(post.bookTaskCode);
+  const task = taskByCode.get(bookTaskCode);
+  if (!task) return "Không tìm thấy Book Task trong Tasklist";
+  if (!normalize(task.formatType)) {
+    return "Format Type của task đang trống";
+  }
+  if (normalize(task.formatType).toLocaleLowerCase("vi").includes("video")) {
+    return `Task Video nhưng Công đoạn là ${task.stage || "trống"}, không phải Edit`;
+  }
+  return `Format Type ${task.formatType} nhưng Công đoạn là ${task.stage || "trống"}, không phải Graphic Design`;
+}
+
 function dailyRows(
   posts: PublicationPost[],
   dateWindow: DateWindow,
@@ -162,6 +178,22 @@ export function calculatePublicationStats(
     const readyAt = publicationReadyDate(task);
     return Boolean(readyAt && readyAt < OLD_ASSET_CUTOFF);
   });
+  const mediaTaskCodes = new Set(
+    classifiedPosts
+      .filter(
+        (item) =>
+          item.source === "video" || item.source === "graphic",
+      )
+      .map((item) => normalize(item.post.bookTaskCode))
+      .filter(Boolean),
+  );
+  const unknownPostDetails = classifiedPosts
+    .filter((item) => item.source === "unknown")
+    .map((item) => ({
+      post: item.post,
+      task: taskByCode.get(normalize(item.post.bookTaskCode)),
+      reason: publicationIssueReason(item.post, taskByCode),
+    }));
 
   return {
     total: filteredPosts.length,
@@ -171,6 +203,7 @@ export function calculatePublicationStats(
     video: sourceCounts.video,
     graphic: sourceCounts.graphic,
     unknown: sourceCounts.unknown,
+    uniqueMediaTasks: mediaTaskCodes.size,
     postMix: [
       { label: "Bài reup", value: sourceCounts.reup },
       { label: "Media · Video", value: sourceCounts.video },
@@ -191,8 +224,6 @@ export function calculatePublicationStats(
     unscheduledGraphicTasks:
       unscheduledTasks.filter(isGraphicPublication),
     oldAssets,
-    unknownPosts: classifiedPosts
-      .filter((item) => item.source === "unknown")
-      .map((item) => item.post),
+    unknownPostDetails,
   };
 }

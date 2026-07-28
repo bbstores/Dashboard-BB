@@ -443,9 +443,9 @@ export function PostingSection({
           note={formatPercent(stats.reup, stats.total)}
         />
         <PostingKpi
-          label="Dùng ấn phẩm media"
+          label="Bài đăng dùng media"
           value={stats.media}
-          note={`${formatNumber(stats.video)} video · ${formatNumber(stats.graphic)} hình`}
+          note={`${formatNumber(stats.video)} bài video · ${formatNumber(stats.graphic)} bài hình · từ ${formatNumber(stats.uniqueMediaTasks)} task gốc`}
         />
         <PostingKpi
           label="Chưa lên lịch"
@@ -500,13 +500,25 @@ export function PostingSection({
       </div>
 
       {stats.unknown > 0 && (
-        <div className="postingDataAlert">
+        <button
+          type="button"
+          className="postingDataAlert interactive"
+          onClick={() =>
+            onOpenDetail({
+              title: "Bài đăng cần kiểm tra dữ liệu",
+              subtitle:
+                "Book Task có giá trị nhưng task liên kết chưa khớp quy tắc phân loại ấn phẩm cuối",
+              publicationEvidence: stats.unknownPostDetails,
+            })
+          }
+        >
           <strong>{formatNumber(stats.unknown)} bài cần kiểm tra dữ liệu</strong>
           <span>
             Có Book Task nhưng task liên kết không khớp quy tắc Video–Edit
             hoặc Hình ảnh–Graphic Design.
           </span>
-        </div>
+          <small>Nhấn để xem dẫn chứng</small>
+        </button>
       )}
 
       <UnscheduledAssets

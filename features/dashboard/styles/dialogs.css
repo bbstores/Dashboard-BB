@@ -136,6 +136,22 @@
   font-size: 8px; line-height: 1.35; white-space: normal;
 }
 .detailTable tbody tr:hover { background: rgba(217,255,114,.18); }
+.publicationEvidenceTable {
+  min-width: 1180px;
+}
+.publicationEvidenceTable .publicationIssueReason {
+  color: var(--red);
+  font-weight: 700;
+  line-height: 1.45;
+  min-width: 250px;
+  white-space: normal;
+}
+.publicationEvidenceTable td:nth-child(6) {
+  min-width: 170px;
+}
+.publicationEvidenceTable td:nth-child(6) small {
+  color: var(--muted);
+}
 .detailEmpty { padding: 30px; color: var(--muted); text-align: center; }
 @media (max-width: 520px) {
   .detailDrawer { width: 100%; padding: 20px 14px; }

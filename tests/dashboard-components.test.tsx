@@ -409,6 +409,10 @@ test("posting section shows source mix and counts multi-platform posts independe
   assert.ok(screen.getAllByText("Media · Video").length >= 1);
   assert.ok(screen.getByText("Facebook"));
   assert.ok(screen.getByText("TikTok"));
+  assert.ok(screen.getByText("Bài đăng dùng media"));
+  assert.ok(
+    screen.getByText("2 bài video · 0 bài hình · từ 1 task gốc"),
+  );
   assert.match(
     screen.getByText(/Một task đăng Facebook và TikTok/).textContent ?? "",
     /hai bài/,
@@ -419,4 +423,57 @@ test("posting section shows source mix and counts multi-platform posts independe
       ?.getAttribute("d") ?? "",
     /\bC\b/,
   );
+});
+
+test("posting data alert opens publication evidence", () => {
+  const issueTask = {
+    ...task(),
+    code: "ISSUE-TASK",
+    formatType: "Xào Source",
+    publicationIds: ["ISSUE-POST"],
+  };
+  const detailState: { current: DetailView | null } = { current: null };
+  render(
+    <PostingSection
+      tasks={[issueTask]}
+      publications={[
+        {
+          id: "ISSUE-POST",
+          scheduledAt: new Date(2026, 6, 10),
+          platform: "Facebook",
+          posted: true,
+          postType: "Reels",
+          title: "Bài cần kiểm tra",
+          bookTaskCode: "ISSUE-TASK",
+        },
+      ]}
+      dateWindow={{
+        from: new Date(2026, 6, 1),
+        to: new Date(2026, 6, 31, 23, 59, 59, 999),
+        hasFilter: true,
+      }}
+      onOpenDetail={(detail) => {
+        detailState.current = detail;
+      }}
+    />,
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: /1 bài cần kiểm tra dữ liệu/,
+    }),
+  );
+  assert.ok(detailState.current);
+  assert.equal(detailState.current.publicationEvidence?.length, 1);
+
+  cleanup();
+  render(
+    <DetailDrawer
+      detail={detailState.current}
+      onClose={() => undefined}
+    />,
+  );
+  assert.ok(screen.getByText("ISSUE-POST"));
+  assert.ok(screen.getByText("ISSUE-TASK"));
+  assert.ok(screen.getByText(/không phải Graphic Design/));
 });
