@@ -357,6 +357,11 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
       completedDate: date(9),
       status: "Done",
     }),
+    task("VIDEO-SCHEDULED-NOT-POSTED", {
+      publicationIds: ["POST-MISSING"],
+      completedDate: date(9),
+      status: "Done",
+    }),
     task("GRAPHIC-OLD", {
       stage: "Graphic Design",
       formatType: "Ảnh Post",
@@ -364,6 +369,13 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
       completedDate: new Date(2026, 4, 2),
       publicationIds: [],
       status: "Done",
+    }),
+    task("GRAPHIC-NEW", {
+      stage: "Graphic Design",
+      formatType: "Ảnh Post",
+      startDate: date(12),
+      publicationIds: [],
+      status: "In Progress",
     }),
   ];
   const publications: PublicationPost[] = [
@@ -441,12 +453,26 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
   ]);
   assert.deepEqual(
     stats.unscheduledTasks.map((item) => item.code),
-    ["GRAPHIC-OLD"],
+    ["GRAPHIC-OLD", "GRAPHIC-NEW"],
   );
   assert.deepEqual(
     stats.oldAssets.map((item) => item.code),
     ["GRAPHIC-OLD"],
   );
+  assert.deepEqual(
+    stats.recentUnscheduledTasks.map((item) => item.code),
+    ["GRAPHIC-NEW"],
+  );
+  assert.equal(stats.recentUnscheduledVideoTasks.length, 0);
+  assert.equal(stats.recentUnscheduledGraphicTasks.length, 1);
+  assert.deepEqual(stats.assetScheduleMix, [
+    { label: "Đã lên lịch", value: 3 },
+    { label: "Chưa lên lịch", value: 2 },
+  ]);
+  assert.deepEqual(stats.scheduledPostStatusMix, [
+    { label: "Đã đăng", value: 2 },
+    { label: "Chưa đăng", value: 1 },
+  ]);
   assert.equal(stats.dailyRows.length, 11);
   assert.deepEqual(
     stats.dailyRows

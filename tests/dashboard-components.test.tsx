@@ -362,6 +362,18 @@ test("posting section shows source mix and counts multi-platform posts independe
     code: "VIDEO-POST",
     publicationIds: ["POST-1", "POST-3"],
   };
+  const scheduledUnpostedTask = {
+    ...task(),
+    code: "VIDEO-NOT-POSTED",
+    publicationIds: ["POST-MISSING"],
+  };
+  const recentGraphicTask = {
+    ...task(),
+    code: "GRAPHIC-NOT-SCHEDULED",
+    stage: "Graphic Design",
+    formatType: "Ảnh Post",
+    publicationIds: [],
+  };
   const publications: PublicationPost[] = [
     {
       id: "POST-1",
@@ -393,7 +405,11 @@ test("posting section shows source mix and counts multi-platform posts independe
   ];
   const { container } = render(
     <PostingSection
-      tasks={[videoTask]}
+      tasks={[
+        videoTask,
+        scheduledUnpostedTask,
+        recentGraphicTask,
+      ]}
       publications={publications}
       dateWindow={{
         from: new Date(2026, 6, 10),
@@ -410,6 +426,16 @@ test("posting section shows source mix and counts multi-platform posts independe
   assert.ok(screen.getByText("Facebook"));
   assert.ok(screen.getByText("TikTok"));
   assert.ok(screen.getByText("Bài đăng dùng media"));
+  assert.ok(screen.getByText("Tình trạng lên lịch ấn phẩm"));
+  assert.ok(
+    screen.getByText("Tình trạng đăng của task đã lên lịch"),
+  );
+  assert.ok(screen.getByText("BẮT ĐẦU TỪ 01/07/2026"));
+  assert.match(
+    container.querySelector(".postingKpiTooltip")?.textContent ?? "",
+    /1 task.*0 video.*1 hình/,
+  );
+  assert.ok(screen.getByText("Chưa đăng"));
   assert.ok(
     screen.getByText("2 bài video · 0 bài hình · từ 1 task gốc"),
   );

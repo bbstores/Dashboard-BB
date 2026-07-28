@@ -89,6 +89,7 @@
     var(--card);
   border: 1px solid var(--line);
   border-radius: 24px;
+  min-width: 0;
   padding: 24px;
 }
 .postingHeader,
@@ -131,6 +132,7 @@
   display: grid;
   min-width: 0;
   padding: 15px 17px;
+  position: relative;
   text-align: left;
 }
 .postingKpiCard.interactive {
@@ -166,6 +168,47 @@
 .postingKpiCard.warning > small {
   color: var(--red);
 }
+.postingKpiTooltip {
+  background: rgba(30, 42, 38, .96);
+  border: 1px solid rgba(217, 255, 114, .28);
+  border-radius: 13px;
+  box-shadow: 0 14px 34px rgba(20, 32, 28, .2);
+  color: white;
+  display: grid;
+  gap: 5px;
+  left: 50%;
+  min-width: 225px;
+  opacity: 0;
+  padding: 12px 14px;
+  pointer-events: none;
+  position: absolute;
+  text-transform: none;
+  top: calc(100% + 10px);
+  transform: translate(-50%, -4px);
+  transition: opacity .15s ease, transform .15s ease, visibility .15s;
+  visibility: hidden;
+  z-index: 120;
+}
+.postingKpiCard:hover .postingKpiTooltip,
+.postingKpiCard:focus-visible .postingKpiTooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  visibility: visible;
+}
+.postingKpiCard > .postingKpiTooltip > b {
+  color: var(--lime);
+  font-size: 9px;
+  letter-spacing: .08em;
+}
+.postingKpiCard > .postingKpiTooltip > strong {
+  color: white;
+  font-size: 22px;
+  line-height: 1;
+}
+.postingKpiCard > .postingKpiTooltip > small {
+  color: rgba(255, 255, 255, .74);
+  font-size: 9px;
+}
 .postingOverviewGrid {
   display: grid;
   gap: 16px;
@@ -174,6 +217,13 @@
 }
 .postingOverviewGrid > * {
   height: 100%;
+}
+.postingAssetStatusGrid {
+  display: grid;
+  margin-top: 18px;
+}
+.postingAssetStatus {
+  overflow: visible;
 }
 .postingPlatformPanel,
 .postingSubchart,

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   calculatePublicationStats,
   OLD_ASSET_CUTOFF,
@@ -31,18 +31,25 @@ function PostingKpi({
   note,
   variant = "",
   onClick,
+  tooltip,
 }: {
   label: string;
   value: number;
   note: string;
   variant?: string;
   onClick?: () => void;
+  tooltip?: ReactNode;
 }) {
   const content = (
     <>
       <span>{label}</span>
       <strong>{formatNumber(value)}</strong>
       <small>{note}</small>
+      {tooltip && (
+        <span className="postingKpiTooltip" role="tooltip">
+          {tooltip}
+        </span>
+      )}
     </>
   );
   return onClick ? (
@@ -451,6 +458,19 @@ export function PostingSection({
           label="Chưa lên lịch"
           value={stats.unscheduledTasks.length}
           note={`${formatNumber(stats.unscheduledVideoTasks.length)} video · ${formatNumber(stats.unscheduledGraphicTasks.length)} hình`}
+          tooltip={
+            <>
+              <b>BẮT ĐẦU TỪ 01/07/2026</b>
+              <strong>
+                {formatNumber(stats.recentUnscheduledTasks.length)} task
+              </strong>
+              <small>
+                {formatNumber(stats.recentUnscheduledVideoTasks.length)} video
+                {" · "}
+                {formatNumber(stats.recentUnscheduledGraphicTasks.length)} hình
+              </small>
+            </>
+          }
           onClick={() =>
             onOpenDetail({
               title: "Ấn phẩm chưa lên lịch",
@@ -497,6 +517,50 @@ export function PostingSection({
           }}
         />
         <PlatformMixChart rows={stats.platformRows} />
+      </div>
+
+      <div className="postingAssetStatusGrid">
+        <PieChart
+          className="postingAssetStatus"
+          title="Tình trạng lên lịch ấn phẩm"
+          data={stats.assetScheduleMix}
+          totalLabel="Task ấn phẩm"
+          hoverChart={(label) =>
+            label === "Đã lên lịch"
+              ? {
+                  title: "Tình trạng đăng của task đã lên lịch",
+                  data: stats.scheduledPostStatusMix,
+                  totalLabel: "Task",
+                }
+              : null
+          }
+          onSelect={(label) =>
+            onOpenDetail({
+              title: label,
+              subtitle:
+                label === "Đã lên lịch"
+                  ? "Task thành phẩm cuối đã có liên kết ở cột 2.7 Đăng Bài"
+                  : "Task thành phẩm cuối chưa có liên kết ở cột 2.7 Đăng Bài",
+              tasks:
+                label === "Đã lên lịch"
+                  ? stats.scheduledTasks
+                  : stats.unscheduledTasks,
+            })
+          }
+          help={{
+            title: "Tình trạng lên lịch ấn phẩm",
+            purpose:
+              "Theo dõi toàn bộ task đủ điều kiện là ấn phẩm cuối, không phụ thuộc khoảng ngày đang lọc bài đăng.",
+            objective:
+              "Cho biết bao nhiêu ấn phẩm đã được book lịch và bao nhiêu ấn phẩm vẫn chưa có lịch đăng.",
+            calculation:
+              "Ấn phẩm Video là task có Format Type chứa Video và Công đoạn Edit; ấn phẩm Hình ảnh là task có Format Type không phải Video và Công đoạn Graphic Design. Cột 2.7 Đăng Bài có mã là Đã lên lịch, để trống là Chưa lên lịch. Khi rê vào Đã lên lịch, task được tính Đã đăng nếu có ít nhất một bài liên kết có Đã Đăng = 1.",
+            example:
+              "Một task video có lịch Facebook và TikTok vẫn chỉ là một ấn phẩm; nếu Facebook đã đăng thì task đó được xếp vào Đã đăng.",
+            note:
+              "Nhấn vào từng hạng mục để mở danh sách task dẫn chứng.",
+          }}
+        />
       </div>
 
       {stats.unknown > 0 && (

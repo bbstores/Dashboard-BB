@@ -182,7 +182,10 @@
   backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0,0,0,0.3);
   color: white; text-align: left; cursor: default;
 }
-.legendRow:hover .legendHoverPanel { display: flex; flex-direction: column; gap: 6px; }
+.legendRow:hover .legendHoverPanel,
+.legendRow:focus-visible .legendHoverPanel {
+  display: flex; flex-direction: column; gap: 6px;
+}
 .legendHoverPanel b {
   display: block; margin-bottom: 4px; color: var(--lime);
   font-size: 11px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,.1);
@@ -195,6 +198,69 @@
 }
 .legendRow .legendHoverPanel strong {
   display: block; font-size: 11px; color: white;
+}
+.legendHoverPanel.miniPieBreakdown {
+  width: 300px;
+}
+.miniPieLayout {
+  align-items: center;
+  display: grid;
+  gap: 13px;
+  grid-template-columns: 92px minmax(0, 1fr);
+}
+.miniPieVisual {
+  aspect-ratio: 1;
+  position: relative;
+  width: 92px;
+}
+.miniPieVisual svg {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+.legendRow .miniPieVisual > span {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  justify-content: center;
+  position: absolute;
+}
+.legendRow .miniPieVisual > span strong {
+  font-size: 15px;
+  line-height: 1;
+}
+.legendRow .miniPieVisual > span small {
+  color: rgba(255, 255, 255, .68);
+  font-size: 8px;
+  margin-top: 3px;
+}
+.miniPieLegend {
+  display: grid;
+  gap: 8px;
+}
+.legendRow .miniPieLegend > span {
+  align-items: center;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  margin: 0;
+}
+.legendRow .miniPieLegend i {
+  border-radius: 2px;
+  height: 8px;
+  width: 8px;
+}
+.legendRow .miniPieLegend > span > span {
+  font-size: 9px;
+}
+.legendRow .miniPieLegend > span > strong {
+  font-size: 10px;
+}
+.legendRow .miniPieLegend > span > small {
+  color: var(--lime);
+  font-size: 8px;
+  grid-column: 2 / 4;
 }
 @media (max-width: 1100px) {
   .triplePie { grid-template-columns: 1fr; }

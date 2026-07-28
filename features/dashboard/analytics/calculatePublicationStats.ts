@@ -169,15 +169,51 @@ export function calculatePublicationStats(
     platformMap.set(label, row);
   }
 
-  const unscheduledTasks = tasks.filter(
+  const eligibleTasks = tasks.filter(isFinalPublicationTask);
+  const scheduledTasks = eligibleTasks.filter(
+    (task) => Boolean(task.publicationIds?.length),
+  );
+  const unscheduledTasks = eligibleTasks.filter(
+    (task) => !(task.publicationIds?.length),
+  );
+  const recentUnscheduledTasks = unscheduledTasks.filter(
     (task) =>
-      isFinalPublicationTask(task) &&
-      !(task.publicationIds?.length),
+      Boolean(
+        task.startDate &&
+        startOfDay(task.startDate) >= OLD_ASSET_CUTOFF,
+      ),
   );
   const oldAssets = unscheduledTasks.filter((task) => {
     const readyAt = publicationReadyDate(task);
     return Boolean(readyAt && readyAt < OLD_ASSET_CUTOFF);
   });
+  const postsByTaskCode = new Map<string, PublicationPost[]>();
+  const postById = new Map(
+    publications.map((post) => [normalize(post.id), post]),
+  );
+  for (const post of publications) {
+    const taskCode = normalize(post.bookTaskCode);
+    if (!taskCode) continue;
+    const linkedPosts = postsByTaskCode.get(taskCode) ?? [];
+    linkedPosts.push(post);
+    postsByTaskCode.set(taskCode, linkedPosts);
+  }
+  const scheduledPostedTasks = scheduledTasks.filter((task) => {
+    const linkedByBookTask =
+      postsByTaskCode.get(normalize(task.code)) ?? [];
+    const linkedByPublicationId = (task.publicationIds ?? [])
+      .map((id) => postById.get(normalize(id)))
+      .filter((post): post is PublicationPost => Boolean(post));
+    return [...linkedByBookTask, ...linkedByPublicationId].some(
+      (post) => post.posted,
+    );
+  });
+  const scheduledPostedCodes = new Set(
+    scheduledPostedTasks.map((task) => normalize(task.code)),
+  );
+  const scheduledUnpostedTasks = scheduledTasks.filter(
+    (task) => !scheduledPostedCodes.has(normalize(task.code)),
+  );
   const mediaTaskCodes = new Set(
     classifiedPosts
       .filter(
@@ -218,11 +254,28 @@ export function calculatePublicationStats(
         left.label.localeCompare(right.label, "vi"),
     ),
     dailyRows: dailyRows(filteredPosts, dateWindow),
+    eligibleTasks,
+    scheduledTasks,
     unscheduledTasks,
     unscheduledVideoTasks:
       unscheduledTasks.filter(isVideoPublication),
     unscheduledGraphicTasks:
       unscheduledTasks.filter(isGraphicPublication),
+    recentUnscheduledTasks,
+    recentUnscheduledVideoTasks:
+      recentUnscheduledTasks.filter(isVideoPublication),
+    recentUnscheduledGraphicTasks:
+      recentUnscheduledTasks.filter(isGraphicPublication),
+    scheduledPostedTasks,
+    scheduledUnpostedTasks,
+    assetScheduleMix: [
+      { label: "Đã lên lịch", value: scheduledTasks.length },
+      { label: "Chưa lên lịch", value: unscheduledTasks.length },
+    ],
+    scheduledPostStatusMix: [
+      { label: "Đã đăng", value: scheduledPostedTasks.length },
+      { label: "Chưa đăng", value: scheduledUnpostedTasks.length },
+    ],
     oldAssets,
     unknownPostDetails,
   };
