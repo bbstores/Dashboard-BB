@@ -11,6 +11,7 @@ import {
   inWindow,
   isFinalPublicationTask,
   isGraphicPublication,
+  isNoSocialPublicationTask,
   isVideoPublication,
   normalize,
   publicationReadyDate,
@@ -142,10 +143,16 @@ export function calculatePublicationStats(
   const taskByCode = new Map(
     tasks.map((task) => [normalize(task.code), task]),
   );
+  const noSocialTaskCodes = new Set(
+    tasks
+      .filter(isNoSocialPublicationTask)
+      .map((task) => normalize(task.code)),
+  );
   const filteredPosts = publications.filter(
     (post) =>
       post.scheduledAt &&
-      inWindow(post.scheduledAt, dateWindow),
+      inWindow(post.scheduledAt, dateWindow) &&
+      !noSocialTaskCodes.has(normalize(post.bookTaskCode)),
   );
   const classifiedPosts: ClassifiedPublication[] = filteredPosts.map((post) => ({
     post,
@@ -176,7 +183,11 @@ export function calculatePublicationStats(
     platformMap.set(label, row);
   }
 
-  const eligibleTasks = tasks.filter(isFinalPublicationTask);
+  const eligibleTasks = tasks.filter(
+    (task) =>
+      isFinalPublicationTask(task) &&
+      !isNoSocialPublicationTask(task),
+  );
   const scheduledTasks = eligibleTasks.filter(
     (task) => Boolean(task.publicationIds?.length),
   );

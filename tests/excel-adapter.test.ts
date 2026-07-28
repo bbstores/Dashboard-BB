@@ -169,6 +169,7 @@ test("parses validated task and feedback sheets", () => {
     [TASK_COLUMNS.startDate]: "11/5/2026",
     [TASK_COLUMNS.inspectionDate]: "2026/05/11 16:15",
     [TASK_COLUMNS.completedDate]: "2026/05/11 17:30",
+    [TASK_COLUMNS.platform]: "Không Đăng Social",
   };
   taskSheet.addRow(
     TASK_REQUIRED_HEADERS.map((header) => taskValues[header] ?? ""),
@@ -190,6 +191,7 @@ test("parses validated task and feedback sheets", () => {
   assert.equal(tasks.length, 1);
   assert.equal(tasks[0].code, "TSK-001");
   assert.equal(tasks[0].expectedMinutes, 120);
+  assert.equal(tasks[0].platform, "Không Đăng Social");
   assert.equal(tasks[0].startDate?.getFullYear(), 2026);
   assert.equal(tasks[0].startDate?.getMonth(), 4);
   assert.equal(tasks[0].startDate?.getDate(), 11);

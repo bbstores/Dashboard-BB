@@ -20,6 +20,7 @@ export type Task = {
   type: string;
   outsource: string;
   publicationIds?: string[];
+  platform?: string;
 };
 
 export type WorkNorm = {

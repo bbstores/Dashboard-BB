@@ -25,6 +25,7 @@ export const TASK_COLUMNS = {
   type: "Type",
   outsource: "Outsource",
   publicationIds: "2.7 Đăng Bài",
+  platform: "Nền Tảng",
 } as const;
 
 export const FEEDBACK_COLUMNS = {

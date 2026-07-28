@@ -54,6 +54,10 @@ export function isFinalPublicationTask(task: Task) {
   return isVideoPublication(task) || isGraphicPublication(task);
 }
 
+export function isNoSocialPublicationTask(task: Task) {
+  return normalizedKey(task.platform) === "không đăng social";
+}
+
 export function publicationReadyDate(task: Task) {
   return (
     task.businessApprovalDate ??

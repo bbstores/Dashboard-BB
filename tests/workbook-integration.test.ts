@@ -48,6 +48,7 @@ test("reads an anonymized workbook end-to-end", async () => {
       [TASK_COLUMNS.type]: "Social",
       [TASK_COLUMNS.publicationIds]:
         "ANON-POST-001, ANON-POST-002",
+      [TASK_COLUMNS.platform]: "Facebook, TikTok",
     }),
   );
   tasks.addRow(
@@ -110,12 +111,14 @@ test("reads an anonymized workbook end-to-end", async () => {
       title: result.tasks[0].title,
       assignee: result.tasks[0].assignee,
       expectedMinutes: result.tasks[0].expectedMinutes,
+      platform: result.tasks[0].platform,
     },
     {
       code: "ANON-TASK-001",
       title: "Anonymous campaign asset",
       assignee: "Nhân sự A",
       expectedMinutes: 90,
+      platform: "Facebook, TikTok",
     },
   );
   assert.equal(result.feedback[0].taskCode, "ANON-TASK-001");

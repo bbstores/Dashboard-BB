@@ -66,6 +66,9 @@ export function parseTasks(sheet: import("exceljs").Worksheet): Task[] {
         .split(",")
         .map(normalize)
         .filter(Boolean),
+      platform: normalize(
+        valueAt(row, headers, TASK_COLUMNS.platform),
+      ),
     });
   }
   return tasks;

@@ -377,6 +377,12 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
       publicationIds: [],
       status: "In Progress",
     }),
+    task("VIDEO-NO-SOCIAL", {
+      platform: "Không Đăng Social",
+      publicationIds: ["POST-NO-SOCIAL"],
+      completedDate: date(9),
+      status: "Done",
+    }),
   ];
   const publications: PublicationPost[] = [
     {
@@ -414,6 +420,15 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
       postType: "Video",
       title: "Outside",
       bookTaskCode: "VIDEO-2",
+    },
+    {
+      id: "POST-NO-SOCIAL",
+      scheduledAt: date(10),
+      platform: "Facebook",
+      posted: true,
+      postType: "Video",
+      title: "Không dùng cho social",
+      bookTaskCode: "VIDEO-NO-SOCIAL",
     },
   ];
 
@@ -454,6 +469,12 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
   assert.deepEqual(
     stats.unscheduledTasks.map((item) => item.code),
     ["GRAPHIC-OLD", "GRAPHIC-NEW"],
+  );
+  assert.equal(
+    stats.eligibleTasks.some(
+      (item) => item.code === "VIDEO-NO-SOCIAL",
+    ),
+    false,
   );
   assert.deepEqual(
     stats.oldAssets.map((item) => item.code),

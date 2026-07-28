@@ -444,7 +444,8 @@ export function PostingSection({
           <h2>Điều phối ấn phẩm & lịch đăng</h2>
           <p>
             Bài đăng đếm theo từng dòng và từng nền tảng; ấn phẩm chưa
-            lên lịch đếm theo task thành phẩm cuối.
+            lên lịch đếm theo task thành phẩm cuối, trừ task có Nền Tảng
+            là Không Đăng Social.
           </p>
         </div>
       </div>
@@ -637,7 +638,7 @@ export function PostingSection({
             objective:
               "Cho biết bao nhiêu ấn phẩm đã được book lịch và bao nhiêu ấn phẩm vẫn chưa có lịch đăng.",
             calculation:
-              "Ấn phẩm Video là task có Format Type chứa Video và Công đoạn Edit; ấn phẩm Hình ảnh là task có Format Type không phải Video và Công đoạn Graphic Design. Cột 2.7 Đăng Bài có mã là Đã lên lịch, để trống là Chưa lên lịch. Khi rê vào Đã lên lịch, task được tính Đã đăng nếu có ít nhất một bài liên kết có Đã Đăng = 1.",
+              "Ấn phẩm Video là task có Format Type chứa Video và Công đoạn Edit; ấn phẩm Hình ảnh là task có Format Type không phải Video và Công đoạn Graphic Design. Task có Nền Tảng = Không Đăng Social được loại khỏi thống kê đăng bài. Với các task còn lại, cột 2.7 Đăng Bài có mã là Đã lên lịch, để trống là Chưa lên lịch. Khi rê vào Đã lên lịch, task được tính Đã đăng nếu có ít nhất một bài liên kết có Đã Đăng = 1.",
             example:
               "Một task video có lịch Facebook và TikTok vẫn chỉ là một ấn phẩm; nếu Facebook đã đăng thì task đó được xếp vào Đã đăng.",
             note:
