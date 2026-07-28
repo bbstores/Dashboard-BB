@@ -452,6 +452,22 @@ test("posting section shows source mix and counts multi-platform posts independe
     screen.getByText(/Một task đăng Facebook và TikTok/).textContent ?? "",
     /hai bài/,
   );
+  assert.equal(
+    container.querySelectorAll(".postingPlatformGroup").length,
+    2,
+  );
+  for (const group of container.querySelectorAll(
+    ".postingPlatformGroup",
+  )) {
+    assert.equal(
+      group.querySelectorAll(".postingPlatformColumn").length,
+      3,
+    );
+  }
+  assert.equal(
+    container.querySelector(".postingPlatformTrack"),
+    null,
+  );
   assert.match(
     container
       .querySelector(".postingTrend.total")

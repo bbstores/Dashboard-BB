@@ -99,7 +99,14 @@ function PlatformMixChart({
     source?: PublicationSource,
   ) => void;
 }) {
-  const max = Math.max(1, ...rows.map((row) => row.total));
+  const max = Math.max(
+    1,
+    ...rows.flatMap((row) => [
+      row.reup,
+      row.video,
+      row.graphic,
+    ]),
+  );
   return (
     <article className="postingPlatformPanel">
       <div className="postingSubchartTitle">
@@ -111,84 +118,81 @@ function PlatformMixChart({
           <span><i className="reup" />Reup</span>
           <span><i className="video" />Video</span>
           <span><i className="graphic" />Hình ảnh</span>
-          <span><i className="unknown" />Chưa xác định</span>
         </div>
       </div>
       <p className="postingChartNote">
         Mỗi dòng trong bảng Đăng Bài được tính là một bài. Một task đăng
         Facebook và TikTok sẽ được tính thành hai bài ở hai nền tảng.
+        Bài chưa xác định được xem tại cảnh báo dữ liệu riêng.
       </p>
-      <div className="postingPlatformRows">
-        {rows.map((row) => (
-          <div className="postingPlatformRow" key={row.label}>
-            <button
-              type="button"
-              className="postingPlatformTotal"
-              title={row.label}
-              aria-label={`${row.label} · Tất cả: ${row.total} bài`}
-              onClick={() => onSelect(row.label)}
-            >
-              {row.label}
-            </button>
-            <div className="postingPlatformTrack">
-              {(
-                [
-                  {
-                    source: "reup",
-                    label: "Reup",
-                    value: row.reup,
-                  },
-                  {
-                    source: "video",
-                    label: "Video",
-                    value: row.video,
-                  },
-                  {
-                    source: "graphic",
-                    label: "Hình ảnh",
-                    value: row.graphic,
-                  },
-                  {
-                    source: "unknown",
-                    label: "Chưa xác định",
-                    value: row.unknown,
-                  },
-                ] as Array<{
-                  source: PublicationSource;
-                  label: string;
-                  value: number;
-                }>
-              )
-                .filter((segment) => segment.value > 0)
-                .map((segment) => (
+      <div className="postingPlatformScroller">
+        <div
+          className="postingPlatformColumns"
+          style={{
+            minWidth: `${Math.max(640, rows.length * 150)}px`,
+          }}
+        >
+          {rows.map((row) => (
+            <div className="postingPlatformGroup" key={row.label}>
+              <div className="postingPlatformBarArea">
+                {(
+                  [
+                    {
+                      source: "reup",
+                      label: "Reup",
+                      value: row.reup,
+                    },
+                    {
+                      source: "video",
+                      label: "Video",
+                      value: row.video,
+                    },
+                    {
+                      source: "graphic",
+                      label: "Hình ảnh",
+                      value: row.graphic,
+                    },
+                  ] as Array<{
+                    source: PublicationSource;
+                    label: string;
+                    value: number;
+                  }>
+                ).map((column) => (
                   <button
                     type="button"
-                    className={segment.source}
-                    key={segment.source}
-                    title={`${segment.label}: ${segment.value}`}
-                    aria-label={`${row.label} · ${segment.label}: ${segment.value} bài`}
+                    className={`postingPlatformColumn ${column.source}`}
+                    key={column.source}
+                    title={`${column.label}: ${column.value}`}
+                    aria-label={`${row.label} · ${column.label}: ${column.value} bài`}
                     onClick={() =>
-                      onSelect(row.label, segment.source)
+                      onSelect(row.label, column.source)
                     }
                     style={{
-                      width: `${(segment.value / max) * 100}%`,
+                      height: `${(column.value / max) * 100}%`,
                     }}
-                  />
+                  >
+                    {column.value > 0 && (
+                      <span>{formatNumber(column.value)}</span>
+                    )}
+                  </button>
                 ))}
+              </div>
+              <button
+                type="button"
+                className="postingPlatformTotal"
+                title={`${row.label}: ${row.total} bài`}
+                aria-label={`${row.label} · Tất cả: ${row.total} bài`}
+                onClick={() => onSelect(row.label)}
+              >
+                <span>{row.label}</span>
+                <strong>{formatNumber(row.total)}</strong>
+              </button>
             </div>
-            <button
-              type="button"
-              className="postingPlatformCount"
-              aria-label={`${row.label} · Tất cả: ${row.total} bài`}
-              onClick={() => onSelect(row.label)}
-            >
-              {formatNumber(row.total)}
-            </button>
-          </div>
-        ))}
-        {!rows.length && (
-          <p className="emptyText">Chưa có dữ liệu phù hợp.</p>
-        )}
+          ))}
+          {!rows.length && (
+            <p className="emptyText">Chưa có dữ liệu phù hợp.</p>
+          )}
+        </div>
       </div>
     </article>
   );
