@@ -360,11 +360,13 @@ test("posting section shows source mix and counts multi-platform posts independe
   const videoTask = {
     ...task(),
     code: "VIDEO-POST",
+    startDate: new Date(2026, 6, 10, 9),
     publicationIds: ["POST-1", "POST-3"],
   };
   const scheduledUnpostedTask = {
     ...task(),
     code: "VIDEO-NOT-POSTED",
+    startDate: new Date(2026, 6, 10, 9),
     publicationIds: ["POST-MISSING"],
   };
   const recentGraphicTask = {
@@ -372,6 +374,7 @@ test("posting section shows source mix and counts multi-platform posts independe
     code: "GRAPHIC-NOT-SCHEDULED",
     stage: "Graphic Design",
     formatType: "Ảnh Post",
+    startDate: new Date(2026, 6, 11, 9),
     publicationIds: [],
   };
   const publications: PublicationPost[] = [
@@ -428,8 +431,9 @@ test("posting section shows source mix and counts multi-platform posts independe
   assert.ok(screen.getByText("Nguồn bài đăng"));
   assert.ok(screen.getAllByText("Bài reup").length >= 1);
   assert.ok(screen.getAllByText("Media · Video").length >= 1);
-  assert.ok(screen.getByText("Facebook"));
-  assert.ok(screen.getByText("TikTok"));
+  assert.ok(screen.getAllByText("Facebook").length >= 1);
+  assert.ok(screen.getAllByText("TikTok").length >= 1);
+  assert.ok(screen.getByText("Bài đăng theo nền tảng"));
   assert.ok(screen.getByText("Bài đăng dùng media"));
   assert.ok(screen.getByText("Tình trạng lên lịch ấn phẩm"));
   assert.equal(
@@ -539,6 +543,18 @@ test("posting section shows source mix and counts multi-platform posts independe
 
   fireEvent.click(
     screen.getByRole("button", {
+      name: "Lát biểu đồ TikTok: 1 Bài đăng",
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-3"],
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", {
       name: "Facebook · Reup: 1 bài",
     }),
   );
@@ -628,6 +644,36 @@ test("posting section shows source mix and counts multi-platform posts independe
     ),
     ["POST-1", "POST-3"],
   );
+
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: "Facebook" }),
+  );
+  assert.ok(
+    screen.getByRole("button", {
+      name: "Đường Tổng bài: 2 bài",
+    }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Đường Tổng bài: 2 bài",
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-1", "POST-2"],
+  );
+
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: "TikTok" }),
+  );
+  assert.ok(
+    screen.getByRole("button", {
+      name: "Đường Tổng bài: 3 bài",
+    }),
+  );
+  assert.ok(screen.getByText("Đang cộng: 2 nền tảng"));
 });
 
 test("posting data alert opens publication evidence", () => {

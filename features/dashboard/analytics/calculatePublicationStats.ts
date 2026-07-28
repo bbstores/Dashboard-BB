@@ -75,7 +75,7 @@ function publicationIssueReason(
   return `Format Type ${task.formatType} nhưng Công đoạn là ${task.stage || "trống"}, không phải Graphic Design`;
 }
 
-function dailyRows(
+export function calculatePublicationDailyRows(
   posts: PublicationPost[],
   dateWindow: DateWindow,
 ) {
@@ -232,6 +232,25 @@ export function calculatePublicationStats(
   const scheduledUnpostedTasks = scheduledTasks.filter(
     (task) => !scheduledPostedCodes.has(normalize(task.code)),
   );
+  const assetStatusTasks = dateWindow.hasFilter
+    ? eligibleTasks.filter(
+        (task) =>
+          task.startDate &&
+          inWindow(task.startDate, dateWindow),
+      )
+    : eligibleTasks;
+  const assetScheduledTasks = assetStatusTasks.filter(
+    (task) => Boolean(task.publicationIds?.length),
+  );
+  const assetUnscheduledTasks = assetStatusTasks.filter(
+    (task) => !(task.publicationIds?.length),
+  );
+  const assetScheduledPostedTasks = assetScheduledTasks.filter(
+    (task) => scheduledPostedCodes.has(normalize(task.code)),
+  );
+  const assetScheduledUnpostedTasks = assetScheduledTasks.filter(
+    (task) => !scheduledPostedCodes.has(normalize(task.code)),
+  );
   const mediaTaskCodes = new Set(
     classifiedPosts
       .filter(
@@ -272,7 +291,10 @@ export function calculatePublicationStats(
         left.label.localeCompare(right.label, "vi"),
     ),
     classifiedPosts,
-    dailyRows: dailyRows(filteredPosts, dateWindow),
+    dailyRows: calculatePublicationDailyRows(
+      filteredPosts,
+      dateWindow,
+    ),
     eligibleTasks,
     scheduledTasks,
     unscheduledTasks,
@@ -287,13 +309,21 @@ export function calculatePublicationStats(
       recentUnscheduledTasks.filter(isGraphicPublication),
     scheduledPostedTasks,
     scheduledUnpostedTasks,
+    assetStatusTasks,
+    assetScheduledTasks,
+    assetUnscheduledTasks,
+    assetScheduledPostedTasks,
+    assetScheduledUnpostedTasks,
     assetScheduleMix: [
-      { label: "Đã lên lịch", value: scheduledTasks.length },
-      { label: "Chưa lên lịch", value: unscheduledTasks.length },
+      { label: "Đã lên lịch", value: assetScheduledTasks.length },
+      { label: "Chưa lên lịch", value: assetUnscheduledTasks.length },
     ],
     scheduledPostStatusMix: [
-      { label: "Đã đăng", value: scheduledPostedTasks.length },
-      { label: "Chưa đăng", value: scheduledUnpostedTasks.length },
+      { label: "Đã đăng", value: assetScheduledPostedTasks.length },
+      {
+        label: "Chưa đăng",
+        value: assetScheduledUnpostedTasks.length,
+      },
     ],
     oldAssets,
     unknownPostDetails,

@@ -1,5 +1,6 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
+  calculatePublicationDailyRows,
   calculatePublicationStats,
   OLD_ASSET_CUTOFF,
   type ClassifiedPublication,
@@ -209,9 +210,15 @@ function smoothPath(points: Array<{ x: number; y: number }>) {
 
 function PostingDailyLineChart({
   rows,
+  platforms,
+  selectedPlatforms,
+  onSelectedPlatformsChange,
   onSelect,
 }: {
   rows: PublicationDailyRow[];
+  platforms: string[];
+  selectedPlatforms: string[];
+  onSelectedPlatformsChange: (platforms: string[]) => void;
   onSelect: (
     date: Date | null,
     series: "total" | "posted",
@@ -267,9 +274,54 @@ function PostingDailyLineChart({
           <span className="chartKicker">NHỊP ĐĂNG THEO NGÀY</span>
           <h3>Số lượng bài đăng theo ngày</h3>
         </div>
-        <div className="postingLegend">
-          <span><i className="total line" />Tổng bài</span>
-          <span><i className="posted line" />Đã đăng</span>
+        <div className="postingDailyTools">
+          <div
+            className="postingPlatformFilters"
+            role="group"
+            aria-label="Lọc biểu đồ ngày theo nền tảng"
+          >
+            <button
+              type="button"
+              className={!selectedPlatforms.length ? "active" : ""}
+              onClick={() => onSelectedPlatformsChange([])}
+            >
+              Tất cả
+            </button>
+            {platforms.map((platform) => {
+              const checked = selectedPlatforms.includes(platform);
+              return (
+                <label
+                  className={checked ? "active" : ""}
+                  key={platform}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(event) =>
+                      onSelectedPlatformsChange(
+                        event.target.checked
+                          ? [...selectedPlatforms, platform]
+                          : selectedPlatforms.filter(
+                              (item) => item !== platform,
+                            ),
+                      )
+                    }
+                  />
+                  {platform}
+                </label>
+              );
+            })}
+          </div>
+          <small className="postingPlatformFilterSummary">
+            Đang cộng:{" "}
+            {selectedPlatforms.length
+              ? `${selectedPlatforms.length} nền tảng`
+              : "tất cả nền tảng"}
+          </small>
+          <div className="postingLegend">
+            <span><i className="total line" />Tổng bài</span>
+            <span><i className="posted line" />Đã đăng</span>
+          </div>
         </div>
       </div>
       <div className="postingChartScroller">
@@ -424,6 +476,31 @@ export function PostingSection({
     () => calculatePublicationStats(tasks, publications, dateWindow),
     [tasks, publications, dateWindow],
   );
+  const [selectedDailyPlatforms, setSelectedDailyPlatforms] =
+    useState<string[]>([]);
+  const dailyPlatformOptions = useMemo(
+    () => stats.platformRows.map((row) => row.label),
+    [stats.platformRows],
+  );
+  const dailyClassifiedPosts = useMemo(
+    () =>
+      selectedDailyPlatforms.length
+        ? stats.classifiedPosts.filter((item) =>
+            selectedDailyPlatforms.includes(
+              normalize(item.post.platform) || "Chưa xác định",
+            ),
+          )
+        : stats.classifiedPosts,
+    [selectedDailyPlatforms, stats.classifiedPosts],
+  );
+  const filteredDailyRows = useMemo(
+    () =>
+      calculatePublicationDailyRows(
+        dailyClassifiedPosts.map((item) => item.post),
+        dateWindow,
+      ),
+    [dailyClassifiedPosts, dateWindow],
+  );
   const openPublicationEvidence = (
     title: string,
     subtitle: string,
@@ -435,6 +512,27 @@ export function PostingSection({
       publicationEvidence: publicationEvidence(items),
       publicationEvidenceLabel: "Phân loại",
     });
+  const openPlatformEvidence = (
+    platform: string,
+    source?: PublicationSource,
+  ) => {
+    const platformPosts = stats.classifiedPosts.filter(
+      (item) =>
+        (normalize(item.post.platform) || "Chưa xác định") ===
+        platform,
+    );
+    openPublicationEvidence(
+      source
+        ? `${platform} · ${publicationSourceLabels[source]}`
+        : `${platform} · Tất cả bài đăng`,
+      source
+        ? "Các dòng bài đăng thuộc đúng nền tảng và nhóm nội dung đã chọn"
+        : "Toàn bộ dòng bài đăng thuộc nền tảng đã chọn",
+      source
+        ? platformPosts.filter((item) => item.source === source)
+        : platformPosts,
+    );
+  };
 
   return (
     <section className="postingSection fullWidth groupProduction">
@@ -565,30 +663,35 @@ export function PostingSection({
               "Book Task không khớp quy tắc ấn phẩm cuối được đưa vào Chưa xác định để tổng luôn đối soát được.",
           }}
         />
-        <PlatformMixChart
-          rows={stats.platformRows}
-          onSelect={(platform, source) => {
-            const platformPosts = stats.classifiedPosts.filter(
-              (item) =>
-                (normalize(item.post.platform) ||
-                  "Chưa xác định") === platform,
-            );
-            openPublicationEvidence(
-              source
-                ? `${platform} · ${publicationSourceLabels[source]}`
-                : `${platform} · Tất cả bài đăng`,
-              source
-                ? "Các dòng bài đăng thuộc đúng nền tảng và nhóm nội dung đã chọn"
-                : "Toàn bộ dòng bài đăng thuộc nền tảng đã chọn",
-              source
-                ? platformPosts.filter(
-                    (item) => item.source === source,
-                  )
-                : platformPosts,
-            );
+        <PieChart
+          className="postingPlatformMix"
+          title="Bài đăng theo nền tảng"
+          data={stats.platformRows.map((row) => ({
+            label: row.label,
+            value: row.total,
+          }))}
+          totalLabel="Bài đăng"
+          onSelect={openPlatformEvidence}
+          help={{
+            title: "Bài đăng theo nền tảng",
+            purpose:
+              "Cho biết tỷ trọng bài đăng của từng nền tảng trong khoảng ngày đang lọc.",
+            objective:
+              "Giúp so sánh nhanh khối lượng phân phối nội dung giữa các kênh.",
+            calculation:
+              "Mỗi dòng ở bảng 2.7 Đăng Bài được tính là một bài cho Nền Tảng của dòng đó. Các nền tảng có tên giống nhau được cộng lại.",
+            example:
+              "Một task có hai dòng Facebook và TikTok sẽ đóng góp một bài cho mỗi lát nền tảng.",
+            note:
+              "Nhấn từng lát hoặc chú thích để mở bảng dẫn chứng.",
           }}
         />
       </div>
+
+      <PlatformMixChart
+        rows={stats.platformRows}
+        onSelect={openPlatformEvidence}
+      />
 
       <div className="postingAssetStatusGrid">
         <PieChart
@@ -614,8 +717,8 @@ export function PostingSection({
                   : "Task thành phẩm cuối chưa có liên kết ở cột 2.7 Đăng Bài",
               tasks:
                 label === "Đã lên lịch"
-                  ? stats.scheduledTasks
-                  : stats.unscheduledTasks,
+                  ? stats.assetScheduledTasks
+                  : stats.assetUnscheduledTasks,
             })
           }
           onHoverChartSelect={(_, label) =>
@@ -627,18 +730,18 @@ export function PostingSection({
                   : "Task đã lên lịch nhưng chưa có bài liên kết nào đã đăng",
               tasks:
                 label === "Đã đăng"
-                  ? stats.scheduledPostedTasks
-                  : stats.scheduledUnpostedTasks,
+                  ? stats.assetScheduledPostedTasks
+                  : stats.assetScheduledUnpostedTasks,
             })
           }
           help={{
             title: "Tình trạng lên lịch ấn phẩm",
             purpose:
-              "Theo dõi toàn bộ task đủ điều kiện là ấn phẩm cuối, không phụ thuộc khoảng ngày đang lọc bài đăng.",
+              "Theo dõi task đủ điều kiện là ấn phẩm cuối có Ngày Bắt Đầu nằm trong khoảng ngày đang lọc.",
             objective:
               "Cho biết bao nhiêu ấn phẩm đã được book lịch và bao nhiêu ấn phẩm vẫn chưa có lịch đăng.",
             calculation:
-              "Ấn phẩm Video là task có Format Type chứa Video và Công đoạn Edit; ấn phẩm Hình ảnh là task có Format Type không phải Video và Công đoạn Graphic Design. Task có Nền Tảng = Không Đăng Social được loại khỏi thống kê đăng bài. Với các task còn lại, cột 2.7 Đăng Bài có mã là Đã lên lịch, để trống là Chưa lên lịch. Khi rê vào Đã lên lịch, task được tính Đã đăng nếu có ít nhất một bài liên kết có Đã Đăng = 1.",
+              "Đầu tiên lọc task theo Ngày Bắt Đầu. Ấn phẩm Video là task có Format Type chứa Video và Công đoạn Edit; ấn phẩm Hình ảnh là task có Format Type không phải Video và Công đoạn Graphic Design. Task có Nền Tảng = Không Đăng Social được loại khỏi thống kê đăng bài. Với các task còn lại, cột 2.7 Đăng Bài có mã là Đã lên lịch, để trống là Chưa lên lịch. Khi rê vào Đã lên lịch, task được tính Đã đăng nếu có ít nhất một bài liên kết có Đã Đăng = 1.",
             example:
               "Một task video có lịch Facebook và TikTok vẫn chỉ là một ấn phẩm; nếu Facebook đã đăng thì task đó được xếp vào Đã đăng.",
             note:
@@ -670,9 +773,12 @@ export function PostingSection({
       )}
 
       <PostingDailyLineChart
-        rows={stats.dailyRows}
+        rows={filteredDailyRows}
+        platforms={dailyPlatformOptions}
+        selectedPlatforms={selectedDailyPlatforms}
+        onSelectedPlatformsChange={setSelectedDailyPlatforms}
         onSelect={(date, series) => {
-          const selected = stats.classifiedPosts.filter(
+          const selected = dailyClassifiedPosts.filter(
             (item) =>
               (series === "total" || item.post.posted) &&
               (!date ||

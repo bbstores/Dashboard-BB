@@ -488,8 +488,17 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
   assert.equal(stats.recentUnscheduledGraphicTasks.length, 1);
   assert.deepEqual(stats.assetScheduleMix, [
     { label: "Đã lên lịch", value: 3 },
-    { label: "Chưa lên lịch", value: 2 },
+    { label: "Chưa lên lịch", value: 1 },
   ]);
+  assert.deepEqual(
+    stats.assetStatusTasks.map((item) => item.code),
+    [
+      "VIDEO-1",
+      "VIDEO-2",
+      "VIDEO-SCHEDULED-NOT-POSTED",
+      "GRAPHIC-NEW",
+    ],
+  );
   assert.deepEqual(stats.scheduledPostStatusMix, [
     { label: "Đã đăng", value: 2 },
     { label: "Chưa đăng", value: 1 },

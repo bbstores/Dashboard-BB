@@ -212,7 +212,7 @@
 .postingOverviewGrid {
   display: grid;
   gap: 16px;
-  grid-template-columns: minmax(330px, .72fr) minmax(0, 1.28fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 18px;
 }
 .postingOverviewGrid > * {
@@ -233,6 +233,7 @@
   min-width: 0;
   padding: 20px;
 }
+.postingPlatformPanel,
 .postingSubchart {
   margin-top: 18px;
 }
@@ -412,6 +413,49 @@
   padding-bottom: 5px;
   scrollbar-gutter: stable;
 }
+.postingDailyTools {
+  display: grid;
+  gap: 7px;
+  justify-items: end;
+  max-width: min(720px, 70vw);
+}
+.postingPlatformFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.postingPlatformFilters button,
+.postingPlatformFilters label {
+  align-items: center;
+  background: #fbfaf5;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 750;
+  gap: 5px;
+  padding: 6px 9px;
+}
+.postingPlatformFilters button.active,
+.postingPlatformFilters label.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+.postingPlatformFilters input {
+  height: 11px;
+  margin: 0;
+  width: 11px;
+}
+.postingPlatformFilterSummary {
+  color: var(--green);
+  font-size: 9px;
+  font-weight: 750;
+}
 .postingDailySvg {
   display: block;
   height: 300px;
@@ -491,6 +535,13 @@
     flex-direction: column;
   }
   .postingLegend {
+    justify-content: flex-start;
+  }
+  .postingDailyTools {
+    justify-items: start;
+    max-width: none;
+  }
+  .postingPlatformFilters {
     justify-content: flex-start;
   }
 }
