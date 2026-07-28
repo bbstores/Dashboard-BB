@@ -171,7 +171,7 @@ export function DetailDrawer({
                   <th>Nền tảng</th>
                   <th>Book Task</th>
                   <th>Format / Công đoạn</th>
-                  <th>Lý do</th>
+                  <th>{detail.publicationEvidenceLabel ?? "Lý do"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -204,7 +204,12 @@ export function DetailDrawer({
                         <br />
                         <small>{task?.stage || "Trống"}</small>
                       </td>
-                      <td data-label="Lý do" className="publicationIssueReason">
+                      <td
+                        data-label={
+                          detail.publicationEvidenceLabel ?? "Lý do"
+                        }
+                        className="publicationIssueReason"
+                      >
                         {reason}
                       </td>
                     </tr>

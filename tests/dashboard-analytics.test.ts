@@ -473,6 +473,18 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
     { label: "Đã đăng", value: 2 },
     { label: "Chưa đăng", value: 1 },
   ]);
+  assert.deepEqual(
+    stats.classifiedPosts.map((item) => ({
+      post: item.post.id,
+      source: item.source,
+      task: item.task?.code,
+    })),
+    [
+      { post: "POST-1", source: "video", task: "VIDEO-1" },
+      { post: "POST-2", source: "reup", task: undefined },
+      { post: "POST-3", source: "video", task: "VIDEO-2" },
+    ],
+  );
   assert.equal(stats.dailyRows.length, 11);
   assert.deepEqual(
     stats.dailyRows

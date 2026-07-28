@@ -121,6 +121,7 @@ export type DetailView = {
     task?: Task;
     reason: string;
   }>;
+  publicationEvidenceLabel?: string;
   taskMetric?: {
     label: string;
     value: (task: Task) => number;

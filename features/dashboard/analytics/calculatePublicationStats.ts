@@ -37,6 +37,12 @@ export type PublicationPlatformRow = {
   unknown: number;
 };
 
+export type ClassifiedPublication = {
+  post: PublicationPost;
+  source: PublicationSource;
+  task?: Task;
+};
+
 export const OLD_ASSET_CUTOFF = new Date(2026, 6, 1);
 
 function classifyPublicationSource(
@@ -141,9 +147,10 @@ export function calculatePublicationStats(
       post.scheduledAt &&
       inWindow(post.scheduledAt, dateWindow),
   );
-  const classifiedPosts = filteredPosts.map((post) => ({
+  const classifiedPosts: ClassifiedPublication[] = filteredPosts.map((post) => ({
     post,
     source: classifyPublicationSource(post, taskByCode),
+    task: taskByCode.get(normalize(post.bookTaskCode)),
   }));
   const sourceCounts = classifiedPosts.reduce(
     (counts, item) => ({
@@ -253,6 +260,7 @@ export function calculatePublicationStats(
         right.total - left.total ||
         left.label.localeCompare(right.label, "vi"),
     ),
+    classifiedPosts,
     dailyRows: dailyRows(filteredPosts, dateWindow),
     eligibleTasks,
     scheduledTasks,

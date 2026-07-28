@@ -14,7 +14,10 @@ function MiniPieBreakdown({
   title,
   data,
   totalLabel = "Task",
-}: HoverChart) {
+  onSelect,
+}: HoverChart & {
+  onSelect?: (label: string) => void;
+}) {
   const total = data.reduce((sum, item) => sum + item.value, 0);
   const slices = data.reduce<{
     accumulated: number;
@@ -82,6 +85,28 @@ function MiniPieBreakdown({
               return (
                 <path
                   key={slice.label}
+                  className={onSelect ? "interactive" : ""}
+                  role={onSelect ? "button" : undefined}
+                  tabIndex={onSelect ? 0 : undefined}
+                  aria-label={
+                    onSelect
+                      ? `Lát biểu đồ phụ ${slice.label}: ${formatNumber(slice.value)} ${totalLabel}`
+                      : undefined
+                  }
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelect?.(slice.label);
+                  }}
+                  onKeyDown={(event) => {
+                    if (
+                      onSelect &&
+                      (event.key === "Enter" || event.key === " ")
+                    ) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onSelect(slice.label);
+                    }
+                  }}
                   d={
                     slice.value === total && total > 0
                       ? "M 50 0 A 50 50 0 1 1 49.9 0 Z"
@@ -100,12 +125,19 @@ function MiniPieBreakdown({
         </div>
         <div className="miniPieLegend">
           {slices.map((item) => (
-            <span key={item.label}>
+            <button
+              type="button"
+              key={item.label}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelect?.(item.label);
+              }}
+            >
               <i style={{ backgroundColor: item.color }} />
               <span>{item.label}</span>
               <strong>{formatNumber(item.value)}</strong>
               <small>{formatPercent(item.value, total)}</small>
-            </span>
+            </button>
           ))}
         </div>
       </div>
@@ -124,6 +156,7 @@ export function PieChart({
   onExcludeOutsourceChange,
   hoverBreakdown,
   hoverChart,
+  onHoverChartSelect,
   help,
   onSelect,
   totalLabel = "Task",
@@ -138,6 +171,10 @@ export function PieChart({
   onExcludeOutsourceChange?: (checked: boolean) => void;
   hoverBreakdown?: (label: string) => { title: string; data: PieDatum[] };
   hoverChart?: (label: string) => HoverChart | null;
+  onHoverChartSelect?: (
+    parentLabel: string,
+    label: string,
+  ) => void;
   help?: DashboardHelp;
   onSelect?: (label: string) => void;
   totalLabel?: string;
@@ -203,6 +240,24 @@ export function PieChart({
                 return (
                   <path
                     key={slice.label}
+                    className={onSelect ? "interactive" : ""}
+                    role={onSelect ? "button" : undefined}
+                    tabIndex={onSelect ? 0 : undefined}
+                    aria-label={
+                      onSelect
+                        ? `Lát biểu đồ ${slice.label}: ${formatNumber(slice.value)} ${totalLabel}`
+                        : undefined
+                    }
+                    onClick={() => onSelect?.(slice.label)}
+                    onKeyDown={(event) => {
+                      if (
+                        onSelect &&
+                        (event.key === "Enter" || event.key === " ")
+                      ) {
+                        event.preventDefault();
+                        onSelect(slice.label);
+                      }
+                    }}
                     d={
                       slice.value === total
                         ? "M 50 0 A 50 50 0 1 1 49.9 0 Z"
@@ -227,11 +282,21 @@ export function PieChart({
             const breakdown = hoverBreakdown?.(slice.label);
             const chart = hoverChart?.(slice.label);
             return (
-              <button
-                type="button"
+              <div
+                role={onSelect ? "button" : undefined}
+                tabIndex={onSelect ? 0 : undefined}
                 className={`legendRow ${onSelect ? "interactive" : ""}`}
                 key={slice.label}
                 onClick={() => onSelect?.(slice.label)}
+                onKeyDown={(event) => {
+                  if (
+                    onSelect &&
+                    (event.key === "Enter" || event.key === " ")
+                  ) {
+                    event.preventDefault();
+                    onSelect(slice.label);
+                  }
+                }}
               >
                 <i style={{ backgroundColor: slice.color }} />
                 <span title={slice.label}>{slice.label}</span>
@@ -250,8 +315,18 @@ export function PieChart({
                     ))}
                   </div>
                 )}
-                {chart && <MiniPieBreakdown {...chart} />}
-              </button>
+                {chart && (
+                  <MiniPieBreakdown
+                    {...chart}
+                    onSelect={
+                      onHoverChartSelect
+                        ? (label) =>
+                            onHoverChartSelect(slice.label, label)
+                        : undefined
+                    }
+                  />
+                )}
+              </div>
             );
           })}
           {!slices.length && <p className="emptyText">Không có dữ liệu</p>}

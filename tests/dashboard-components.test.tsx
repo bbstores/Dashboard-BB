@@ -403,6 +403,9 @@ test("posting section shows source mix and counts multi-platform posts independe
       bookTaskCode: "VIDEO-POST",
     },
   ];
+  const postingDetailState: { current: DetailView | null } = {
+    current: null,
+  };
   const { container } = render(
     <PostingSection
       tasks={[
@@ -416,7 +419,9 @@ test("posting section shows source mix and counts multi-platform posts independe
         to: new Date(2026, 6, 11, 23, 59, 59, 999),
         hasFilter: true,
       }}
-      onOpenDetail={() => undefined}
+      onOpenDetail={(detail) => {
+        postingDetailState.current = detail;
+      }}
     />,
   );
 
@@ -427,6 +432,10 @@ test("posting section shows source mix and counts multi-platform posts independe
   assert.ok(screen.getByText("TikTok"));
   assert.ok(screen.getByText("Bài đăng dùng media"));
   assert.ok(screen.getByText("Tình trạng lên lịch ấn phẩm"));
+  assert.equal(
+    screen.queryByText("TASKLIST CHƯA CÓ ĐĂNG BÀI"),
+    null,
+  );
   assert.ok(
     screen.getByText("Tình trạng đăng của task đã lên lịch"),
   );
@@ -448,6 +457,160 @@ test("posting section shows source mix and counts multi-platform posts independe
       .querySelector(".postingTrend.total")
       ?.getAttribute("d") ?? "",
     /\bC\b/,
+  );
+
+  const totalKpi = Array.from(
+    container.querySelectorAll<HTMLButtonElement>(
+      ".postingKpiCard",
+    ),
+  ).find((element) =>
+    element.textContent?.startsWith("Tổng bài trong kỳ"),
+  );
+  assert.ok(totalKpi);
+  fireEvent.click(totalKpi);
+  assert.deepEqual(
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-1", "POST-2", "POST-3"],
+  );
+
+  const mediaKpi = Array.from(
+    container.querySelectorAll<HTMLButtonElement>(
+      ".postingKpiCard",
+    ),
+  ).find((element) =>
+    element.textContent?.startsWith("Bài đăng dùng media"),
+  );
+  assert.ok(mediaKpi);
+  fireEvent.click(mediaKpi);
+  assert.deepEqual(
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-1", "POST-3"],
+  );
+
+  const unscheduledKpi = Array.from(
+    container.querySelectorAll<HTMLButtonElement>(
+      ".postingKpiCard",
+    ),
+  ).find((element) =>
+    element.textContent?.startsWith("Chưa lên lịch"),
+  );
+  assert.ok(unscheduledKpi);
+  fireEvent.click(unscheduledKpi);
+  assert.deepEqual(
+    postingDetailState.current?.tasks?.map((item) => item.code),
+    ["GRAPHIC-NOT-SCHEDULED"],
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Lát biểu đồ Bài reup: 1 Bài đăng",
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-2"],
+  );
+  assert.equal(
+    postingDetailState.current?.publicationEvidenceLabel,
+    "Phân loại",
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Facebook · Reup: 1 bài",
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-2"],
+  );
+
+  fireEvent.click(
+    screen.getAllByRole("button", {
+      name: "Facebook · Tất cả: 2 bài",
+    })[0],
+  );
+  assert.deepEqual(
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-1", "POST-2"],
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Lát biểu đồ Chưa lên lịch: 1 Task ấn phẩm",
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.tasks?.map((item) => item.code),
+    ["GRAPHIC-NOT-SCHEDULED"],
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Lát biểu đồ phụ Đã đăng: 1 Task",
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.tasks?.map((item) => item.code),
+    ["VIDEO-POST"],
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: /Tổng bài ngày 11\/7\/2026: 2 bài/,
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-2", "POST-3"],
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: /Đã đăng ngày 11\/7\/2026: 1 bài/,
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-3"],
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Đường Tổng bài: 3 bài",
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-1", "POST-2", "POST-3"],
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Đường Đã đăng: 2 bài",
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-1", "POST-3"],
   );
 });
 
