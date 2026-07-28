@@ -153,6 +153,7 @@ export function Dashboard() {
                     viewModel={{
                       reportingDate: analytics.reportingDate,
                       types: analytics.types,
+                      costs: analytics.costs,
                       selectedTasks: analytics.selectedTasks,
                       metrics: {
                         status: chartMetrics("status"),

@@ -12,6 +12,10 @@ export type DashboardWorksheets = {
   feedbackSheet: import("exceljs").Worksheet;
   publicationSheet?: import("exceljs").Worksheet;
   normSheet?: import("exceljs").Worksheet;
+  costSheet?: import("exceljs").Worksheet;
+  collectionSheet?: import("exceljs").Worksheet;
+  productSheet?: import("exceljs").Worksheet;
+  shootSheet?: import("exceljs").Worksheet;
 };
 
 export class WorkbookValidationError extends Error {
@@ -55,6 +59,12 @@ export function validateDashboardWorkbook(
     DASHBOARD_SHEETS.publications,
   );
   const normSheet = workbook.getWorksheet(DASHBOARD_SHEETS.norms);
+  const costSheet = workbook.getWorksheet(DASHBOARD_SHEETS.costs);
+  const collectionSheet = workbook.getWorksheet(
+    DASHBOARD_SHEETS.collections,
+  );
+  const productSheet = workbook.getWorksheet(DASHBOARD_SHEETS.products);
+  const shootSheet = workbook.getWorksheet(DASHBOARD_SHEETS.shoots);
 
   validateRequiredHeaders(taskSheet, TASK_REQUIRED_HEADERS);
   validateRequiredHeaders(feedbackSheet, FEEDBACK_REQUIRED_HEADERS);
@@ -73,5 +83,9 @@ export function validateDashboardWorkbook(
     feedbackSheet,
     publicationSheet,
     normSheet,
+    costSheet,
+    collectionSheet,
+    productSheet,
+    shootSheet,
   };
 }

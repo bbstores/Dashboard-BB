@@ -4,6 +4,14 @@ export function formatNumber(value: number) {
   return new Intl.NumberFormat("vi-VN").format(value);
 }
 
+export function formatCurrency(value: number) {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    maximumFractionDigits: 0,
+  }).format(Math.round(value));
+}
+
 export function formatHours(minutes: number) {
   return `${new Intl.NumberFormat("vi-VN", {
     maximumFractionDigits: 1,

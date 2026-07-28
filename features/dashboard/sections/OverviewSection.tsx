@@ -2,6 +2,7 @@ import { formatDate } from "@/shared/formatting/format";
 import type { DashboardStats } from "../analytics/calculateDashboardStats";
 import type { PieMetricSet } from "../analytics/types";
 import { HorizontalBars } from "../components/HorizontalBars";
+import { CostMetricCard } from "../components/CostMetricCard";
 import { PieChart } from "../components/PieChart";
 import {
   evaluateHandoff,
@@ -19,6 +20,7 @@ import type {
 type OverviewViewModel = {
   reportingDate: Date;
   types: DashboardStats["types"];
+  costs: DashboardStats["costs"];
   selectedTasks: DashboardStats["selectedTasks"];
   metrics: {
     status: PieMetricSet;
@@ -46,7 +48,7 @@ export function OverviewSection({
   onExcludeOutsourceChange,
   onOpenDetail,
 }: OverviewSectionProps) {
-  const { metrics, reportingDate, selectedTasks, types } = viewModel;
+  const { costs, metrics, reportingDate, selectedTasks, types } = viewModel;
 
   return (
     <>
@@ -171,6 +173,16 @@ export function OverviewSection({
             tasks: metrics.outsource.tasks.filter((task) =>
               matchesGroup(outsourceName(task), label),
             ),
+          })
+        }
+      />
+      <CostMetricCard
+        costs={costs}
+        onClick={() =>
+          onOpenDetail({
+            title: "Chi phí task trong khoảng lọc",
+            subtitle: "Phân bổ từ các phiếu có Link Approval, đã thanh toán; task được chọn theo Ngày Bắt Đầu",
+            costAllocations: costs.selectedAllocations,
           })
         }
       />

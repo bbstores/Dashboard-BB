@@ -3,6 +3,29 @@ export const DASHBOARD_SHEETS = {
   publications: "2.7 Đăng Bài",
   feedback: "2.9 Lịch sử phản hồi Task",
   norms: "1.7 Định Mức",
+  costs: "2.8 Đề xuất chi phí",
+  collections: "2.1 Bộ Sưu Tập",
+  products: "2.3 Product.SKU",
+  shoots: "2.11 Lịch Quay",
+} as const;
+
+export const COST_COLUMNS = {
+  id: "Tên khoản chi",
+  approvalLink: "Link Approval",
+  title: "Tên Khoản Chi",
+  collections: "Bộ Sưu Tập",
+  shoots: "Thuộc Ca Quay Nào",
+  products: "Thuộc SKU nào",
+  tasks: "Thuộc Task Nào",
+  unitAmount: "Thành Tiền / Đơn vị",
+  status: "Trạng thái thanh toán",
+} as const;
+
+export const COST_LINK_COLUMNS = {
+  collectionId: "ID",
+  shootId: "Mã Ca Quay",
+  productId: "Mã SP",
+  tasks: "2.6 Tasklist",
 } as const;
 
 export const TASK_COLUMNS = {

@@ -13,6 +13,7 @@ import type {
 } from "../model/types";
 import { calculateBacklogBreakdown } from "./calculateBacklog";
 import { calculateCollections } from "./calculateCollections";
+import { calculateCosts } from "./calculateCosts";
 import { calculateLeaderboard } from "./calculateLeaderboard";
 import { calculatePieMetrics } from "./calculatePieMetrics";
 import { calculateSla } from "./calculateSla";
@@ -64,6 +65,7 @@ export function calculateDashboardStats(
     reportingDate,
     ...staff,
     ...collections,
+    costs: calculateCosts(data.tasks, data.costs, dateWindow),
     backlogTasks,
     backlogAttentionTasks,
     pieMetrics: calculatePieMetrics(pieTaskSets, reportingDate),

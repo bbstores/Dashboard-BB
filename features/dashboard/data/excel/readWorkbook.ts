@@ -3,6 +3,7 @@ import { parseFeedback } from "./parseFeedback";
 import { parseNorms } from "./parseNorms";
 import { parsePublications } from "./parsePublications";
 import { parseTasks } from "./parseTasks";
+import { parseCosts } from "./parseCosts";
 import { validateDashboardWorkbook } from "./validateWorkbook";
 
 export async function readDashboardWorkbook(
@@ -17,6 +18,10 @@ export async function readDashboardWorkbook(
     feedbackSheet,
     publicationSheet,
     normSheet,
+    costSheet,
+    collectionSheet,
+    productSheet,
+    shootSheet,
   } =
     validateDashboardWorkbook(workbook);
   const tasks = parseTasks(taskSheet);
@@ -28,6 +33,12 @@ export async function readDashboardWorkbook(
     publications: publicationSheet
       ? parsePublications(publicationSheet)
       : [],
+    costs: parseCosts({
+      costSheet,
+      collectionSheet,
+      productSheet,
+      shootSheet,
+    }),
     fileName: file.name,
   };
 }

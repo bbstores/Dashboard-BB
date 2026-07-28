@@ -47,11 +47,35 @@ export type PublicationPost = {
   bookTaskCode?: string;
 };
 
+export type CostProposal = {
+  id: string;
+  approvalLink: string;
+  title: string;
+  collections: string[];
+  shoots: string[];
+  products: string[];
+  tasks: string[];
+  unitAmount: number;
+  status: string;
+};
+
+export type CostEntityLinks = {
+  collections: Record<string, string[]>;
+  shoots: Record<string, string[]>;
+  products: Record<string, string[]>;
+};
+
+export type CostData = {
+  proposals: CostProposal[];
+  links: CostEntityLinks;
+};
+
 export type DashboardData = {
   tasks: Task[];
   feedback: Feedback[];
   norms: WorkNorm[];
   publications: PublicationPost[];
+  costs?: CostData;
   fileName: string;
 };
 
@@ -123,12 +147,24 @@ export type DetailView = {
     reason: string;
   }>;
   publicationEvidenceLabel?: string;
+  costAllocations?: CostAllocation[];
   taskMetric?: {
     label: string;
     value: (task: Task) => number;
     format: (value: number) => string;
     describe?: (value: number) => string;
   };
+};
+
+export type CostAllocation = {
+  proposalId: string;
+  proposalTitle: string;
+  classification: "Bộ Sưu Tập" | "Ca Quay" | "Mã Sản Phẩm" | "Task";
+  entity: string;
+  unitAmount: number;
+  linkedTaskCount: number;
+  allocatedAmount: number;
+  task: Task;
 };
 
 export type DashboardHelp = {

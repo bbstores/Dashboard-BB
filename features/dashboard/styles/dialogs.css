@@ -727,3 +727,13 @@
   }
 
 }
+.costAmountCell {
+  color: var(--green);
+  font-size: 12px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.costAllocationTable {
+  min-width: 1180px;
+}

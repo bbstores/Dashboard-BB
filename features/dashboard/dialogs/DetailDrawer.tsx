@@ -1,5 +1,10 @@
 import type { DetailView, Task } from "../model/types";
-import { formatNumber, formatDate, formatDateTime } from "@/shared/formatting/format";
+import {
+  formatCurrency,
+  formatNumber,
+  formatDate,
+  formatDateTime,
+} from "@/shared/formatting/format";
 import { normalizedKey } from "../model/taskUtils";
 
 function TaskDetailRow({
@@ -129,6 +134,7 @@ export function DetailDrawer({
 }) {
   const count =
     detail.publicationEvidence?.length ??
+    detail.costAllocations?.length ??
     detail.feedback?.length ??
     detail.tasks?.length ??
     0;
@@ -155,13 +161,64 @@ export function DetailDrawer({
           <span>
             {detail.publicationEvidence
               ? "bài đăng"
+              : detail.costAllocations
+                ? "dòng phân bổ"
               : detail.feedback
                 ? "lần phản hồi"
                 : "task"}
           </span>
         </div>
         <div className="detailTableWrap">
-          {detail.publicationEvidence ? (
+          {detail.costAllocations ? (
+            <table className="detailTable costAllocationTable">
+              <thead>
+                <tr>
+                  <th>STT</th>
+                  <th>Phiếu chi</th>
+                  <th>Phân loại</th>
+                  <th>Đơn vị</th>
+                  <th>Task</th>
+                  <th>Ngày bắt đầu</th>
+                  <th>Thành tiền/đơn vị</th>
+                  <th>Số task chia</th>
+                  <th>Chi phí task</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detail.costAllocations.map((row, index) => (
+                  <tr
+                    key={`${row.proposalId}-${row.entity}-${row.task.code}-${index}`}
+                  >
+                    <td data-label="STT" className="detailRowNumber">
+                      {index + 1}
+                    </td>
+                    <td data-label="Phiếu chi" className="taskIdentity">
+                      <strong>{row.proposalId}</strong>
+                      <span>{row.proposalTitle || "Chưa có mô tả"}</span>
+                    </td>
+                    <td data-label="Phân loại">{row.classification}</td>
+                    <td data-label="Đơn vị">{row.entity}</td>
+                    <td data-label="Task" className="taskIdentity">
+                      <strong>{row.task.code}</strong>
+                      <span>{row.task.title}</span>
+                    </td>
+                    <td data-label="Ngày bắt đầu">
+                      {formatDate(row.task.startDate)}
+                    </td>
+                    <td data-label="Thành tiền/đơn vị">
+                      {formatCurrency(row.unitAmount)}
+                    </td>
+                    <td data-label="Số task chia">
+                      {formatNumber(row.linkedTaskCount)}
+                    </td>
+                    <td data-label="Chi phí task" className="costAmountCell">
+                      <strong>{formatCurrency(row.allocatedAmount)}</strong>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : detail.publicationEvidence ? (
             <table className="detailTable publicationEvidenceTable">
               <thead>
                 <tr>
