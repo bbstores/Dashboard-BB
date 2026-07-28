@@ -148,10 +148,16 @@ export function calculatePublicationStats(
       .filter(isNoSocialPublicationTask)
       .map((task) => normalize(task.code)),
   );
-  const filteredPosts = publications.filter(
+  const postsInWindow = publications.filter(
     (post) =>
       post.scheduledAt &&
-      inWindow(post.scheduledAt, dateWindow) &&
+      inWindow(post.scheduledAt, dateWindow),
+  );
+  const noSocialPosts = postsInWindow.filter((post) =>
+    noSocialTaskCodes.has(normalize(post.bookTaskCode)),
+  );
+  const filteredPosts = postsInWindow.filter(
+    (post) =>
       !noSocialTaskCodes.has(normalize(post.bookTaskCode)),
   );
   const classifiedPosts: ClassifiedPublication[] = filteredPosts.map((post) => ({
@@ -267,6 +273,12 @@ export function calculatePublicationStats(
       task: taskByCode.get(normalize(item.post.bookTaskCode)),
       reason: publicationIssueReason(item.post, taskByCode),
     }));
+  const noSocialPostDetails = noSocialPosts.map((post) => ({
+    post,
+    task: taskByCode.get(normalize(post.bookTaskCode)),
+    reason:
+      "Book Task liên kết tới task có Nền Tảng = Không Đăng Social",
+  }));
 
   return {
     total: filteredPosts.length,
@@ -327,5 +339,6 @@ export function calculatePublicationStats(
     ],
     oldAssets,
     unknownPostDetails,
+    noSocialPostDetails,
   };
 }

@@ -377,6 +377,13 @@ test("posting section shows source mix and counts multi-platform posts independe
     startDate: new Date(2026, 6, 11, 9),
     publicationIds: [],
   };
+  const noSocialTask = {
+    ...task(),
+    code: "VIDEO-NO-SOCIAL",
+    startDate: new Date(2026, 6, 10, 9),
+    platform: "Không Đăng Social",
+    publicationIds: ["POST-NO-SOCIAL"],
+  };
   const publications: PublicationPost[] = [
     {
       id: "POST-1",
@@ -405,6 +412,15 @@ test("posting section shows source mix and counts multi-platform posts independe
       title: "TikTok video",
       bookTaskCode: "VIDEO-POST",
     },
+    {
+      id: "POST-NO-SOCIAL",
+      scheduledAt: new Date(2026, 6, 10, 10),
+      platform: "Không Đăng Social",
+      posted: false,
+      postType: "Video",
+      title: "Không dùng cho social",
+      bookTaskCode: "VIDEO-NO-SOCIAL",
+    },
   ];
   const postingDetailState: { current: DetailView | null } = {
     current: null,
@@ -415,6 +431,7 @@ test("posting section shows source mix and counts multi-platform posts independe
         videoTask,
         scheduledUnpostedTask,
         recentGraphicTask,
+        noSocialTask,
       ]}
       publications={publications}
       dateWindow={{
@@ -434,6 +451,11 @@ test("posting section shows source mix and counts multi-platform posts independe
   assert.ok(screen.getAllByText("Facebook").length >= 1);
   assert.ok(screen.getAllByText("TikTok").length >= 1);
   assert.ok(screen.getByText("Bài đăng theo nền tảng"));
+  assert.ok(
+    screen.getByText(
+      "Dữ liệu cần kiểm tra · Không Đăng Social",
+    ),
+  );
   assert.ok(screen.getByText("Bài đăng dùng media"));
   assert.ok(screen.getByText("Tình trạng lên lịch ấn phẩm"));
   assert.equal(
@@ -551,6 +573,24 @@ test("posting section shows source mix and counts multi-platform posts independe
       (item) => item.post.id,
     ),
     ["POST-3"],
+  );
+
+  const noSocialMetric = screen
+    .getByText("Dữ liệu cần kiểm tra · Không Đăng Social")
+    .closest("button");
+  assert.ok(noSocialMetric);
+  fireEvent.click(
+    noSocialMetric,
+  );
+  assert.deepEqual(
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-NO-SOCIAL"],
+  );
+  assert.equal(
+    postingDetailState.current?.publicationEvidenceLabel,
+    "Lý do kiểm tra",
   );
 
   fireEvent.click(

@@ -631,6 +631,22 @@ export function PostingSection({
             })
           }
         />
+        <PostingKpi
+          label="Dữ liệu cần kiểm tra · Không Đăng Social"
+          value={stats.noSocialPostDetails.length}
+          note="Có dòng Đăng Bài liên kết sai quy tắc"
+          variant="warning"
+          onClick={() =>
+            onOpenDetail({
+              title:
+                "Dữ liệu cần kiểm tra · Không Đăng Social",
+              subtitle:
+                "Dòng Đăng Bài có Book Task liên kết tới task được đánh dấu Không Đăng Social",
+              publicationEvidence: stats.noSocialPostDetails,
+              publicationEvidenceLabel: "Lý do kiểm tra",
+            })
+          }
+        />
       </div>
 
       <div className="postingOverviewGrid">

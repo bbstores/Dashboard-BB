@@ -515,6 +515,21 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
       { post: "POST-3", source: "video", task: "VIDEO-2" },
     ],
   );
+  assert.deepEqual(
+    stats.noSocialPostDetails.map((item) => ({
+      post: item.post.id,
+      task: item.task?.code,
+      reason: item.reason,
+    })),
+    [
+      {
+        post: "POST-NO-SOCIAL",
+        task: "VIDEO-NO-SOCIAL",
+        reason:
+          "Book Task liên kết tới task có Nền Tảng = Không Đăng Social",
+      },
+    ],
+  );
   assert.equal(stats.dailyRows.length, 11);
   assert.deepEqual(
     stats.dailyRows
