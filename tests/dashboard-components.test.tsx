@@ -6,13 +6,17 @@ import { DashboardFilters } from "../features/dashboard/components/DashboardFilt
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { DashboardKpis } from "../features/dashboard/components/DashboardKpis";
 import { DailyTaskChart } from "../features/dashboard/components/DailyTaskChart";
+import { ComparisonDashboard } from "../features/dashboard/components/ComparisonDashboard";
 import { DetailDrawer } from "../features/dashboard/dialogs/DetailDrawer";
 import { PercentileDialog } from "../features/dashboard/dialogs/PercentileDialog";
+import { HelpProvider } from "../features/dashboard/help/HelpProvider";
 import { PostingSection } from "../features/dashboard/sections/PostingSection";
 import type {
+  DashboardData,
   DetailView,
   PublicationPost,
   ReportDepartment,
+  SavedReport,
   Task,
 } from "../features/dashboard/model/types";
 
@@ -177,6 +181,121 @@ test("DashboardFilters hides task backlog date on business dashboard", () => {
   assert.equal(screen.queryByLabelText(/Mốc task tồn/), null);
   assert.ok(screen.getByLabelText("Từ ngày"));
   assert.ok(screen.getByLabelText("Đến ngày"));
+});
+
+test("comparison charts open evidence and line charts select the clicked point", () => {
+  const mediaTask = {
+    ...task(),
+    code: "MEDIA-COMPARE-001",
+    title: "Media comparison evidence",
+    startDate: new Date(2026, 6, 20, 9),
+  };
+  const publicationTask = {
+    ...task(),
+    code: "POST-COMPARE-001",
+    title: "Publication comparison evidence",
+    startDate: new Date(2026, 6, 21, 9),
+    publicationIds: ["POST-COMPARE-001"],
+  };
+  const publication: PublicationPost = {
+    id: "POST-COMPARE-001",
+    scheduledAt: new Date(2026, 6, 21, 10),
+    platform: "Facebook",
+    posted: true,
+    postType: "Video",
+    title: "Comparison post",
+    bookTaskCode: publicationTask.code,
+  };
+  const data: DashboardData = {
+    fileName: "comparison-evidence.xlsx",
+    tasks: [mediaTask, publicationTask],
+    feedback: [],
+    norms: [],
+    publications: [publication],
+  };
+  const report = (
+    id: string,
+    name: string,
+    department: ReportDepartment,
+  ): SavedReport => ({
+    id,
+    name,
+    department,
+    createdAt: "2026-07-29T03:00:00.000Z",
+    filters: {
+      dateFrom: "2026-07-20",
+      dateTo: "2026-07-26",
+      backlogDate: "2026-07-26",
+      collectionMonth: "",
+      leaderboardUnit: "minutes",
+      pieScopes: {},
+      pieExcludeOutsource: {},
+    },
+  });
+  const detailState: { current: DetailView | null } = {
+    current: null,
+  };
+  const { container } = render(
+    <HelpProvider>
+      <ComparisonDashboard
+        data={data}
+        reports={[
+          report("MEDIA-WEEK", "Media tuần 20–26/07", "media"),
+          report(
+            "BUSINESS-WEEK",
+            "Kinh doanh tuần 20–26/07",
+            "business",
+          ),
+        ]}
+        onOpenDetail={(detail) => {
+          detailState.current = detail;
+        }}
+      />
+    </HelpProvider>,
+  );
+
+  assert.ok(
+    container.querySelectorAll(".comparisonBarTrack.interactive")
+      .length > 0,
+  );
+  assert.ok(
+    container.querySelectorAll(".comparisonStackTrack button")
+      .length > 0,
+  );
+  assert.ok(
+    container.querySelectorAll(
+      ".comparisonHeatmapRow span[role='button']",
+    ).length > 0,
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Media tuần 20–26/07 · Task trong kỳ: 2 · Xem dẫn chứng",
+    }),
+  );
+  assert.ok(detailState.current);
+  assert.match(detailState.current.title, /Luồng task/);
+  assert.deepEqual(
+    detailState.current.tasks?.map((item) => item.code),
+    ["MEDIA-COMPARE-001", "POST-COMPARE-001"],
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Kinh doanh",
+    }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Kinh doanh tuần 20–26/07 · Tổng bài: 1 · Xem dẫn chứng",
+    }),
+  );
+  assert.deepEqual(
+    detailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-COMPARE-001"],
+  );
 });
 
 test("KPI selection opens the matching detail data", () => {
