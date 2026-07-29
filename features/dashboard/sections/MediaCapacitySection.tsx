@@ -188,9 +188,18 @@ function CapacityCard({
           <span>
             P25 {formatHours(reference.p25Minutes)}
           </span>
-          <strong>
+          <strong className="capacityP50Summary">
             {reference.p50Minutes
-              ? `${formatNumber(reference.percentage)}% P50`
+              ? (
+                  <>
+                    <span>
+                      {formatNumber(reference.percentage)}% P50
+                    </span>
+                    <small>
+                      P50 = {formatHours(reference.p50Minutes)}
+                    </small>
+                  </>
+                )
               : "Chưa đủ dữ liệu"}
           </strong>
           <span>
