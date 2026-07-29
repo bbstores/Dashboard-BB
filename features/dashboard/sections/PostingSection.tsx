@@ -413,6 +413,14 @@ function PostingDailyLineChart({
                       }
                     }}
                   />
+                  <text
+                    className="postingTrendValue total"
+                    x={totalPoint.x}
+                    y={totalPoint.y - 9}
+                    textAnchor="middle"
+                  >
+                    {row.total}
+                  </text>
                   <circle
                     className="postingTrendPoint posted interactive"
                     cx={postedPoint.x}
@@ -432,6 +440,14 @@ function PostingDailyLineChart({
                       }
                     }}
                   />
+                  <text
+                    className="postingTrendValue posted"
+                    x={postedPoint.x}
+                    y={postedPoint.y + 15}
+                    textAnchor="middle"
+                  >
+                    {row.posted}
+                  </text>
                   {(index % labelStep === 0 ||
                     index === rows.length - 1) && (
                     <text

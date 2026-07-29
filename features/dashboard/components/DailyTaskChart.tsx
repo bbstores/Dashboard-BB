@@ -194,6 +194,14 @@ export function DailyTaskChart({
                     cy={backlogPosition.y}
                     r="4"
                   />
+                  <text
+                    className="dailyPointValue"
+                    x={backlogPosition.x}
+                    y={backlogPosition.y - 9}
+                    textAnchor="middle"
+                  >
+                    {row.backlog}
+                  </text>
                   <title>
                     {formatDate(row.date)} · Được giao: {row.assigned} · Bàn giao: {row.handedSameDay + row.handedBacklog} (Task trong ngày: {row.handedSameDay}, Xử lý task tồn: {row.handedBacklog}) · Tồn cuối ngày: {row.backlog}
                   </title>

@@ -514,6 +514,21 @@
   outline: none;
   stroke-width: 4;
 }
+.postingTrendValue {
+  font-size: 8px;
+  font-weight: 850;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: #fbfaf5;
+  stroke-linejoin: round;
+  stroke-width: 3px;
+}
+.postingTrendValue.total {
+  fill: #174f3d;
+}
+.postingTrendValue.posted {
+  fill: #719a34;
+}
 @media (max-width: 1120px) {
   .postingKpis {
     grid-template-columns: repeat(3, minmax(0, 1fr));

@@ -653,6 +653,16 @@
   fill: #fbfaf5;
   stroke-width: 2.5;
 }
+.dailyPointValue {
+  fill: #174f3d;
+  font-size: 9px;
+  font-weight: 850;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: #fbfaf5;
+  stroke-linejoin: round;
+  stroke-width: 3px;
+}
 .dailyHandoffBar,
 .dailyAssignedBar {
   opacity: .9;

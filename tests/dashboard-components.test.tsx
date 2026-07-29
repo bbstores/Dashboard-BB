@@ -362,6 +362,10 @@ test("monthly daily chart keeps all 31 date labels readable", () => {
   assert.ok(screen.getByText("01/07"));
   assert.ok(screen.getByText("02/07"));
   assert.ok(screen.getByText("31/07"));
+  assert.equal(
+    container.querySelectorAll(".dailyPointValue").length,
+    rows.length,
+  );
 });
 
 test("posting section shows source mix and counts multi-platform posts independently", () => {
@@ -507,6 +511,14 @@ test("posting section shows source mix and counts multi-platform posts independe
       .querySelector(".postingTrend.total")
       ?.getAttribute("d") ?? "",
     /\bC\b/,
+  );
+  assert.ok(
+    container.querySelectorAll(".postingTrendValue.total").length >
+      0,
+  );
+  assert.equal(
+    container.querySelectorAll(".postingTrendValue.total").length,
+    container.querySelectorAll(".postingTrendValue.posted").length,
   );
 
   const totalKpi = Array.from(

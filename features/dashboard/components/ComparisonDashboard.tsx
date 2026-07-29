@@ -382,7 +382,7 @@ function ComparisonTrend<T extends ComparisonPoint>({
               </g>
             );
           })}
-          {series.map((item) => {
+          {series.map((item, seriesIndex) => {
             const path = points
               .map(
                 (point, index) =>
@@ -398,20 +398,37 @@ function ComparisonTrend<T extends ComparisonPoint>({
                   strokeWidth="4"
                   strokeLinejoin="round"
                 />
-                {points.map((point, index) => (
-                  <circle
-                    key={point.id}
-                    cx={x(index)}
-                    cy={y(item.value(point))}
-                    fill={item.color}
-                    r="5"
-                  >
-                    <title>
-                      {point.name} · {item.label}:{" "}
-                      {format(item.value(point))}
-                    </title>
-                  </circle>
-                ))}
+                {points.map((point, index) => {
+                  const value = item.value(point);
+                  const labelOffset =
+                    [-11, 16, -25, 30][seriesIndex] ?? 14;
+                  const labelY = Math.max(
+                    12,
+                    Math.min(height - bottom + 18, y(value) + labelOffset),
+                  );
+                  return (
+                    <g key={point.id}>
+                      <circle
+                        cx={x(index)}
+                        cy={y(value)}
+                        fill={item.color}
+                        r="5"
+                      >
+                        <title>
+                          {point.name} · {item.label}: {format(value)}
+                        </title>
+                      </circle>
+                      <text
+                        className="comparisonPointValue"
+                        x={x(index)}
+                        y={labelY}
+                        textAnchor="middle"
+                      >
+                        {format(value)}
+                      </text>
+                    </g>
+                  );
+                })}
               </g>
             );
           })}
