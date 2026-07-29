@@ -11,6 +11,7 @@ import type {
 } from "../model/types";
 
 export function useDashboardDialogs() {
+  const [comparisonActive, setComparisonActive] = useState(false);
   const [dashboardDepartment, setDashboardDepartment] =
     useState<ReportDepartment>("media");
   const [detail, setDetail] = useState<DetailView | null>(null);
@@ -26,6 +27,11 @@ export function useDashboardDialogs() {
   function openSaveReport(department: ReportDepartment) {
     setSaveDepartment(department);
     setSaveReportOpen(true);
+  }
+
+  function showDashboardDepartment(department: ReportDepartment) {
+    setComparisonActive(false);
+    setDashboardDepartment(department);
   }
 
   function closeSaveReport() {
@@ -63,6 +69,9 @@ export function useDashboardDialogs() {
   return {
     dashboardDepartment,
     setDashboardDepartment,
+    comparisonActive,
+    openComparison: () => setComparisonActive(true),
+    showDashboardDepartment,
     detail,
     setDetail,
     percentileDetail,

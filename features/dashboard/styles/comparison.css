@@ -1,0 +1,429 @@
+.comparisonDashboard {
+  background: #e8eee9;
+  padding: 22px 24px 56px;
+}
+
+.comparisonHero {
+  align-items: flex-end;
+  background: var(--green);
+  border-radius: 30px;
+  color: #fff;
+  display: flex;
+  gap: 32px;
+  justify-content: space-between;
+  padding: 38px 42px;
+}
+
+.comparisonHero > div:first-child > span,
+.comparisonReportPicker header span,
+.comparisonCard header > span {
+  color: var(--lime);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.comparisonHero h1 {
+  font-size: clamp(30px, 4vw, 54px);
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+  margin: 12px 0 14px;
+  max-width: 720px;
+}
+
+.comparisonHero p {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  margin: 0;
+}
+
+.comparisonModeControls {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 12px;
+}
+
+.comparisonModeControls > div {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(2, 1fr);
+  padding: 8px;
+}
+
+.comparisonModeControls small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 8px;
+  font-weight: 850;
+  grid-column: 1 / -1;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.comparisonModeControls button {
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 9px 13px;
+}
+
+.comparisonModeControls button.active {
+  background: var(--lime);
+  color: #153d31;
+}
+
+.comparisonReportPicker,
+.comparisonCard {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+}
+
+.comparisonReportPicker {
+  margin-top: 18px;
+  padding: 24px;
+}
+
+.comparisonReportPicker > header {
+  align-items: center;
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+}
+
+.comparisonReportPicker h2 {
+  font-size: 22px;
+  margin: 6px 0 0;
+}
+
+.comparisonReportPicker header > div:last-child {
+  display: flex;
+  gap: 8px;
+}
+
+.comparisonReportPicker header button {
+  background: #e5eee8;
+  border: 0;
+  border-radius: 9px;
+  color: var(--green);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 850;
+  padding: 9px 12px;
+}
+
+.comparisonReportOptions {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
+  margin-top: 18px;
+}
+
+.comparisonReportOptions label {
+  background: #f2f1e9;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  cursor: pointer;
+  display: grid;
+  gap: 5px;
+  grid-template-columns: 18px 1fr;
+  padding: 13px;
+}
+
+.comparisonReportOptions label.selected {
+  background: #e9f7cf;
+  border-color: #9bc743;
+}
+
+.comparisonReportOptions input {
+  accent-color: var(--green);
+  grid-row: 1 / 3;
+  margin: 2px 0 0;
+}
+
+.comparisonReportOptions strong {
+  font-size: 11px;
+}
+
+.comparisonReportOptions span {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.comparisonCharts {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 18px;
+}
+
+.comparisonCard {
+  min-width: 0;
+  padding: 24px;
+}
+
+.comparisonTrendCard,
+.comparisonHeatmapCard {
+  grid-column: 1 / -1;
+}
+
+.comparisonCard header h3 {
+  font-size: 22px;
+  letter-spacing: -0.03em;
+  margin: 7px 0 0;
+}
+
+.comparisonCard header > span,
+.comparisonReportPicker header span {
+  color: var(--green);
+}
+
+.comparisonLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 17px 0;
+}
+
+.comparisonLegend span {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 9px;
+  gap: 6px;
+}
+
+.comparisonLegend i {
+  border-radius: 3px;
+  display: block;
+  height: 9px;
+  width: 9px;
+}
+
+.comparisonBarRows,
+.comparisonStacks {
+  display: grid;
+  gap: 14px;
+}
+
+.comparisonBarRow,
+.comparisonStackRow {
+  align-items: center;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(115px, 0.8fr) minmax(0, 2fr);
+}
+
+.comparisonReportLabel {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.comparisonReportLabel strong {
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comparisonReportLabel small {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.comparisonBarTracks {
+  display: grid;
+  gap: 5px;
+}
+
+.comparisonBarTrack {
+  background: #e7e7df;
+  border-radius: 8px;
+  height: 18px;
+  overflow: hidden;
+  position: relative;
+}
+
+.comparisonBarTrack > span {
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+  min-width: 2px;
+}
+
+.comparisonBarTrack b {
+  color: #10251f;
+  font-size: 8px;
+  position: absolute;
+  right: 7px;
+  top: 4px;
+}
+
+.comparisonStackTrack {
+  background: #e7e7df;
+  border-radius: 10px;
+  display: flex;
+  height: 27px;
+  overflow: hidden;
+}
+
+.comparisonStackTrack span {
+  min-width: 0;
+}
+
+.comparisonStackValues {
+  color: var(--muted);
+  display: block;
+  font-size: 8px;
+  line-height: 1.45;
+  margin-top: 5px;
+}
+
+.comparisonChartScroller {
+  overflow-x: auto;
+}
+
+.comparisonChartScroller svg {
+  min-width: 720px;
+  width: 100%;
+}
+
+.comparisonGridLine {
+  stroke: #d9ddd5;
+  stroke-dasharray: 4 7;
+}
+
+.comparisonAxisText {
+  fill: #7a817d;
+  font-size: 9px;
+}
+
+.comparisonHeatmap {
+  display: grid;
+  gap: 5px;
+  margin-top: 20px;
+  min-width: 640px;
+  overflow-x: auto;
+}
+
+.comparisonHeatmap > b {
+  color: var(--muted);
+  font-size: 8px;
+  padding: 5px 7px;
+}
+
+.comparisonHeatmapRow {
+  display: contents;
+}
+
+.comparisonHeatmapRow strong,
+.comparisonHeatmapRow span {
+  align-items: center;
+  border-radius: 7px;
+  display: flex;
+  font-size: 9px;
+  min-height: 32px;
+  padding: 6px 8px;
+}
+
+.comparisonHeatmapRow strong {
+  background: #eeeee7;
+}
+
+.comparisonHeatmapRow span {
+  color: #fff;
+  font-weight: 800;
+  justify-content: center;
+}
+
+.comparisonEmpty {
+  color: var(--muted);
+  font-size: 11px;
+  padding: 26px 0 8px;
+  text-align: center;
+}
+
+.comparisonEmptyLarge {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  margin-top: 18px;
+  padding: 60px 20px;
+}
+
+.comparisonSnapshotNote {
+  background: #dfe8e1;
+  border: 1px solid rgba(25, 91, 71, 0.12);
+  border-radius: 16px;
+  color: var(--green);
+  margin-top: 18px;
+  padding: 16px 20px;
+}
+
+.comparisonSnapshotNote strong {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.comparisonSnapshotNote p {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+  margin: 6px 0 0;
+}
+
+@media (max-width: 880px) {
+  .comparisonHero {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 28px;
+  }
+
+  .comparisonModeControls {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .comparisonCharts {
+    grid-template-columns: 1fr;
+  }
+
+  .comparisonTrendCard,
+  .comparisonHeatmapCard {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 620px) {
+  .comparisonDashboard {
+    padding: 12px 12px 42px;
+  }
+
+  .comparisonHero,
+  .comparisonReportPicker,
+  .comparisonCard {
+    border-radius: 18px;
+  }
+
+  .comparisonModeControls {
+    grid-template-columns: 1fr;
+  }
+
+  .comparisonReportPicker > header,
+  .comparisonBarRow,
+  .comparisonStackRow {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .comparisonReportPicker > header {
+    flex-direction: column;
+  }
+}

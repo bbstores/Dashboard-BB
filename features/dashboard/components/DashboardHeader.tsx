@@ -6,8 +6,10 @@ export type DashboardHeaderProps = {
   loading: boolean;
   hasData: boolean;
   activeDepartment: ReportDepartment;
+  comparisonActive: boolean;
   reportCounts: Record<ReportDepartment, number>;
   onDepartmentChange: (department: ReportDepartment) => void;
+  onOpenComparison: () => void;
   onOpenSavedReports: (department: ReportDepartment) => void;
   onFileSelected: (file: File) => void;
 };
@@ -17,8 +19,10 @@ export function DashboardHeader({
   loading,
   hasData,
   activeDepartment,
+  comparisonActive,
   reportCounts,
   onDepartmentChange,
+  onOpenComparison,
   onOpenSavedReports,
   onFileSelected,
 }: DashboardHeaderProps) {
@@ -40,23 +44,39 @@ export function DashboardHeader({
           <button
             key={department}
             type="button"
-            className={activeDepartment === department ? "active" : ""}
-            aria-pressed={activeDepartment === department}
+            className={
+              !comparisonActive && activeDepartment === department
+                ? "active"
+                : ""
+            }
+            aria-pressed={
+              !comparisonActive && activeDepartment === department
+            }
             onClick={() => onDepartmentChange(department)}
           >
             {department === "media" ? "Media" : "Kinh doanh"}
           </button>
         ))}
+        <button
+          type="button"
+          className={comparisonActive ? "active" : ""}
+          aria-pressed={comparisonActive}
+          onClick={onOpenComparison}
+        >
+          So sánh
+        </button>
       </nav>
-      <button
-        type="button"
-        className="savedReportsButton"
-        aria-label={`Báo cáo đã lưu của ${departmentName}`}
-        onClick={() => onOpenSavedReports(activeDepartment)}
-      >
-        Báo cáo đã lưu
-        <small>{reportCounts[activeDepartment]}</small>
-      </button>
+      {!comparisonActive && (
+        <button
+          type="button"
+          className="savedReportsButton"
+          aria-label={`Báo cáo đã lưu của ${departmentName}`}
+          onClick={() => onOpenSavedReports(activeDepartment)}
+        >
+          Báo cáo đã lưu
+          <small>{reportCounts[activeDepartment]}</small>
+        </button>
+      )}
       <button
         type="button"
         className="uploadButton"

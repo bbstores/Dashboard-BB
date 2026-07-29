@@ -3,10 +3,15 @@ import test from "node:test";
 import { calculateDailyTaskChart } from "../features/dashboard/analytics/calculateDailyTaskChart";
 import { calculateDashboardStats } from "../features/dashboard/analytics/calculateDashboardStats";
 import { calculatePublicationStats } from "../features/dashboard/analytics/calculatePublicationStats";
+import {
+  calculateReportComparison,
+  comparisonPeriod,
+} from "../features/dashboard/analytics/calculateReportComparison";
 import type {
   DashboardData,
   DateWindow,
   PublicationPost,
+  SavedReport,
   Task,
 } from "../features/dashboard/model/types";
 
@@ -284,6 +289,44 @@ test("daily chart excludes outsource from assignees and every metric", () => {
   );
   assert.equal(chart.rows[0].handedBacklogTasks.length, 0);
   assert.equal(chart.rows[0].backlogTasks.length, 0);
+});
+
+test("compares only saved reports from the same department and period", () => {
+  const report = (
+    id: string,
+    department: "media" | "business",
+    dateFrom: string,
+    dateTo: string,
+  ): SavedReport => ({
+    id,
+    name: id,
+    department,
+    createdAt: "2026-07-29T03:00:00.000Z",
+    filters: {
+      dateFrom,
+      dateTo,
+      backlogDate: dateTo,
+      collectionMonth: "",
+      leaderboardUnit: "minutes",
+      pieScopes: {},
+      pieExcludeOutsource: {},
+    },
+  });
+  const reports = [
+    report("WEEK-MEDIA", "media", "2026-07-13", "2026-07-19"),
+    report("MONTH-MEDIA", "media", "2026-07-01", "2026-07-31"),
+    report("WEEK-BUSINESS", "business", "2026-07-13", "2026-07-19"),
+  ];
+
+  assert.equal(comparisonPeriod(reports[0]), "week");
+  assert.equal(comparisonPeriod(reports[1]), "month");
+  const points = calculateReportComparison(
+    dashboardData,
+    reports,
+    "media",
+    "week",
+  );
+  assert.deepEqual(points.map((point) => point.id), ["WEEK-MEDIA"]);
 });
 
 test("separates backlog rules from invalid Done chronology", () => {

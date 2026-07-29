@@ -58,5 +58,13 @@ export function useSavedReports() {
     saveSavedReports(window.localStorage, next);
   }, []);
 
-  return { savedReports, saveReport, deleteReport };
+  const reportCounts = savedReports.reduce<Record<ReportDepartment, number>>(
+    (counts, report) => ({
+      ...counts,
+      [report.department]: counts[report.department] + 1,
+    }),
+    { media: 0, business: 0 },
+  );
+
+  return { savedReports, reportCounts, saveReport, deleteReport };
 }

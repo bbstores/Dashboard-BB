@@ -1,8 +1,8 @@
 "use client";
-
 import "./styles/dashboard.css";
 import "./styles/filters.css";
 import "./styles/charts.css";
+import "./styles/comparison.css";
 import "./sections/collection/collection.css";
 import "./sections/publication/publication.css";
 import "./sections/sla/sla.css";
@@ -11,6 +11,7 @@ import { DashboardFilters } from "./components/DashboardFilters";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { DashboardHero } from "./components/DashboardHero";
 import { DashboardKpis } from "./components/DashboardKpis";
+import { ComparisonDashboard } from "./components/ComparisonDashboard";
 import { EmptyDashboard } from "./components/EmptyDashboard";
 import { DetailDrawer } from "./dialogs/DetailDrawer";
 import { PercentileDialog } from "./dialogs/PercentileDialog";
@@ -69,18 +70,11 @@ export function Dashboard() {
     dialogs.finishSaveReport(dialogs.saveDepartment);
   }
   function applySavedReport(report: SavedReport) {
-    dialogs.setDashboardDepartment(report.department);
+    dialogs.showDashboardDepartment(report.department);
     filters.applySavedReportFilters(report.filters);
     dialogs.setReportDepartment(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
-  const reportCounts = reports.savedReports.reduce<Record<ReportDepartment, number>>(
-    (counts, report) => ({
-      ...counts,
-      [report.department]: counts[report.department] + 1,
-    }),
-    { media: 0, business: 0 },
-  );
   return (
     <HelpProvider>
       <main className="dashboard">
@@ -89,15 +83,19 @@ export function Dashboard() {
           loading={workbook.loading}
           hasData={Boolean(workbook.data)}
           activeDepartment={dialogs.dashboardDepartment}
-          reportCounts={reportCounts}
-          onDepartmentChange={dialogs.setDashboardDepartment}
+          comparisonActive={dialogs.comparisonActive}
+          reportCounts={reports.reportCounts}
+          onDepartmentChange={dialogs.showDashboardDepartment}
+          onOpenComparison={dialogs.openComparison}
           onOpenSavedReports={toggleSavedReports}
           onFileSelected={(file) => void workbook.loadWorkbook(file)}
         />
-        <DashboardHero
-          data={workbook.data}
-          department={dialogs.dashboardDepartment}
-        />
+        {!dialogs.comparisonActive && (
+          <DashboardHero
+            data={workbook.data}
+            department={dialogs.dashboardDepartment}
+          />
+        )}
         {workbook.error && (
           <div className="errorBanner">{workbook.error}</div>
         )}
@@ -105,6 +103,11 @@ export function Dashboard() {
           <EmptyDashboard
             fileRef={workbook.fileRef}
             loading={workbook.loading}
+          />
+        ) : dialogs.comparisonActive ? (
+          <ComparisonDashboard
+            data={workbook.data}
+            reports={reports.savedReports}
           />
         ) : (
           <>
@@ -145,7 +148,6 @@ export function Dashboard() {
                   backlogDate={filters.backlogDate}
                   onOpenDetail={dialogs.setDetail}
                 />
-
                 <section className="dashboardGrid">
                   <OverviewSection
                     viewModel={{
@@ -236,7 +238,6 @@ export function Dashboard() {
                     onOpenPercentile={dialogs.setPercentileDetail}
                   />
                 </section>
-
                 <section className="logicNote">
                   <span>LOGIC TEST V0.1</span>
                   <p>
@@ -260,7 +261,6 @@ export function Dashboard() {
             )}
           </>
         )}
-
         {dialogs.detail && (
           <DetailDrawer
             detail={dialogs.detail}

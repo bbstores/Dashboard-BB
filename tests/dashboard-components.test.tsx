@@ -111,6 +111,7 @@ test("DashboardFilters emits typed filter actions", () => {
 test("DashboardHeader switches dashboard and opens saved reports separately", () => {
   let activeDepartment: ReportDepartment = "media";
   let openedReports: ReportDepartment | null = null;
+  let comparisonOpened = false;
   const inputRef = { current: null };
 
   render(
@@ -119,12 +120,16 @@ test("DashboardHeader switches dashboard and opens saved reports separately", ()
       loading={false}
       hasData
       activeDepartment="media"
+      comparisonActive={false}
       reportCounts={{ media: 2, business: 3 }}
       onDepartmentChange={(department) => {
         activeDepartment = department;
       }}
       onOpenSavedReports={(department) => {
         openedReports = department;
+      }}
+      onOpenComparison={() => {
+        comparisonOpened = true;
       }}
       onFileSelected={() => undefined}
     />,
@@ -147,6 +152,9 @@ test("DashboardHeader switches dashboard and opens saved reports separately", ()
     }),
   );
   assert.equal(openedReports, "media");
+
+  fireEvent.click(screen.getByRole("button", { name: "So sánh" }));
+  assert.equal(comparisonOpened, true);
 });
 
 test("DashboardFilters hides task backlog date on business dashboard", () => {
