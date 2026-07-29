@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { calculateCosts } from "../features/dashboard/analytics/calculateCosts";
+import {
+  calculateCosts,
+  summarizeCostAllocationsByTask,
+} from "../features/dashboard/analytics/calculateCosts";
 import type {
   CostData,
   DateWindow,
@@ -96,4 +99,46 @@ test("keeps missing linked tasks as unallocated and reconciles", () => {
   assert.equal(result.allocatedTotal, 2_500_000);
   assert.equal(result.unallocatedTotal, 7_500_000);
   assert.equal(result.isReconciled, true);
+});
+
+test("groups allocation evidence by task and bill", () => {
+  const t1 = task("T1", 5);
+  const summaries = summarizeCostAllocationsByTask([
+    {
+      proposalId: "BILL-1",
+      proposalTitle: "Khách sạn",
+      classification: "Ca Quay",
+      entity: "CA-1",
+      unitAmount: 1_000_000,
+      linkedTaskCount: 2,
+      allocatedAmount: 500_000,
+      task: t1,
+    },
+    {
+      proposalId: "BILL-1",
+      proposalTitle: "Khách sạn",
+      classification: "Ca Quay",
+      entity: "CA-2",
+      unitAmount: 600_000,
+      linkedTaskCount: 3,
+      allocatedAmount: 200_000,
+      task: t1,
+    },
+    {
+      proposalId: "BILL-2",
+      proposalTitle: "Di chuyển",
+      classification: "Task",
+      entity: "T1",
+      unitAmount: 300_000,
+      linkedTaskCount: 1,
+      allocatedAmount: 300_000,
+      task: t1,
+    },
+  ]);
+
+  assert.equal(summaries.length, 1);
+  assert.equal(summaries[0].task.code, "T1");
+  assert.equal(summaries[0].bills.length, 2);
+  assert.equal(summaries[0].bills[0].allocatedAmount, 700_000);
+  assert.equal(summaries[0].totalAmount, 1_000_000);
 });

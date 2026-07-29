@@ -49,8 +49,8 @@ export function dashboardHelp(title: string): DashboardHelp {
     },
     "Task thiếu thông tin": {
       purpose: "Phát hiện task chưa đủ dữ liệu để giao việc và theo dõi.",
-      calculation: "Chia thành ba nhóm loại trừ nhau: chỉ thiếu Ngày Bắt Đầu, chỉ thiếu Assignee và thiếu cả hai. Tổng lớn bằng tổng của đúng ba nhóm này.",
-      example: "200 task chỉ thiếu ngày, 0 task chỉ thiếu assignee và 92 task thiếu cả hai → tổng 292.",
+      calculation: "Chia thành bốn nhóm loại trừ nhau. Task không có Tên Task được ưu tiên xếp vào nhóm Task rỗng và không xuất hiện trong ba nhóm còn lại. Các task có tên mới được phân thành chỉ thiếu Ngày Bắt Đầu, chỉ thiếu Assignee hoặc thiếu cả hai. Tổng lớn bằng tổng của bốn nhóm.",
+      example: "100 task rỗng, 200 task chỉ thiếu ngày, 10 task chỉ thiếu assignee và 92 task thiếu cả hai → tổng task chưa phân là 402.",
     },
     "Task tồn tại mốc chọn": {
       purpose: "Cho biết lượng task còn tồn từ trước ngày mốc độc lập.",

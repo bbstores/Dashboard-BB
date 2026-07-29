@@ -134,6 +134,7 @@ export function DetailDrawer({
 }) {
   const count =
     detail.publicationEvidence?.length ??
+    detail.costTaskSummaries?.length ??
     detail.costAllocations?.length ??
     detail.feedback?.length ??
     detail.tasks?.length ??
@@ -161,6 +162,8 @@ export function DetailDrawer({
           <span>
             {detail.publicationEvidence
               ? "bài đăng"
+              : detail.costTaskSummaries
+                ? "task có chi phí"
               : detail.costAllocations
                 ? "dòng phân bổ"
               : detail.feedback
@@ -169,7 +172,56 @@ export function DetailDrawer({
           </span>
         </div>
         <div className="detailTableWrap">
-          {detail.costAllocations ? (
+          {detail.costTaskSummaries ? (
+            <table className="detailTable costTaskSummaryTable">
+              <thead>
+                <tr>
+                  <th>STT</th>
+                  <th>Mã task</th>
+                  <th>Tên task</th>
+                  <th>Mã bill phân bổ</th>
+                  <th>Tên bill</th>
+                  <th>Tổng tiền</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detail.costTaskSummaries.map((row, index) => (
+                  <tr key={`${row.task.code}-${index}`}>
+                    <td data-label="STT" className="detailRowNumber">
+                      {index + 1}
+                    </td>
+                    <td data-label="Mã task" className="costTaskCode">
+                      <strong>{row.task.code || "Chưa có mã"}</strong>
+                    </td>
+                    <td data-label="Tên task" className="detailTitleCell">
+                      {row.task.title || "Chưa có tên task"}
+                    </td>
+                    <td data-label="Mã bill phân bổ">
+                      <div className="costBillList costBillCodes">
+                        {row.bills.map((bill) => (
+                          <span key={bill.id}>
+                            {bill.id || "Chưa có mã bill"}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td data-label="Tên bill">
+                      <div className="costBillList costBillNames">
+                        {row.bills.map((bill) => (
+                          <span key={bill.id}>
+                            {bill.title || "Chưa có tên bill"}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td data-label="Tổng tiền" className="costAmountCell">
+                      <strong>{formatCurrency(row.totalAmount)}</strong>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : detail.costAllocations ? (
             <table className="detailTable costAllocationTable">
               <thead>
                 <tr>

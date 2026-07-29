@@ -18,6 +18,7 @@ type DashboardKpisViewModel = Pick<
   | "missingStartOnly"
   | "missingAssigneeOnly"
   | "missingBoth"
+  | "untitledTaskCount"
   | "backlogTasks"
   | "backlogAttentionTasks"
   | "backlogTotal"
@@ -63,15 +64,19 @@ export function DashboardKpis({
       </KpiCard>
 
       <KpiCard
-        label="Thiếu ngày bắt đầu hoặc assignee"
+        label="Task chưa phân / thiếu thông tin"
         value={formatNumber(viewModel.missingEither)}
         help={dashboardHelp("Task thiếu thông tin")}
         onClick={() =>
           onOpenDetail({
-            title: "Task thiếu thông tin",
-            subtitle: "Chưa có Ngày Bắt Đầu hoặc chưa có Assignee",
+            title: "Task chưa phân / thiếu thông tin",
+            subtitle:
+              "Bốn nhóm loại trừ nhau: task rỗng, chỉ thiếu ngày, chỉ thiếu assignee hoặc thiếu cả hai",
             tasks: allTasks.filter(
-              (task) => !task.startDate || !task.assignee,
+              (task) =>
+                !task.title.trim() ||
+                !task.startDate ||
+                !task.assignee,
             ),
           })
         }
@@ -80,6 +85,8 @@ export function DashboardKpis({
         <b>{viewModel.missingAssigneeOnly}</b> chỉ thiếu assignee
         <br />
         <b>{viewModel.missingBoth}</b> thiếu cả hai
+        <br />
+        <b>{formatNumber(viewModel.untitledTaskCount)}</b> task rỗng
       </KpiCard>
 
       <KpiCard

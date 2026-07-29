@@ -168,6 +168,14 @@ test("calculates dashboard cohorts, people, collections and backlog", () => {
   assert.deepEqual(stats.backlogTasks.map((item) => item.code), ["T3"]);
   assert.equal(stats.missingBoth, 1);
   assert.equal(stats.missingEither, 1);
+  assert.equal(stats.untitledTaskCount, 0);
+  assert.equal(
+    stats.missingEither,
+    stats.missingStartOnly +
+      stats.missingAssigneeOnly +
+      stats.missingBoth +
+      stats.untitledTaskCount,
+  );
 });
 
 test("calculates SLA and norm metrics without React", () => {

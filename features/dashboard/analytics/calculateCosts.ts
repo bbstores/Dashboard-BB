@@ -3,6 +3,7 @@ import type {
   CostData,
   DateWindow,
   Task,
+  CostTaskSummary,
 } from "../model/types";
 import {
   inWindow,
@@ -10,6 +11,55 @@ import {
 } from "../model/taskUtils";
 
 type CostClassification = CostAllocation["classification"];
+
+export function summarizeCostAllocationsByTask(
+  allocations: CostAllocation[],
+): CostTaskSummary[] {
+  const taskGroups = new Map<
+    string,
+    {
+      task: Task;
+      bills: Map<
+        string,
+        { id: string; title: string; allocatedAmount: number }
+      >;
+      totalAmount: number;
+    }
+  >();
+
+  for (const allocation of allocations) {
+    const taskKey =
+      normalizedKey(allocation.task.code) ||
+      `untitled-${taskGroups.size}`;
+    const group = taskGroups.get(taskKey) ?? {
+      task: allocation.task,
+      bills: new Map(),
+      totalAmount: 0,
+    };
+    const billKey =
+      normalizedKey(allocation.proposalId) ||
+      `bill-${group.bills.size}`;
+    const bill = group.bills.get(billKey) ?? {
+      id: allocation.proposalId,
+      title: allocation.proposalTitle,
+      allocatedAmount: 0,
+    };
+    bill.allocatedAmount += allocation.allocatedAmount;
+    group.bills.set(billKey, bill);
+    group.totalAmount += allocation.allocatedAmount;
+    taskGroups.set(taskKey, group);
+  }
+
+  return [...taskGroups.values()]
+    .map(({ task, bills, totalAmount }) => ({
+      task,
+      bills: [...bills.values()].sort((a, b) =>
+        a.id.localeCompare(b.id, "vi"),
+      ),
+      totalAmount,
+    }))
+    .sort((a, b) => b.totalAmount - a.totalAmount);
+}
 
 function normalizedLinkMap(source: Record<string, string[]>) {
   return new Map(
@@ -132,10 +182,13 @@ export function calculateCosts(
   );
   const reconciliationDelta =
     eligibleTotal - allocatedTotal - unallocatedTotal;
+  const selectedTaskCosts =
+    summarizeCostAllocationsByTask(selectedAllocations);
 
   return {
     selectedAmount,
     selectedAllocations,
+    selectedTaskCosts,
     eligibleTotal,
     allocatedTotal,
     unallocatedTotal,

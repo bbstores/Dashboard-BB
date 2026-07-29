@@ -74,7 +74,6 @@ export function Dashboard() {
     dialogs.setReportDepartment(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
-
   const reportCounts = reports.savedReports.reduce<Record<ReportDepartment, number>>(
     (counts, report) => ({
       ...counts,
@@ -82,7 +81,6 @@ export function Dashboard() {
     }),
     { media: 0, business: 0 },
   );
-
   return (
     <HelpProvider>
       <main className="dashboard">
@@ -103,7 +101,6 @@ export function Dashboard() {
         {workbook.error && (
           <div className="errorBanner">{workbook.error}</div>
         )}
-
         {!workbook.data || !analytics ? (
           <EmptyDashboard
             fileRef={workbook.fileRef}
@@ -138,6 +135,7 @@ export function Dashboard() {
                     missingStartOnly: analytics.missingStartOnly,
                     missingAssigneeOnly: analytics.missingAssigneeOnly,
                     missingBoth: analytics.missingBoth,
+                    untitledTaskCount: analytics.untitledTaskCount,
                     backlogTasks: analytics.backlogTasks,
                     backlogAttentionTasks:
                       analytics.backlogAttentionTasks,

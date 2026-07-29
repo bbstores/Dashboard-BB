@@ -181,8 +181,8 @@ export function OverviewSection({
         onClick={() =>
           onOpenDetail({
             title: "Chi phí task trong khoảng lọc",
-            subtitle: "Phân bổ từ các phiếu có Link Approval, đã thanh toán; task được chọn theo Ngày Bắt Đầu",
-            costAllocations: costs.selectedAllocations,
+            subtitle: "Mỗi dòng là một task; các bill liên quan đã được gộp và cộng tổng tiền phân bổ",
+            costTaskSummaries: costs.selectedTaskCosts,
           })
         }
       />

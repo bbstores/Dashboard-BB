@@ -148,6 +148,7 @@ export type DetailView = {
   }>;
   publicationEvidenceLabel?: string;
   costAllocations?: CostAllocation[];
+  costTaskSummaries?: CostTaskSummary[];
   taskMetric?: {
     label: string;
     value: (task: Task) => number;
@@ -165,6 +166,16 @@ export type CostAllocation = {
   linkedTaskCount: number;
   allocatedAmount: number;
   task: Task;
+};
+
+export type CostTaskSummary = {
+  task: Task;
+  bills: Array<{
+    id: string;
+    title: string;
+    allocatedAmount: number;
+  }>;
+  totalAmount: number;
 };
 
 export type DashboardHelp = {

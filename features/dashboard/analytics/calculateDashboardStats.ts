@@ -78,16 +78,29 @@ export function calculateDashboardStats(
     ),
     leaderboard: calculateLeaderboard(selection.classified),
     missingStartOnly: data.tasks.filter(
-      (task) => !task.startDate && Boolean(task.assignee),
+      (task) =>
+        Boolean(task.title.trim()) &&
+        !task.startDate &&
+        Boolean(task.assignee),
     ).length,
     missingAssigneeOnly: data.tasks.filter(
-      (task) => Boolean(task.startDate) && !task.assignee,
+      (task) =>
+        Boolean(task.title.trim()) &&
+        Boolean(task.startDate) &&
+        !task.assignee,
     ).length,
     missingBoth: data.tasks.filter(
-      (task) => !task.startDate && !task.assignee,
+      (task) =>
+        Boolean(task.title.trim()) &&
+        !task.startDate &&
+        !task.assignee,
     ).length,
     missingEither: data.tasks.filter(
-      (task) => !task.startDate || !task.assignee,
+      (task) =>
+        !task.title.trim() || !task.startDate || !task.assignee,
+    ).length,
+    untitledTaskCount: data.tasks.filter(
+      (task) => !task.title.trim(),
     ).length,
     status: groupCount(selection.selectedTasks, (task) => task.status),
     handoff: groupCount(

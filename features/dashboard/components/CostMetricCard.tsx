@@ -36,8 +36,8 @@ export function CostMetricCard({
       >
         <strong>{formatCurrency(costs.selectedAmount)}</strong>
         <span>
-          {formatNumber(costs.selectedAllocations.length)} dòng phân bổ
-          task · {formatNumber(costs.validProposalCount)} phiếu hợp lệ
+          {formatNumber(costs.selectedTaskCosts.length)} task có chi phí
+          · {formatNumber(costs.validProposalCount)} phiếu hợp lệ
         </span>
       </button>
       <div className="costAudit">

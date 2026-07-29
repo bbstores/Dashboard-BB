@@ -737,3 +737,50 @@
 .costAllocationTable {
   min-width: 1180px;
 }
+
+.costTaskSummaryTable {
+  min-width: 1040px;
+}
+
+.costTaskSummaryTable .detailTitleCell {
+  min-width: 260px;
+  white-space: normal;
+}
+
+.costTaskCode strong {
+  color: var(--green);
+  font-size: 11px;
+}
+
+.costBillList {
+  display: grid;
+  gap: 6px;
+  min-width: 150px;
+}
+
+.costBillList > span {
+  align-items: center;
+  display: flex;
+  min-height: 25px;
+}
+
+.costBillCodes > span {
+  background: #e5eee8;
+  border: 1px solid rgba(23, 79, 61, 0.14);
+  border-radius: 7px;
+  color: var(--green);
+  font-size: 9px;
+  font-weight: 800;
+  padding: 5px 8px;
+  width: fit-content;
+}
+
+.costBillNames > span {
+  font-size: 10px;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.costTaskSummaryTable .costAmountCell strong {
+  font-size: 14px;
+}
