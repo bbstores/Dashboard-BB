@@ -30,6 +30,7 @@ export type CostSimulationResult = {
   proposalTotal: number;
   allocatedTotal: number;
   unallocatedTotal: number;
+  reconciliationTolerance: number;
   isReconciled: boolean;
 };
 
@@ -74,6 +75,10 @@ export function simulateCostAllocations(
     (sum, result) => sum + result.unallocatedTotal,
     0,
   );
+  const reconciliationTolerance = results.reduce(
+    (sum, result) => sum + result.reconciliationTolerance,
+    0,
+  );
 
   return {
     errors,
@@ -82,9 +87,11 @@ export function simulateCostAllocations(
     proposalTotal,
     allocatedTotal,
     unallocatedTotal,
+    reconciliationTolerance,
     isReconciled:
       results.every((result) => result.isReconciled) &&
-      Math.abs(proposalTotal - allocatedTotal - unallocatedTotal) < 0.5,
+      Math.abs(proposalTotal - allocatedTotal - unallocatedTotal) <=
+        reconciliationTolerance + 0.001,
   };
 }
 
@@ -178,6 +185,7 @@ export function simulateCostAllocation(
       proposalTotal,
       allocatedTotal: 0,
       unallocatedTotal: proposalTotal,
+      reconciliationTolerance: 0,
       isReconciled: true,
     };
   }
@@ -212,6 +220,7 @@ export function simulateCostAllocation(
   );
   const reconciliationDelta =
     proposalTotal - allocatedTotal - unallocatedTotal;
+  const reconciliationTolerance = entities.size * 0.5;
 
   return {
     errors,
@@ -220,6 +229,8 @@ export function simulateCostAllocation(
     proposalTotal,
     allocatedTotal,
     unallocatedTotal,
-    isReconciled: Math.abs(reconciliationDelta) < 0.5,
+    reconciliationTolerance,
+    isReconciled:
+      Math.abs(reconciliationDelta) <= reconciliationTolerance + 0.001,
   };
 }

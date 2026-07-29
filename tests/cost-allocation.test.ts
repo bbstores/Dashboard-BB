@@ -122,6 +122,36 @@ test("flags a bill when stored unit amount does not match its total", () => {
   assert.equal(result.isReconciled, false);
 });
 
+test("accepts cumulative whole-currency rounding across many entities", () => {
+  const taskCodes = Array.from({ length: 18 }, (_, index) => `T${index + 1}`);
+  const roundedCosts: CostData = {
+    proposals: [
+      {
+        id: "BILL-ROUNDING",
+        approvalLink: "APPROVED",
+        title: "18 video",
+        collections: [],
+        shoots: [],
+        products: [],
+        tasks: taskCodes,
+        totalAmount: 1_680_000,
+        unitAmount: 93_333,
+        status: "Đã Thanh Toán",
+      },
+    ],
+    links: { collections: {}, products: {}, shoots: {} },
+  };
+  const result = calculateCosts(
+    taskCodes.map((code) => task(code, 5)),
+    roundedCosts,
+    { from: null, to: null, hasFilter: false },
+  );
+
+  assert.equal(result.reconciliationDelta, 6);
+  assert.equal(result.unitMismatchCount, 0);
+  assert.equal(result.isReconciled, true);
+});
+
 test("groups allocation evidence by task and bill", () => {
   const t1 = task("T1", 5);
   const summaries = summarizeCostAllocationsByTask([

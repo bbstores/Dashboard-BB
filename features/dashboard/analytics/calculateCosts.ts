@@ -92,6 +92,7 @@ export function calculateCosts(
   let unallocatedTotal = 0;
   let invalidProposalCount = 0;
   let validProposalCount = 0;
+  let reconciliationTolerance = 0;
   const unitMismatches: Array<{
     proposalId: string;
     proposalTitle: string;
@@ -156,6 +157,7 @@ export function calculateCosts(
         difference: unitDifference,
       });
     }
+    reconciliationTolerance += selectedEntityCount * 0.5;
 
     const { classification, entities } = selectedGroups[0];
     for (const entity of entities) {
@@ -216,10 +218,12 @@ export function calculateCosts(
     allocatedTotal,
     unallocatedTotal,
     reconciliationDelta,
+    reconciliationTolerance,
     validProposalCount,
     invalidProposalCount,
     unitMismatchCount: unitMismatches.length,
     unitMismatches,
-    isReconciled: Math.abs(reconciliationDelta) < 0.5,
+    isReconciled:
+      Math.abs(reconciliationDelta) <= reconciliationTolerance + 0.001,
   };
 }
