@@ -71,9 +71,9 @@ export function dashboardHelp(title: string): DashboardHelp {
     },
     "Tiến độ hoàn thành": {
       purpose: "Theo dõi tiến độ từng Bộ Sưu Tập của tháng đã chọn.",
-      calculation: "Chỉ lấy task có ô BST chứa tháng đã chọn. Vòng task = task Done/Kinh Doanh Done ÷ tổng task; vòng phút = phút dự kiến của task Done/Kinh Doanh Done ÷ tổng phút dự kiến.",
+      calculation: "Chỉ lấy task có ô BST chứa tháng đã chọn và loại task có trạng thái Pending / Cancel. Vòng task = task Done/Kinh Doanh Done ÷ tổng task hợp lệ; vòng phút = phút dự kiến của task Done/Kinh Doanh Done ÷ tổng phút dự kiến hợp lệ.",
       example: "BST 08.2026 có 100 task, 80 Done → 80%. Nếu 8.000/10.000 phút thuộc task Done → 80% theo phút.",
-      note: "Rê vào từng vòng cha để xem các vòng con theo đúng tiêu chí của vòng đó.",
+      note: "Task Pending / Cancel không xuất hiện trong tổng, phần Done, tổng phút, BST con hoặc bảng dẫn chứng. Rê vào từng vòng cha để xem các vòng con theo đúng tiêu chí của vòng đó.",
     },
     "Số task thực hiện & số lần trả về": {
       purpose: "So sánh khối lượng thực hiện và phản hồi theo từng nhân sự.",

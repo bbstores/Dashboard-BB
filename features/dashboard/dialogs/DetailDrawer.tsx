@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import type { DetailView, Task } from "../model/types";
 import {
   formatCurrency,
@@ -6,6 +7,370 @@ import {
   formatDateTime,
 } from "@/shared/formatting/format";
 import { normalizedKey } from "../model/taskUtils";
+
+type FeedbackEvidence = NonNullable<DetailView["feedback"]>[number];
+type PublicationEvidence = NonNullable<
+  DetailView["publicationEvidence"]
+>[number];
+type CostAllocationEvidence = NonNullable<
+  DetailView["costAllocations"]
+>[number];
+type CostTaskSummaryEvidence = NonNullable<
+  DetailView["costTaskSummaries"]
+>[number];
+
+type DetailRecord =
+  | { kind: "task"; value: Task }
+  | { kind: "feedback"; value: FeedbackEvidence }
+  | { kind: "publication"; value: PublicationEvidence }
+  | { kind: "costAllocation"; value: CostAllocationEvidence }
+  | { kind: "costTaskSummary"; value: CostTaskSummaryEvidence };
+
+type DetailColumn = {
+  key: string;
+  label: string;
+  value: (record: DetailRecord) => string | number;
+  search?: (record: DetailRecord) => string;
+};
+
+const detailCollator = new Intl.Collator("vi", {
+  numeric: true,
+  sensitivity: "base",
+});
+
+function normalizeSearch(value: unknown) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLocaleLowerCase("vi")
+    .trim();
+}
+
+function detailRecords(detail: DetailView): DetailRecord[] {
+  if (detail.publicationEvidence) {
+    return detail.publicationEvidence.map((value) => ({
+      kind: "publication",
+      value,
+    }));
+  }
+  if (detail.costTaskSummaries) {
+    return detail.costTaskSummaries.map((value) => ({
+      kind: "costTaskSummary",
+      value,
+    }));
+  }
+  if (detail.costAllocations) {
+    return detail.costAllocations.map((value) => ({
+      kind: "costAllocation",
+      value,
+    }));
+  }
+  if (detail.feedback) {
+    return detail.feedback.map((value) => ({
+      kind: "feedback",
+      value,
+    }));
+  }
+  return (detail.tasks ?? []).map((value) => ({
+    kind: "task",
+    value,
+  }));
+}
+
+function detailColumns(detail: DetailView): DetailColumn[] {
+  if (detail.publicationEvidence) {
+    return [
+      {
+        key: "post",
+        label: "Bài đăng",
+        value: (record) =>
+          record.kind === "publication"
+            ? `${record.value.post.id} ${record.value.post.title}`
+            : "",
+      },
+      {
+        key: "scheduledAt",
+        label: "Ngày đăng",
+        value: (record) =>
+          record.kind === "publication"
+            ? (record.value.post.scheduledAt?.getTime() ?? -1)
+            : -1,
+        search: (record) =>
+          record.kind === "publication"
+            ? formatDate(record.value.post.scheduledAt)
+            : "",
+      },
+      {
+        key: "platform",
+        label: "Nền tảng",
+        value: (record) =>
+          record.kind === "publication"
+            ? record.value.post.platform
+            : "",
+      },
+      {
+        key: "bookTask",
+        label: "Book Task",
+        value: (record) =>
+          record.kind === "publication"
+            ? `${record.value.post.bookTaskCode ?? ""} ${record.value.task?.title ?? ""}`
+            : "",
+      },
+      {
+        key: "formatStage",
+        label: "Format / Công đoạn",
+        value: (record) =>
+          record.kind === "publication"
+            ? `${record.value.task?.formatType ?? ""} ${record.value.task?.stage ?? ""}`
+            : "",
+      },
+      {
+        key: "reason",
+        label: detail.publicationEvidenceLabel ?? "Lý do",
+        value: (record) =>
+          record.kind === "publication" ? record.value.reason : "",
+      },
+    ];
+  }
+  if (detail.costTaskSummaries) {
+    return [
+      {
+        key: "taskCode",
+        label: "Mã task",
+        value: (record) =>
+          record.kind === "costTaskSummary"
+            ? record.value.task.code
+            : "",
+      },
+      {
+        key: "taskTitle",
+        label: "Tên task",
+        value: (record) =>
+          record.kind === "costTaskSummary"
+            ? record.value.task.title
+            : "",
+      },
+      {
+        key: "billCode",
+        label: "Mã bill phân bổ",
+        value: (record) =>
+          record.kind === "costTaskSummary"
+            ? record.value.bills.map((bill) => bill.id).join(" ")
+            : "",
+      },
+      {
+        key: "billTitle",
+        label: "Tên bill",
+        value: (record) =>
+          record.kind === "costTaskSummary"
+            ? record.value.bills.map((bill) => bill.title).join(" ")
+            : "",
+      },
+      {
+        key: "totalAmount",
+        label: "Tổng tiền",
+        value: (record) =>
+          record.kind === "costTaskSummary"
+            ? record.value.totalAmount
+            : 0,
+        search: (record) =>
+          record.kind === "costTaskSummary"
+            ? `${record.value.totalAmount} ${formatCurrency(record.value.totalAmount)}`
+            : "",
+      },
+    ];
+  }
+  if (detail.costAllocations) {
+    return [
+      {
+        key: "proposal",
+        label: "Phiếu chi",
+        value: (record) =>
+          record.kind === "costAllocation"
+            ? `${record.value.proposalId} ${record.value.proposalTitle}`
+            : "",
+      },
+      {
+        key: "classification",
+        label: "Phân loại",
+        value: (record) =>
+          record.kind === "costAllocation"
+            ? record.value.classification
+            : "",
+      },
+      {
+        key: "entity",
+        label: "Đơn vị",
+        value: (record) =>
+          record.kind === "costAllocation" ? record.value.entity : "",
+      },
+      {
+        key: "task",
+        label: "Task",
+        value: (record) =>
+          record.kind === "costAllocation"
+            ? `${record.value.task.code} ${record.value.task.title}`
+            : "",
+      },
+      {
+        key: "startDate",
+        label: "Ngày bắt đầu",
+        value: (record) =>
+          record.kind === "costAllocation"
+            ? (record.value.task.startDate?.getTime() ?? -1)
+            : -1,
+        search: (record) =>
+          record.kind === "costAllocation"
+            ? formatDate(record.value.task.startDate)
+            : "",
+      },
+      {
+        key: "unitAmount",
+        label: "Thành tiền/đơn vị",
+        value: (record) =>
+          record.kind === "costAllocation"
+            ? record.value.unitAmount
+            : 0,
+        search: (record) =>
+          record.kind === "costAllocation"
+            ? `${record.value.unitAmount} ${formatCurrency(record.value.unitAmount)}`
+            : "",
+      },
+      {
+        key: "linkedTaskCount",
+        label: "Số task chia",
+        value: (record) =>
+          record.kind === "costAllocation"
+            ? record.value.linkedTaskCount
+            : 0,
+      },
+      {
+        key: "allocatedAmount",
+        label: "Chi phí task",
+        value: (record) =>
+          record.kind === "costAllocation"
+            ? record.value.allocatedAmount
+            : 0,
+        search: (record) =>
+          record.kind === "costAllocation"
+            ? `${record.value.allocatedAmount} ${formatCurrency(record.value.allocatedAmount)}`
+            : "",
+      },
+    ];
+  }
+  if (detail.feedback) {
+    return [
+      {
+        key: "taskCode",
+        label: "Task",
+        value: (record) =>
+          record.kind === "feedback" ? record.value.taskCode : "",
+      },
+      {
+        key: "taskTitle",
+        label: "Tên task",
+        value: (record) =>
+          record.kind === "feedback"
+            ? (record.value.task?.title ?? "")
+            : "",
+      },
+      {
+        key: "assignee",
+        label: "Người làm",
+        value: (record) =>
+          record.kind === "feedback"
+            ? record.value.assignee || record.value.task?.assignee || ""
+            : "",
+      },
+      {
+        key: "at",
+        label: "Thời điểm",
+        value: (record) =>
+          record.kind === "feedback"
+            ? (record.value.at?.getTime() ?? -1)
+            : -1,
+        search: (record) =>
+          record.kind === "feedback"
+            ? formatDateTime(record.value.at)
+            : "",
+      },
+      {
+        key: "status",
+        label: "Trạng thái",
+        value: (record) =>
+          record.kind === "feedback"
+            ? (record.value.task?.status ?? "")
+            : "",
+      },
+    ];
+  }
+
+  const taskColumns: DetailColumn[] = [
+    {
+      key: "task",
+      label: "Task",
+      value: (record) =>
+        record.kind === "task"
+          ? `${record.value.code} ${record.value.title}`
+          : "",
+    },
+    {
+      key: "assignee",
+      label: "Assignee",
+      value: (record) =>
+        record.kind === "task" ? record.value.assignee : "",
+    },
+    {
+      key: "status",
+      label: "Trạng thái",
+      value: (record) =>
+        record.kind === "task" ? record.value.status : "",
+    },
+    {
+      key: "timeline",
+      label: "Timeline công việc",
+      value: (record) =>
+        record.kind === "task"
+          ? (record.value.startDate?.getTime() ?? -1)
+          : -1,
+      search: (record) =>
+        record.kind === "task"
+          ? [
+              formatDateTime(
+                record.value.receivedStartDate ??
+                  record.value.startDate,
+              ),
+              formatDateTime(record.value.inspectionDate),
+              formatDateTime(record.value.completedDate),
+              formatDateTime(record.value.businessApprovalDate),
+            ].join(" ")
+          : "",
+    },
+    {
+      key: "minutes",
+      label: "Phút dự kiến",
+      value: (record) =>
+        record.kind === "task" ? record.value.expectedMinutes : 0,
+    },
+  ];
+  if (detail.taskMetric) {
+    taskColumns.push({
+      key: "metric",
+      label: detail.taskMetric.label,
+      value: (record) =>
+        record.kind === "task"
+          ? detail.taskMetric?.value(record.value) ?? 0
+          : 0,
+      search: (record) =>
+        record.kind === "task"
+          ? detail.taskMetric?.format(
+              detail.taskMetric.value(record.value),
+            ) ?? ""
+          : "",
+    });
+  }
+  return taskColumns;
+}
 
 function TaskDetailRow({
   task,
@@ -132,14 +497,108 @@ export function DetailDrawer({
   detail: DetailView;
   onClose: () => void;
 }) {
-  const count =
-    detail.publicationEvidence?.length ??
-    detail.costTaskSummaries?.length ??
-    detail.costAllocations?.length ??
-    detail.feedback?.length ??
-    detail.tasks?.length ??
-    0;
-  const hasRecords = count > 0;
+  const [search, setSearch] = useState("");
+  const [filterColumn, setFilterColumn] = useState("");
+  const [filterValue, setFilterValue] = useState("");
+  const [sortColumn, setSortColumn] = useState("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">(
+    "asc",
+  );
+  const records = useMemo(() => detailRecords(detail), [detail]);
+  const columns = useMemo(() => detailColumns(detail), [detail]);
+
+  const visibleRecords = useMemo(() => {
+    const globalNeedle = normalizeSearch(search);
+    const columnNeedle = normalizeSearch(filterValue);
+    const selectedFilter = columns.find(
+      (column) => column.key === filterColumn,
+    );
+    const selectedSort = columns.find(
+      (column) => column.key === sortColumn,
+    );
+    const matching = records.filter((record) => {
+      const matchesGlobal =
+        !globalNeedle ||
+        columns.some((column) =>
+          normalizeSearch(
+            column.search?.(record) ?? column.value(record),
+          ).includes(globalNeedle),
+        );
+      const matchesColumn =
+        !columnNeedle ||
+        !selectedFilter ||
+        normalizeSearch(
+          selectedFilter.search?.(record) ??
+            selectedFilter.value(record),
+        ).includes(columnNeedle);
+      return matchesGlobal && matchesColumn;
+    });
+    if (!selectedSort) return matching;
+    return matching
+      .map((record, index) => ({ record, index }))
+      .sort((a, b) => {
+        const left = selectedSort.value(a.record);
+        const right = selectedSort.value(b.record);
+        const comparison =
+          typeof left === "number" && typeof right === "number"
+            ? left - right
+            : detailCollator.compare(String(left), String(right));
+        return (
+          (sortDirection === "asc" ? comparison : -comparison) ||
+          a.index - b.index
+        );
+      })
+      .map(({ record }) => record);
+  }, [
+    columns,
+    filterColumn,
+    filterValue,
+    records,
+    search,
+    sortColumn,
+    sortDirection,
+  ]);
+
+  const count = records.length;
+  const visibleCount = visibleRecords.length;
+  const hasRecords = visibleCount > 0;
+  const isFiltered =
+    normalizeSearch(search).length > 0 ||
+    (Boolean(filterColumn) && normalizeSearch(filterValue).length > 0);
+  const unit = detail.publicationEvidence
+    ? "bài đăng"
+    : detail.costTaskSummaries
+      ? "task có chi phí"
+      : detail.costAllocations
+        ? "dòng phân bổ"
+        : detail.feedback
+          ? "lần phản hồi"
+          : "task";
+
+  const costTaskSummaryRows = visibleRecords.flatMap((record) =>
+    record.kind === "costTaskSummary" ? [record.value] : [],
+  );
+  const costAllocationRows = visibleRecords.flatMap((record) =>
+    record.kind === "costAllocation" ? [record.value] : [],
+  );
+  const publicationRows = visibleRecords.flatMap((record) =>
+    record.kind === "publication" ? [record.value] : [],
+  );
+  const feedbackRows = visibleRecords.flatMap((record) =>
+    record.kind === "feedback" ? [record.value] : [],
+  );
+  const taskRows = visibleRecords.flatMap((record) =>
+    record.kind === "task" ? [record.value] : [],
+  );
+
+  const resetTools = () => {
+    setSearch("");
+    setFilterColumn("");
+    setFilterValue("");
+    setSortColumn("");
+    setSortDirection("asc");
+  };
+
   return (
     <div className="detailOverlay" role="presentation" onMouseDown={onClose}>
       <aside
@@ -158,18 +617,90 @@ export function DetailDrawer({
           <button type="button" onClick={onClose} aria-label="Đóng chi tiết">×</button>
         </header>
         <div className="detailCount">
-          <strong>{formatNumber(count)}</strong>
+          <strong>{formatNumber(visibleCount)}</strong>
           <span>
-            {detail.publicationEvidence
-              ? "bài đăng"
-              : detail.costTaskSummaries
-                ? "task có chi phí"
-              : detail.costAllocations
-                ? "dòng phân bổ"
-              : detail.feedback
-                ? "lần phản hồi"
-                : "task"}
+            {isFiltered
+              ? `/ ${formatNumber(count)} ${unit} phù hợp`
+              : unit}
           </span>
+        </div>
+        <div className="detailTools">
+          <label className="detailToolField detailSearchField">
+            <span>Tìm toàn bảng</span>
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Mã task, tên, trạng thái..."
+              aria-label="Tìm trong bảng dẫn chứng"
+            />
+          </label>
+          <label className="detailToolField">
+            <span>Lọc theo cột</span>
+            <select
+              value={filterColumn}
+              onChange={(event) => {
+                setFilterColumn(event.target.value);
+                setFilterValue("");
+              }}
+              aria-label="Cột cần lọc"
+            >
+              <option value="">Chọn cột</option>
+              {columns.map((column) => (
+                <option key={column.key} value={column.key}>
+                  {column.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="detailToolField detailColumnFilterField">
+            <span>Giá trị cần lọc</span>
+            <input
+              type="search"
+              value={filterValue}
+              onChange={(event) => setFilterValue(event.target.value)}
+              placeholder={
+                filterColumn ? "Nhập giá trị cần lọc" : "Chọn cột trước"
+              }
+              disabled={!filterColumn}
+              aria-label="Giá trị lọc theo cột"
+            />
+          </label>
+          <label className="detailToolField">
+            <span>Sắp xếp theo</span>
+            <select
+              value={sortColumn}
+              onChange={(event) => setSortColumn(event.target.value)}
+              aria-label="Sắp xếp theo cột"
+            >
+              <option value="">Thứ tự gốc</option>
+              {columns.map((column) => (
+                <option key={column.key} value={column.key}>
+                  {column.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="detailSortDirection"
+            disabled={!sortColumn}
+            onClick={() =>
+              setSortDirection((current) =>
+                current === "asc" ? "desc" : "asc",
+              )
+            }
+            aria-label="Đổi hướng sắp xếp"
+          >
+            {sortDirection === "asc" ? "Tăng dần ↑" : "Giảm dần ↓"}
+          </button>
+          <button
+            type="button"
+            className="detailClearFilters"
+            onClick={resetTools}
+          >
+            Đặt lại
+          </button>
         </div>
         <div className="detailTableWrap">
           {detail.costTaskSummaries ? (
@@ -185,7 +716,7 @@ export function DetailDrawer({
                 </tr>
               </thead>
               <tbody>
-                {detail.costTaskSummaries.map((row, index) => (
+                {costTaskSummaryRows.map((row, index) => (
                   <tr key={`${row.task.code}-${index}`}>
                     <td data-label="STT" className="detailRowNumber">
                       {index + 1}
@@ -237,7 +768,7 @@ export function DetailDrawer({
                 </tr>
               </thead>
               <tbody>
-                {detail.costAllocations.map((row, index) => (
+                {costAllocationRows.map((row, index) => (
                   <tr
                     key={`${row.proposalId}-${row.entity}-${row.task.code}-${index}`}
                   >
@@ -284,7 +815,7 @@ export function DetailDrawer({
                 </tr>
               </thead>
               <tbody>
-                {detail.publicationEvidence.map(
+                {publicationRows.map(
                   ({ post, task, reason }, index) => (
                     <tr key={`${post.id}-${index}`}>
                       <td data-label="STT" className="detailRowNumber">
@@ -339,7 +870,7 @@ export function DetailDrawer({
                 </tr>
               </thead>
               <tbody>
-                {detail.feedback.map((item, index) => (
+                {feedbackRows.map((item, index) => (
                   <tr key={`${item.taskCode}-${item.at?.getTime() ?? "none"}-${index}`}>
                     <td data-label="STT" className="detailRowNumber">
                       {index + 1}
@@ -373,7 +904,7 @@ export function DetailDrawer({
                 </tr>
               </thead>
               <tbody>
-                {(detail.tasks ?? []).map((task, index) => (
+                {taskRows.map((task, index) => (
                   <TaskDetailRow
                     detail={detail}
                     index={index}
@@ -385,7 +916,11 @@ export function DetailDrawer({
             </table>
           )}
           {!hasRecords && (
-            <p className="detailEmpty">Không có bản ghi phù hợp.</p>
+            <p className="detailEmpty">
+              {count > 0
+                ? "Không có bản ghi khớp với tìm kiếm và bộ lọc."
+                : "Không có bản ghi phù hợp."}
+            </p>
           )}
         </div>
       </aside>

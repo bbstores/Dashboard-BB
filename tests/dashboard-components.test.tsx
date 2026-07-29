@@ -355,6 +355,83 @@ test("KPI selection opens the matching detail data", () => {
   assert.equal(closed, true);
 });
 
+test("evidence tables support global search, column filters and sorting", () => {
+  const alpha = {
+    ...task(),
+    code: "FILTER-ALPHA",
+    title: "Alpha campaign",
+    assignee: "An",
+    expectedMinutes: 120,
+  };
+  const beta = {
+    ...task(),
+    code: "FILTER-BETA",
+    title: "Beta campaign",
+    assignee: "Bình",
+    expectedMinutes: 30,
+  };
+  const gamma = {
+    ...task(),
+    code: "FILTER-GAMMA",
+    title: "Gamma campaign",
+    assignee: "An",
+    expectedMinutes: 60,
+  };
+
+  render(
+    <DetailDrawer
+      detail={{
+        title: "Kiểm thử bảng dẫn chứng",
+        subtitle: "Tìm, lọc và sắp xếp",
+        tasks: [alpha, beta, gamma],
+      }}
+      onClose={() => undefined}
+    />,
+  );
+
+  fireEvent.change(
+    screen.getByRole("searchbox", {
+      name: "Tìm trong bảng dẫn chứng",
+    }),
+    { target: { value: "Beta" } },
+  );
+  assert.ok(screen.getByText("FILTER-BETA"));
+  assert.equal(screen.queryByText("FILTER-ALPHA"), null);
+  assert.match(
+    document.querySelector(".detailCount")?.textContent ?? "",
+    /1\s*\/ 3 task phù hợp/,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Đặt lại" }));
+  fireEvent.change(screen.getByLabelText("Cột cần lọc"), {
+    target: { value: "assignee" },
+  });
+  fireEvent.change(screen.getByLabelText("Giá trị lọc theo cột"), {
+    target: { value: "An" },
+  });
+  assert.ok(screen.getByText("FILTER-ALPHA"));
+  assert.ok(screen.getByText("FILTER-GAMMA"));
+  assert.equal(screen.queryByText("FILTER-BETA"), null);
+
+  fireEvent.click(screen.getByRole("button", { name: "Đặt lại" }));
+  fireEvent.change(screen.getByLabelText("Sắp xếp theo cột"), {
+    target: { value: "minutes" },
+  });
+  const taskCodes = () =>
+    Array.from(
+      document.querySelectorAll(".taskDetailTable tbody tr"),
+    ).map((row) => row.textContent ?? "");
+  assert.match(taskCodes()[0], /FILTER-BETA/);
+  assert.match(taskCodes()[1], /FILTER-GAMMA/);
+  assert.match(taskCodes()[2], /FILTER-ALPHA/);
+
+  fireEvent.click(
+    screen.getByRole("button", { name: "Đổi hướng sắp xếp" }),
+  );
+  assert.match(taskCodes()[0], /FILTER-ALPHA/);
+  assert.match(taskCodes()[2], /FILTER-BETA/);
+});
+
 test("attention KPI opens invalid Done chronology as standalone detail", () => {
   const backlogTask = task();
   const attentionTask = {

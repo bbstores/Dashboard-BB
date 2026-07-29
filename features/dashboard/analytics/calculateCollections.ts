@@ -2,6 +2,7 @@ import {
   collectionMonths,
   collectionNames,
   isCollectionDone,
+  normalizedKey,
 } from "../model/taskUtils";
 import type { Task } from "../model/types";
 
@@ -9,7 +10,14 @@ export function calculateCollections(
   tasks: Task[],
   collectionMonth: string,
 ) {
-  const months = Array.from(new Set(tasks.flatMap(collectionMonths))).sort(
+  const eligibleTasks = tasks.filter(
+    (task) =>
+      normalizedKey(task.status).replace(/\s*\/\s*/g, "/") !==
+      "pending/cancel",
+  );
+  const months = Array.from(
+    new Set(eligibleTasks.flatMap(collectionMonths)),
+  ).sort(
     (a, b) => {
       const [am, ay] = a.split(".").map(Number);
       const [bm, by] = b.split(".").map(Number);
@@ -17,7 +25,7 @@ export function calculateCollections(
     },
   );
   const collectionTasks = collectionMonth
-    ? tasks.filter((task) =>
+    ? eligibleTasks.filter((task) =>
         collectionMonths(task).includes(collectionMonth),
       )
     : [];

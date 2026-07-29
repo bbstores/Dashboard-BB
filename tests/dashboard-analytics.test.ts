@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { calculateDailyTaskChart } from "../features/dashboard/analytics/calculateDailyTaskChart";
 import { calculateDashboardStats } from "../features/dashboard/analytics/calculateDashboardStats";
+import { calculateCollections } from "../features/dashboard/analytics/calculateCollections";
 import { calculatePublicationStats } from "../features/dashboard/analytics/calculatePublicationStats";
 import {
   calculateReportComparison,
@@ -714,4 +715,42 @@ test("explains publication rows whose Book Task is not a final asset", () => {
     stats.unknownPostDetails[0].reason,
     /không phải Graphic Design/,
   );
+});
+
+test("excludes Pending / Cancel tasks from every collection metric", () => {
+  const result = calculateCollections(
+    [
+      task("ACTIVE", {
+        collection: "BST 08.2026-Tiệc",
+        status: "Done",
+        expectedMinutes: 60,
+      }),
+      task("PENDING-SPACED", {
+        collection: "BST 08.2026-Tiệc",
+        status: "Pending / Cancel",
+        expectedMinutes: 90,
+      }),
+      task("PENDING-COMPACT", {
+        collection: "BST 09.2026-Công sở",
+        status: "Pending/Cancel",
+        expectedMinutes: 120,
+      }),
+    ],
+    "08.2026",
+  );
+
+  assert.deepEqual(result.months, ["08.2026"]);
+  assert.deepEqual(
+    result.collectionTasks.map((item) => item.code),
+    ["ACTIVE"],
+  );
+  assert.deepEqual(result.collection, {
+    taskDone: 1,
+    taskTotal: 1,
+    minuteDone: 60,
+    minuteTotal: 60,
+  });
+  assert.equal(result.childCollections.length, 1);
+  assert.equal(result.childCollections[0].taskTotal, 1);
+  assert.equal(result.childCollections[0].minuteTotal, 60);
 });
