@@ -46,6 +46,7 @@ const costs: CostData = {
       shoots: ["CA-1", "CA-2"],
       products: [],
       tasks: [],
+      totalAmount: 10_000_000,
       unitAmount: 5_000_000,
       status: "Đã Thanh Toán",
     },
@@ -57,6 +58,7 @@ const costs: CostData = {
       shoots: [],
       products: [],
       tasks: ["T1"],
+      totalAmount: 99_000_000,
       unitAmount: 99_000_000,
       status: "Đã Thanh Toán",
     },
@@ -103,6 +105,21 @@ test("keeps missing linked tasks as unallocated and reconciles", () => {
   assert.equal(result.allocatedTotal, 2_500_000);
   assert.equal(result.unallocatedTotal, 7_500_000);
   assert.equal(result.isReconciled, true);
+});
+
+test("flags a bill when stored unit amount does not match its total", () => {
+  const mismatched = structuredClone(costs);
+  mismatched.proposals[0].totalAmount = 12_000_000;
+  const result = calculateCosts(
+    [task("T1", 5), task("T2", 5), task("T3", 5)],
+    mismatched,
+    { from: null, to: null, hasFilter: false },
+  );
+
+  assert.equal(result.unitMismatchCount, 1);
+  assert.equal(result.unitMismatches[0].expectedUnitAmount, 6_000_000);
+  assert.equal(result.unitMismatches[0].actualUnitAmount, 5_000_000);
+  assert.equal(result.isReconciled, false);
 });
 
 test("groups allocation evidence by task and bill", () => {
@@ -154,6 +171,7 @@ test("simulates one unit amount per entity and divides it evenly by task", () =>
     approvalLink: "https://approval.example/BILL-DEMO",
     status: "Đã Thanh Toán",
     classification: "Ca Quay",
+    totalAmount: 2_000_000,
     unitAmount: 1_000_000,
     rows: [
       { entity: "CA-01", taskCode: "T1", taskTitle: "Task 1" },
@@ -181,6 +199,54 @@ test("simulates one unit amount per entity and divides it evenly by task", () =>
   );
 });
 
+test("derives unit amount from the user-entered bill total", () => {
+  const result = simulateCostAllocation({
+    billId: "HOTEL-ABC",
+    billTitle: "Khách sạn ABC hai ngày quay",
+    approvalLink: "https://approval.example/hotel",
+    status: "Đã Thanh Toán",
+    classification: "Ca Quay",
+    totalAmount: 10_000_000,
+    unitAmount: 5_000_000,
+    rows: [
+      { entity: "Ngày quay 1", taskCode: "T1", taskTitle: "Task 1" },
+      { entity: "Ngày quay 1", taskCode: "T2", taskTitle: "Task 2" },
+      { entity: "Ngày quay 2", taskCode: "T3", taskTitle: "Task 3" },
+    ],
+  });
+
+  assert.equal(result.proposalTotal, 10_000_000);
+  assert.deepEqual(result.warnings, []);
+  assert.equal(
+    result.summaries.find((row) => row.task.code === "T1")?.totalAmount,
+    2_500_000,
+  );
+  assert.equal(
+    result.summaries.find((row) => row.task.code === "T3")?.totalAmount,
+    5_000_000,
+  );
+});
+
+test("simulator keeps the entered unit amount and warns when it differs", () => {
+  const result = simulateCostAllocation({
+    billId: "HOTEL-ABC",
+    billTitle: "Khách sạn ABC",
+    approvalLink: "https://approval.example/hotel",
+    status: "Đã Thanh Toán",
+    classification: "Ca Quay",
+    totalAmount: 10_000_000,
+    unitAmount: 4_000_000,
+    rows: [
+      { entity: "Ngày quay 1", taskCode: "T1", taskTitle: "Task 1" },
+      { entity: "Ngày quay 2", taskCode: "T2", taskTitle: "Task 2" },
+    ],
+  });
+
+  assert.equal(result.warnings.length, 1);
+  assert.equal(result.allocatedTotal, 8_000_000);
+  assert.equal(result.isReconciled, false);
+});
+
 test("simulator reports entities without linked tasks as unallocated", () => {
   const result = simulateCostAllocation({
     billId: "BILL-DEMO",
@@ -188,6 +254,7 @@ test("simulator reports entities without linked tasks as unallocated", () => {
     approvalLink: "https://approval.example/BILL-DEMO",
     status: "Đã Thanh Toán",
     classification: "Ca Quay",
+    totalAmount: 750_000,
     unitAmount: 750_000,
     rows: [{ entity: "CA-01", taskCode: "", taskTitle: "" }],
   });
@@ -204,6 +271,7 @@ test("combines several simulated bills on the same task", () => {
   const shared = {
     approvalLink: "https://approval.example",
     status: "Đã Thanh Toán",
+    totalAmount: 1_000_000,
     unitAmount: 1_000_000,
   };
   const result = simulateCostAllocations([

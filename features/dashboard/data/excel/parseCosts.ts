@@ -78,6 +78,9 @@ export function parseCosts({
           valueAt(row, headers, COST_COLUMNS.products),
         ),
         tasks: listValue(valueAt(row, headers, COST_COLUMNS.tasks)),
+        totalAmount: numberValue(
+          valueAt(row, headers, COST_COLUMNS.totalAmount),
+        ),
         unitAmount: numberValue(
           valueAt(row, headers, COST_COLUMNS.unitAmount),
         ),

@@ -17,6 +17,7 @@ export const COST_COLUMNS = {
   shoots: "Thuộc Ca Quay Nào",
   products: "Thuộc SKU nào",
   tasks: "Thuộc Task Nào",
+  totalAmount: "Số tiền đề xuất (VND)",
   unitAmount: "Thành Tiền / Đơn vị",
   status: "Trạng thái thanh toán",
 } as const;

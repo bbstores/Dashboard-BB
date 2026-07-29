@@ -18,12 +18,14 @@ export type CostSimulationInput = {
   approvalLink: string;
   status: string;
   classification: CostAllocation["classification"];
+  totalAmount: number;
   unitAmount: number;
   rows: CostSimulationRow[];
 };
 
 export type CostSimulationResult = {
   errors: string[];
+  warnings: string[];
   summaries: CostTaskSummary[];
   proposalTotal: number;
   allocatedTotal: number;
@@ -38,6 +40,12 @@ export function simulateCostAllocations(
   const errors = results.flatMap((result, index) =>
     result.errors.map(
       (error) => `${inputs[index]?.billId || `Bill ${index + 1}`}: ${error}`,
+    ),
+  );
+  const warnings = results.flatMap((result, index) =>
+    result.warnings.map(
+      (warning) =>
+        `${inputs[index]?.billId || `Bill ${index + 1}`}: ${warning}`,
     ),
   );
   const allocations: CostAllocation[] = results.flatMap((result) =>
@@ -69,6 +77,7 @@ export function simulateCostAllocations(
 
   return {
     errors,
+    warnings,
     summaries: summarizeCostAllocationsByTask(allocations),
     proposalTotal,
     allocatedTotal,
@@ -117,8 +126,11 @@ export function simulateCostAllocation(
   if (normalizedKey(input.status) !== "đã thanh toán") {
     errors.push("Phiếu chưa ở trạng thái Đã Thanh Toán.");
   }
+  if (!Number.isFinite(input.totalAmount) || input.totalAmount <= 0) {
+    errors.push("Tổng tiền bill phải lớn hơn 0.");
+  }
   if (!Number.isFinite(input.unitAmount) || input.unitAmount <= 0) {
-    errors.push("Thành Tiền / đơn vị phải lớn hơn 0.");
+    errors.push("Thành Tiền / Đơn vị phải lớn hơn 0.");
   }
 
   const entities = new Map<
@@ -147,10 +159,21 @@ export function simulateCostAllocation(
     errors.push("Cần ít nhất một đơn vị phân bổ.");
   }
 
-  const proposalTotal = input.unitAmount * entities.size;
+  const proposalTotal = input.totalAmount;
+  const expectedUnitAmount = entities.size
+    ? proposalTotal / entities.size
+    : 0;
+  const warnings =
+    entities.size &&
+    Math.abs(input.unitAmount - expectedUnitAmount) >= 0.5
+      ? [
+          `Thành Tiền / Đơn vị lệch mức kỳ vọng ${expectedUnitAmount.toLocaleString("vi-VN")} ₫.`,
+        ]
+      : [];
   if (errors.length) {
     return {
       errors,
+      warnings,
       summaries: [],
       proposalTotal,
       allocatedTotal: 0,
@@ -161,20 +184,21 @@ export function simulateCostAllocation(
 
   const allocations: CostAllocation[] = [];
   let unallocatedTotal = 0;
+  const unitAmount = input.unitAmount;
   for (const entity of entities.values()) {
     const tasks = [...entity.tasks.values()];
     if (!tasks.length) {
-      unallocatedTotal += input.unitAmount;
+      unallocatedTotal += unitAmount;
       continue;
     }
-    const amountPerTask = input.unitAmount / tasks.length;
+    const amountPerTask = unitAmount / tasks.length;
     for (const task of tasks) {
       allocations.push({
         proposalId: input.billId,
         proposalTitle: input.billTitle,
         classification: input.classification,
         entity: entity.name,
-        unitAmount: input.unitAmount,
+        unitAmount,
         linkedTaskCount: tasks.length,
         allocatedAmount: amountPerTask,
         task,
@@ -191,6 +215,7 @@ export function simulateCostAllocation(
 
   return {
     errors,
+    warnings,
     summaries,
     proposalTotal,
     allocatedTotal,

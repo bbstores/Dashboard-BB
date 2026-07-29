@@ -873,6 +873,19 @@
   resize: vertical;
 }
 
+.costSimulatorCalculated {
+  align-items: center;
+  background: #e5eee8;
+  border: 1px solid rgba(23, 79, 61, 0.14);
+  border-radius: 10px;
+  color: var(--green);
+  display: flex;
+  font-size: 12px;
+  font-weight: 900;
+  min-height: 39px;
+  padding: 10px 12px;
+}
+
 .costSimulatorRows {
   grid-column: 1 / -1;
 }

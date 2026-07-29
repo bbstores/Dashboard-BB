@@ -55,6 +55,7 @@ export type CostProposal = {
   shoots: string[];
   products: string[];
   tasks: string[];
+  totalAmount: number;
   unitAmount: number;
   status: string;
 };

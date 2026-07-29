@@ -15,6 +15,7 @@ type BillDraft = {
   approvalLink: string;
   status: string;
   classification: CostAllocation["classification"];
+  totalAmount: string;
   unitAmount: string;
   rowsText: string;
 };
@@ -26,6 +27,7 @@ const DEFAULT_BILLS: BillDraft[] = [
     approvalLink: "https://approval.demo/bst-01",
     status: "Đã Thanh Toán",
     classification: "Bộ Sưu Tập",
+    totalAmount: "24000000",
     unitAmount: "12000000",
     rowsText: [
       "08.2026-Tiệc | TSK001 | Chụp lookbook Tiệc",
@@ -41,6 +43,7 @@ const DEFAULT_BILLS: BillDraft[] = [
     approvalLink: "https://approval.demo/ca-01",
     status: "Đã Thanh Toán",
     classification: "Ca Quay",
+    totalAmount: "10000000",
     unitAmount: "5000000",
     rowsText: [
       "CA-01 | TSK001 | Chụp lookbook Tiệc",
@@ -55,6 +58,7 @@ const DEFAULT_BILLS: BillDraft[] = [
     approvalLink: "https://approval.demo/sp-01",
     status: "Đã Thanh Toán",
     classification: "Mã Sản Phẩm",
+    totalAmount: "1800000",
     unitAmount: "600000",
     rowsText: [
       "SP001 | TSK001 | Chụp lookbook Tiệc",
@@ -69,6 +73,7 @@ const DEFAULT_BILLS: BillDraft[] = [
     approvalLink: "https://approval.demo/task-01",
     status: "Đã Thanh Toán",
     classification: "Task",
+    totalAmount: "3600000",
     unitAmount: "900000",
     rowsText: [
       "TSK004 | TSK004 | Chụp lookbook Công sở",
@@ -94,6 +99,14 @@ function parseRows(value: string): CostSimulationRow[] {
     .filter((row) => row.entity || row.taskCode || row.taskTitle);
 }
 
+function entityCount(rowsText: string) {
+  return new Set(
+    parseRows(rowsText)
+      .map((row) => row.entity.trim().toLocaleLowerCase("vi"))
+      .filter(Boolean),
+  ).size;
+}
+
 export function CostAllocationSimulator() {
   const [bills, setBills] = useState<BillDraft[]>(DEFAULT_BILLS);
   const [result, setResult] =
@@ -112,6 +125,7 @@ export function CostAllocationSimulator() {
       simulateCostAllocations(
         bills.map((bill) => ({
           ...bill,
+          totalAmount: Number(bill.totalAmount),
           unitAmount: Number(bill.unitAmount),
           rows: parseRows(bill.rowsText),
         })),
@@ -193,7 +207,19 @@ export function CostAllocationSimulator() {
                 </select>
               </label>
               <label>
-                Thành Tiền / đơn vị
+                Tổng tiền bill
+                <input
+                  min="0"
+                  step="1000"
+                  type="number"
+                  value={bill.totalAmount}
+                  onChange={(event) =>
+                    updateBill(index, { totalAmount: event.target.value })
+                  }
+                />
+              </label>
+              <label>
+                Thành Tiền / Đơn vị (từ Lark)
                 <input
                   min="0"
                   step="1000"
@@ -203,6 +229,17 @@ export function CostAllocationSimulator() {
                     updateBill(index, { unitAmount: event.target.value })
                   }
                 />
+              </label>
+              <label>
+                Thành tiền / đơn vị kỳ vọng
+                <output className="costSimulatorCalculated">
+                  {entityCount(bill.rowsText)
+                    ? formatCurrency(
+                        Number(bill.totalAmount) /
+                          entityCount(bill.rowsText),
+                      )
+                    : "Chưa có đơn vị"}
+                </output>
               </label>
               <label className="costSimulatorRows">
                 Đơn vị | Mã task | Tên task
@@ -220,7 +257,8 @@ export function CostAllocationSimulator() {
       </div>
       <p className="costSimulationFootnote">
         Kịch bản có task nhận tiền từ nhiều bill và một đơn vị
-        TSK-CHUA-LINK chưa có task để kiểm tra phần chưa phân bổ.
+        TSK-CHUA-LINK chưa có task để kiểm tra phần chưa phân bổ. Tổng tiền
+        mỗi bill được chia đều theo số đơn vị trước khi chia tiếp cho task.
       </p>
       <button
         type="button"
@@ -264,6 +302,13 @@ export function CostAllocationSimulator() {
               </div>
             ) : (
               <>
+                {result.warnings.length > 0 && (
+                  <div className="costSimulationErrors">
+                    {result.warnings.map((warning) => (
+                      <p key={warning}>{warning}</p>
+                    ))}
+                  </div>
+                )}
                 <div className="costSimulationAudit">
                   <span>
                     <small>Tổng phiếu</small>
@@ -333,8 +378,8 @@ export function CostAllocationSimulator() {
                 </div>
                 <p className="costSimulationFootnote">
                   {formatNumber(result.summaries.length)} task · Mỗi đơn vị
-                  nhận một “Thành Tiền / đơn vị”, sau đó chia đều cho các
-                  task duy nhất thuộc đơn vị đó.
+                  nhận “Tổng tiền bill ÷ số đơn vị”, sau đó số tiền của đơn
+                  vị được chia đều cho các task duy nhất thuộc đơn vị đó.
                 </p>
               </>
             )}

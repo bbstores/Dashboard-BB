@@ -54,7 +54,7 @@
 .costAudit {
   display: grid;
   gap: 8px;
-  grid-template-columns: minmax(0, 1fr) 110px;
+  grid-template-columns: minmax(0, 1fr) 130px 110px;
 }
 
 .costAudit > span {
@@ -90,6 +90,32 @@
 
 .costAudit .pass strong {
   color: #2f765f;
+}
+
+.costMismatchList {
+  background: #fff0cf;
+  border: 1px solid #e2b15b;
+  border-radius: 12px;
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 9px 12px;
+}
+
+.costMismatchList > span {
+  color: #7a5520;
+  font-size: 9px;
+}
+
+.costMismatchList > span strong {
+  color: #51350e;
+  margin-right: 7px;
+}
+
+.costMismatchList > small {
+  color: #7a5520;
+  font-size: 8px;
+  font-weight: 800;
 }
 .chartTitle {
   min-height: 46px; display: flex; justify-content: space-between;

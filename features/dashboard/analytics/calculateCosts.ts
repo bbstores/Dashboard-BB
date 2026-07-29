@@ -92,11 +92,21 @@ export function calculateCosts(
   let unallocatedTotal = 0;
   let invalidProposalCount = 0;
   let validProposalCount = 0;
+  const unitMismatches: Array<{
+    proposalId: string;
+    proposalTitle: string;
+    totalAmount: number;
+    entityCount: number;
+    expectedUnitAmount: number;
+    actualUnitAmount: number;
+    difference: number;
+  }> = [];
 
   for (const proposal of costs?.proposals ?? []) {
     if (
       !proposal.approvalLink ||
       normalizedKey(proposal.status) !== "đã thanh toán" ||
+      proposal.totalAmount <= 0 ||
       proposal.unitAmount <= 0
     ) {
       continue;
@@ -124,14 +134,27 @@ export function calculateCosts(
       (sum, group) => sum + group.entities.length,
       0,
     );
-    const proposalTotal =
-      proposal.unitAmount * Math.max(1, selectedEntityCount);
+    const proposalTotal = proposal.totalAmount;
     eligibleTotal += proposalTotal;
 
-    if (selectedGroups.length !== 1) {
+    if (selectedGroups.length !== 1 || selectedEntityCount === 0) {
       invalidProposalCount += 1;
       unallocatedTotal += proposalTotal;
       continue;
+    }
+
+    const expectedUnitAmount = proposalTotal / selectedEntityCount;
+    const unitDifference = proposal.unitAmount - expectedUnitAmount;
+    if (Math.abs(unitDifference) >= 0.5) {
+      unitMismatches.push({
+        proposalId: proposal.id,
+        proposalTitle: proposal.title,
+        totalAmount: proposal.totalAmount,
+        entityCount: selectedEntityCount,
+        expectedUnitAmount,
+        actualUnitAmount: proposal.unitAmount,
+        difference: unitDifference,
+      });
     }
 
     const { classification, entities } = selectedGroups[0];
@@ -195,6 +218,8 @@ export function calculateCosts(
     reconciliationDelta,
     validProposalCount,
     invalidProposalCount,
+    unitMismatchCount: unitMismatches.length,
+    unitMismatches,
     isReconciled: Math.abs(reconciliationDelta) < 0.5,
   };
 }
