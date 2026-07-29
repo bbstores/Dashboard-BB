@@ -13,7 +13,7 @@ test("implements the requested task dashboard sections", async () => {
   for (const expected of [
     "Leaderboard thời gian",
     "Số task thực hiện &amp; số lần trả về",
-    "Thiếu ngày bắt đầu hoặc assignee",
+    "Task chưa phân / thiếu thông tin",
     "Tiến độ hoàn thành",
     "Tình trạng task",
     "Đánh giá bàn giao",

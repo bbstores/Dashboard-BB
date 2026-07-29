@@ -4,6 +4,10 @@ import {
   calculateCosts,
   summarizeCostAllocationsByTask,
 } from "../features/dashboard/analytics/calculateCosts";
+import {
+  simulateCostAllocation,
+  simulateCostAllocations,
+} from "../features/dashboard/analytics/simulateCostAllocation";
 import type {
   CostData,
   DateWindow,
@@ -141,4 +145,86 @@ test("groups allocation evidence by task and bill", () => {
   assert.equal(summaries[0].bills.length, 2);
   assert.equal(summaries[0].bills[0].allocatedAmount, 700_000);
   assert.equal(summaries[0].totalAmount, 1_000_000);
+});
+
+test("simulates one unit amount per entity and divides it evenly by task", () => {
+  const result = simulateCostAllocation({
+    billId: "BILL-DEMO",
+    billTitle: "Chi phí ca quay",
+    approvalLink: "https://approval.example/BILL-DEMO",
+    status: "Đã Thanh Toán",
+    classification: "Ca Quay",
+    unitAmount: 1_000_000,
+    rows: [
+      { entity: "CA-01", taskCode: "T1", taskTitle: "Task 1" },
+      { entity: "CA-01", taskCode: "T2", taskTitle: "Task 2" },
+      { entity: "CA-02", taskCode: "T2", taskTitle: "Task 2" },
+      { entity: "CA-02", taskCode: "T3", taskTitle: "Task 3" },
+    ],
+  });
+
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.proposalTotal, 2_000_000);
+  assert.equal(result.allocatedTotal, 2_000_000);
+  assert.equal(result.unallocatedTotal, 0);
+  assert.equal(result.isReconciled, true);
+  assert.deepEqual(
+    result.summaries.map((summary) => [
+      summary.task.code,
+      summary.totalAmount,
+    ]),
+    [
+      ["T2", 1_000_000],
+      ["T1", 500_000],
+      ["T3", 500_000],
+    ],
+  );
+});
+
+test("simulator reports entities without linked tasks as unallocated", () => {
+  const result = simulateCostAllocation({
+    billId: "BILL-DEMO",
+    billTitle: "Chi phí ca quay",
+    approvalLink: "https://approval.example/BILL-DEMO",
+    status: "Đã Thanh Toán",
+    classification: "Ca Quay",
+    unitAmount: 750_000,
+    rows: [{ entity: "CA-01", taskCode: "", taskTitle: "" }],
+  });
+
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.proposalTotal, 750_000);
+  assert.equal(result.allocatedTotal, 0);
+  assert.equal(result.unallocatedTotal, 750_000);
+  assert.equal(result.isReconciled, true);
+  assert.equal(result.summaries.length, 0);
+});
+
+test("combines several simulated bills on the same task", () => {
+  const shared = {
+    approvalLink: "https://approval.example",
+    status: "Đã Thanh Toán",
+    unitAmount: 1_000_000,
+  };
+  const result = simulateCostAllocations([
+    {
+      ...shared,
+      billId: "BILL-BST",
+      billTitle: "BST",
+      classification: "Bộ Sưu Tập",
+      rows: [{ entity: "BST-01", taskCode: "T1", taskTitle: "Task 1" }],
+    },
+    {
+      ...shared,
+      billId: "BILL-CA",
+      billTitle: "Ca quay",
+      classification: "Ca Quay",
+      rows: [{ entity: "CA-01", taskCode: "T1", taskTitle: "Task 1" }],
+    },
+  ]);
+
+  assert.equal(result.summaries.length, 1);
+  assert.equal(result.summaries[0].bills.length, 2);
+  assert.equal(result.summaries[0].totalAmount, 2_000_000);
+  assert.equal(result.isReconciled, true);
 });

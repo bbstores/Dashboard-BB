@@ -1,11 +1,16 @@
 import type { DashboardHelp } from "../model/types";
 import { dashboardObjective } from "../help/helpContent";
+import { CostAllocationSimulator } from "../components/CostAllocationSimulator";
 
 export function HelpDialog({ help, onClose }: { help: DashboardHelp; onClose: () => void }) {
   return (
     <div className="helpOverlay" role="presentation" onMouseDown={onClose}>
       <aside
-        className="helpDialog"
+        className={`helpDialog ${
+          help.title === "Số tiền đã chi"
+            ? "costSimulatorHelpDialog"
+            : ""
+        }`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="dashboard-help-title"
@@ -19,6 +24,9 @@ export function HelpDialog({ help, onClose }: { help: DashboardHelp; onClose: ()
         <section><h3>Cách tính</h3><p>{help.calculation}</p></section>
         <section className="helpExample"><h3>Ví dụ</h3><p>{help.example}</p></section>
         {help.note && <section><h3>Lưu ý</h3><p>{help.note}</p></section>}
+        {help.title === "Số tiền đã chi" && (
+          <CostAllocationSimulator />
+        )}
       </aside>
     </div>
   );

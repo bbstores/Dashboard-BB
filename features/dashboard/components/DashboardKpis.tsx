@@ -81,12 +81,20 @@ export function DashboardKpis({
           })
         }
       >
-        <b>{viewModel.missingStartOnly}</b> chỉ thiếu ngày ·{" "}
-        <b>{viewModel.missingAssigneeOnly}</b> chỉ thiếu assignee
-        <br />
-        <b>{viewModel.missingBoth}</b> thiếu cả hai
-        <br />
-        <b>{formatNumber(viewModel.untitledTaskCount)}</b> task rỗng
+        <span className="missingKpiBreakdown">
+          <span>
+            <b>{viewModel.missingStartOnly}</b> chỉ thiếu ngày
+          </span>
+          <span>
+            <b>{viewModel.missingAssigneeOnly}</b> chỉ thiếu assignee
+          </span>
+          <span>
+            <b>{viewModel.missingBoth}</b> thiếu cả hai
+          </span>
+          <span>
+            <b>{formatNumber(viewModel.untitledTaskCount)}</b> task rỗng
+          </span>
+        </span>
       </KpiCard>
 
       <KpiCard
