@@ -117,6 +117,23 @@ export type SavedReport = {
   department: ReportDepartment;
   createdAt: string;
   filters: SavedReportFilters;
+  mediaCapacitySnapshot?: MediaCapacitySnapshot;
+};
+
+export type MediaCapacitySnapshot = {
+  version: 1;
+  weekKey: string;
+  weekLabel: string;
+  savedAt: string;
+  baselineWeekCount: number;
+  workingDays: number;
+  elapsedWorkingDays: number;
+  shootActualMinutes: number;
+  shootReferenceMinutes: number;
+  outputActualMinutes: number;
+  outputReferenceMinutes: number;
+  shootTaskCount: number;
+  outputTaskCount: number;
 };
 
 export type SavedReportFilters = {

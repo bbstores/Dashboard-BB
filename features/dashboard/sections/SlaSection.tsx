@@ -57,7 +57,7 @@ export function SlaSection({
   return (
     <>
       <header className="dashboardGroupHeader slaGroupHeader">
-        <span>04</span>
+        <span>05</span>
         <div>
           <p>SLA &amp; ĐỊNH MỨC</p>
           <h2>Nhịp xử lý, aging &amp; tải công việc</h2>

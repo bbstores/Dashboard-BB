@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
+  MediaCapacitySnapshot,
   ReportDepartment,
   SavedReport,
   SavedReportFilters,
@@ -15,6 +16,7 @@ type SavedReportDraft = {
   name: string;
   department: ReportDepartment;
   filters: SavedReportFilters;
+  mediaCapacitySnapshot?: MediaCapacitySnapshot;
 };
 
 function createSavedReport(draft: SavedReportDraft): SavedReport {
@@ -24,6 +26,7 @@ function createSavedReport(draft: SavedReportDraft): SavedReport {
     department: draft.department,
     createdAt: new Date().toISOString(),
     filters: draft.filters,
+    mediaCapacitySnapshot: draft.mediaCapacitySnapshot,
   };
 }
 

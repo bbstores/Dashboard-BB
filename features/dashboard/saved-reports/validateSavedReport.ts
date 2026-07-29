@@ -64,7 +64,36 @@ function isSavedReport(value: unknown): value is SavedReport {
     departments.includes(value.department as ReportDepartment) &&
     typeof value.createdAt === "string" &&
     !Number.isNaN(Date.parse(value.createdAt)) &&
-    isSavedReportFilters(value.filters)
+    isSavedReportFilters(value.filters) &&
+    (value.mediaCapacitySnapshot === undefined ||
+      isMediaCapacitySnapshot(value.mediaCapacitySnapshot))
+  );
+}
+
+function isMediaCapacitySnapshot(value: unknown) {
+  if (!isRecord(value)) return false;
+  const numericFields = [
+    "baselineWeekCount",
+    "workingDays",
+    "elapsedWorkingDays",
+    "shootActualMinutes",
+    "shootReferenceMinutes",
+    "outputActualMinutes",
+    "outputReferenceMinutes",
+    "shootTaskCount",
+    "outputTaskCount",
+  ];
+  return (
+    value.version === 1 &&
+    typeof value.weekKey === "string" &&
+    typeof value.weekLabel === "string" &&
+    typeof value.savedAt === "string" &&
+    !Number.isNaN(Date.parse(value.savedAt)) &&
+    numericFields.every(
+      (field) =>
+        typeof value[field] === "number" &&
+        Number.isFinite(value[field]),
+    )
   );
 }
 

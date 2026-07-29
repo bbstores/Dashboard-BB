@@ -1,0 +1,440 @@
+/* Media weekly capacity and production reference. */
+.mediaCapacitySection {
+  background:
+    radial-gradient(circle at 95% 0, rgba(217, 255, 114, .22), transparent 25%),
+    #174f3d;
+  border-radius: 28px;
+  color: #fff;
+  padding: 30px;
+}
+.mediaCapacityHeader,
+.capacityCardHeader,
+.capacityMetricValue,
+.capacityReferenceCopy,
+.capacityHeaderTools,
+.capacityLegend,
+.capacityLegend span,
+.capacityMethodNote {
+  align-items: center;
+  display: flex;
+}
+.mediaCapacityHeader {
+  align-items: flex-start;
+  gap: 30px;
+  justify-content: space-between;
+}
+.mediaCapacityHeader .chartKicker,
+.capacityCardHeader .chartKicker {
+  color: #d9ff72;
+}
+.mediaCapacityHeader h2 {
+  font-size: 34px;
+  letter-spacing: -.045em;
+  margin: 4px 0 0;
+}
+.mediaCapacityHeader p {
+  color: #c6d4cf;
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 10px 0 0;
+  max-width: 720px;
+}
+.capacityLockSummary {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 16px;
+  display: grid;
+  flex: 0 0 auto;
+  gap: 5px;
+  min-width: 255px;
+  padding: 15px 17px;
+}
+.capacityLockSummary > span {
+  color: #d9ff72;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+.capacityLockSummary > strong {
+  font-size: 14px;
+}
+.capacityLockSummary > small {
+  color: #bdcec7;
+  font-size: 9px;
+}
+.capacityTopGrid,
+.capacityBottomGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.capacityTopGrid { margin-top: 24px; }
+.capacityBottomGrid { margin-top: 16px; }
+.capacityMetricCard,
+.capacityTrendCard,
+.capacitySegmentCard {
+  background: rgba(255, 255, 255, .075);
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 22px;
+  min-width: 0;
+  padding: 21px;
+}
+.capacityMetricCard.output {
+  border-color: rgba(217, 255, 114, .42);
+}
+.capacityCardHeader {
+  align-items: flex-start;
+  gap: 18px;
+  justify-content: space-between;
+}
+.capacityCardHeader .chartKicker {
+  display: block;
+  margin-bottom: 6px;
+}
+.capacityCardHeader h3 {
+  color: #fff;
+  font-size: 20px;
+  letter-spacing: -.035em;
+  margin: 0;
+}
+.capacityCardHeader .helpButton {
+  border-color: rgba(255, 255, 255, .28);
+  color: #174f3d;
+  flex: 0 0 auto;
+}
+.capacityMetricBody {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: block;
+  margin-top: 25px;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+.capacityMetricValue {
+  align-items: flex-end;
+  gap: 14px;
+  justify-content: space-between;
+}
+.capacityMetricValue > strong {
+  font-size: clamp(38px, 4.2vw, 62px);
+  letter-spacing: -.065em;
+  line-height: .95;
+}
+.capacityBandStatus {
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  padding: 7px 10px;
+  text-transform: uppercase;
+}
+.capacityBandStatus.below {
+  background: #f6d8d2;
+  color: #98443b;
+}
+.capacityBandStatus.within {
+  background: #d9ff72;
+  color: #174f3d;
+}
+.capacityBandStatus.above {
+  background: #fff0b7;
+  color: #805514;
+}
+.capacityBandStatus.unavailable {
+  background: rgba(255, 255, 255, .12);
+  color: #c4d2cc;
+}
+.capacityMetricBody > p {
+  color: #bdcec7;
+  font-size: 10px;
+  margin: 10px 0 0;
+}
+.capacityBullet {
+  background: rgba(255, 255, 255, .12);
+  border-radius: 999px;
+  height: 18px;
+  margin-top: 24px;
+  overflow: hidden;
+  position: relative;
+}
+.capacityBullet > b {
+  background: linear-gradient(90deg, #8ebf44, #d9ff72);
+  border-radius: inherit;
+  bottom: 4px;
+  left: 0;
+  min-width: 3px;
+  position: absolute;
+  top: 4px;
+}
+.capacityMetricCard.shoot .capacityBullet > b {
+  background: linear-gradient(90deg, #78a99a, #aee1d2);
+}
+.capacityReferenceBand {
+  background: rgba(217, 255, 114, .2);
+  bottom: 0;
+  position: absolute;
+  top: 0;
+}
+.capacityBullet > em {
+  background: #fff;
+  bottom: -2px;
+  position: absolute;
+  top: -2px;
+  width: 2px;
+}
+.capacityReferenceCopy {
+  color: #aebfb8;
+  font-size: 8px;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.capacityReferenceCopy strong {
+  color: #d9ff72;
+  font-size: 9px;
+}
+.capacityTrendCard {
+  margin-top: 16px;
+}
+.capacityHeaderTools {
+  align-items: flex-start;
+  gap: 15px;
+}
+.capacityLegend {
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+.capacityLegend span {
+  color: #c1d0ca;
+  font-size: 9px;
+  gap: 6px;
+  white-space: nowrap;
+}
+.capacityLegend i {
+  border-radius: 50%;
+  display: block;
+  height: 9px;
+  width: 9px;
+}
+.capacityLegend i.shoot { background: #9bcbbb; }
+.capacityLegend i.output { background: #d9ff72; }
+.capacityTrendScroller {
+  margin-top: 16px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.capacityTrendSvg {
+  display: block;
+  min-width: 980px;
+  width: 100%;
+}
+.capacityGridLine {
+  stroke: rgba(255, 255, 255, .13);
+  stroke-dasharray: 4 8;
+  stroke-width: 1;
+}
+.capacityAxisLabel,
+.capacityWeekLabel {
+  fill: #aebfb8;
+  font-size: 8px;
+}
+.capacityTrendLine {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+.capacityTrendLine.shoot { stroke: #9bcbbb; }
+.capacityTrendLine.output { stroke: #d9ff72; }
+.capacityBaseline {
+  opacity: .55;
+  stroke-dasharray: 8 7;
+  stroke-width: 1.5;
+}
+.capacityBaseline.shoot { stroke: #9bcbbb; }
+.capacityBaseline.output { stroke: #d9ff72; }
+.capacityPointGroup {
+  cursor: pointer;
+  outline: none;
+}
+.capacityPointGroup:focus-visible .capacityTrendPoint,
+.capacityPointGroup:hover .capacityTrendPoint {
+  filter: drop-shadow(0 3px 7px rgba(0, 0, 0, .35));
+  stroke-width: 4;
+}
+.capacityTrendPoint {
+  stroke: #174f3d;
+  stroke-width: 2;
+}
+.capacityTrendPoint.shoot { fill: #9bcbbb; }
+.capacityTrendPoint.output { fill: #d9ff72; }
+.capacityPointValue {
+  font-size: 8px;
+  font-weight: 850;
+  paint-order: stroke;
+  stroke: #174f3d;
+  stroke-linejoin: round;
+  stroke-width: 3px;
+}
+.capacityPointValue.shoot { fill: #c6e2d9; }
+.capacityPointValue.output { fill: #eaffaa; }
+.capacitySegmentTotal {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  margin-top: 25px;
+}
+.capacitySegmentTotal strong {
+  font-size: 42px;
+  letter-spacing: -.055em;
+}
+.capacitySegmentTotal span {
+  color: #b9cac3;
+  font-size: 10px;
+}
+.capacitySegments {
+  background: rgba(255, 255, 255, .12);
+  border-radius: 999px;
+  display: flex;
+  height: 18px;
+  margin-top: 17px;
+  overflow: hidden;
+}
+.capacitySegments button {
+  border: 0;
+  cursor: pointer;
+  min-width: 0;
+}
+.capacitySegments .video,
+.capacitySegmentLegend i.video { background: #d9ff72; }
+.capacitySegments .graphic,
+.capacitySegmentLegend i.graphic { background: #8fc442; }
+.capacitySegments .onTime,
+.capacitySegmentLegend i.onTime { background: #d9ff72; }
+.capacitySegments .late,
+.capacitySegmentLegend i.late { background: #db786b; }
+.capacitySegments .unassessed,
+.capacitySegmentLegend i.unassessed { background: #aeb7b1; }
+.capacityEmptyBar {
+  background: rgba(255, 255, 255, .06);
+  display: block;
+  width: 100%;
+}
+.capacitySegmentLegend {
+  display: grid;
+  gap: 7px;
+  margin-top: 15px;
+}
+.capacitySegmentLegend button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 10px minmax(0, 1fr) auto 48px;
+  padding: 3px 0;
+  text-align: left;
+}
+.capacitySegmentLegend i {
+  border-radius: 3px;
+  height: 10px;
+  width: 10px;
+}
+.capacitySegmentLegend span {
+  color: #c4d2cd;
+  font-size: 10px;
+}
+.capacitySegmentLegend strong {
+  font-size: 11px;
+}
+.capacitySegmentLegend small {
+  color: #d9ff72;
+  font-size: 9px;
+  text-align: right;
+}
+.capacityFeedbackMetric {
+  align-items: center;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 13px;
+  color: inherit;
+  cursor: pointer;
+  display: grid;
+  gap: 4px 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 18px;
+  padding: 12px 14px;
+  text-align: left;
+  width: 100%;
+}
+.capacityFeedbackMetric span {
+  color: #d9ff72;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+.capacityFeedbackMetric strong {
+  font-size: 24px;
+  grid-row: span 2;
+}
+.capacityFeedbackMetric small {
+  color: #b9c9c3;
+  font-size: 8px;
+}
+.capacityMethodNote {
+  align-items: flex-start;
+  border-top: 1px solid rgba(255, 255, 255, .14);
+  gap: 18px;
+  margin-top: 22px;
+  padding-top: 18px;
+}
+.capacityMethodNote > span {
+  color: #d9ff72;
+  flex: 0 0 120px;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+.capacityMethodNote p {
+  color: #b9cac3;
+  flex: 1;
+  font-size: 9px;
+  line-height: 1.55;
+  margin: 0;
+}
+.capacityMethodNote small {
+  color: #91a69e;
+  font-size: 8px;
+  white-space: nowrap;
+}
+@media (max-width: 900px) {
+  .mediaCapacityHeader,
+  .capacityMethodNote {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .capacityLockSummary { min-width: 0; }
+  .capacityTopGrid,
+  .capacityBottomGrid { grid-template-columns: 1fr; }
+  .capacityMethodNote > span { flex-basis: auto; }
+}
+@media (max-width: 560px) {
+  .mediaCapacitySection { padding: 20px; }
+  .mediaCapacityHeader h2 { font-size: 27px; }
+  .capacityMetricValue {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .capacityHeaderTools {
+    align-items: flex-end;
+    flex-direction: column-reverse;
+  }
+  .capacityLegend { justify-content: flex-start; }
+  .capacityReferenceCopy { gap: 7px; }
+  .capacityReferenceCopy span { max-width: 90px; }
+}

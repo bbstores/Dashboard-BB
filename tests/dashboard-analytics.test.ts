@@ -3,6 +3,7 @@ import test from "node:test";
 import { calculateDailyTaskChart } from "../features/dashboard/analytics/calculateDailyTaskChart";
 import { calculateDashboardStats } from "../features/dashboard/analytics/calculateDashboardStats";
 import { calculateCollections } from "../features/dashboard/analytics/calculateCollections";
+import { calculateMediaCapacity } from "../features/dashboard/analytics/calculateMediaCapacity";
 import { calculatePublicationStats } from "../features/dashboard/analytics/calculatePublicationStats";
 import {
   calculateReportComparison,
@@ -753,4 +754,90 @@ test("excludes Pending / Cancel tasks from every collection metric", () => {
   assert.equal(result.childCollections.length, 1);
   assert.equal(result.childCollections[0].taskTotal, 1);
   assert.equal(result.childCollections[0].minuteTotal, 60);
+});
+
+test("calculates weekly Media capacity from standard minutes and handoff dates", () => {
+  const data: DashboardData = {
+    fileName: "capacity.xlsx",
+    publications: [],
+    norms: [
+      {
+        formatType: "Video ngắn",
+        recordMinutes: 120,
+        editMinutes: 60,
+        graphicMinutes: 0,
+        contentMinutes: 0,
+      },
+      {
+        formatType: "Ảnh social",
+        recordMinutes: 90,
+        editMinutes: 0,
+        graphicMinutes: 90,
+        contentMinutes: 0,
+      },
+    ],
+    feedback: [
+      {
+        taskCode: "FOCUS-VIDEO",
+        at: new Date(2026, 6, 22, 10),
+        assignee: "An",
+      },
+    ],
+    tasks: [
+      task("BASE-SHOOT", {
+        stage: "Quay",
+        startDate: new Date(2026, 6, 13),
+      }),
+      task("BASE-OUTPUT", {
+        stage: "Edit",
+        inspectionDate: new Date(2026, 6, 14),
+      }),
+      task("FOCUS-SHOOT", {
+        stage: "Quay",
+        startDate: new Date(2026, 6, 20),
+      }),
+      task("FOCUS-VIDEO", {
+        stage: "Edit",
+        inspectionDate: new Date(2026, 6, 21),
+        handoffRating: "✅ Bàn giao đúng hạn",
+      }),
+      task("FOCUS-GRAPHIC", {
+        stage: "Graphic Design",
+        formatType: "Ảnh social",
+        inspectionDate: new Date(2026, 6, 22),
+        handoffRating: "🔥 Bàn giao trễ hạn",
+      }),
+      task("EXCLUDED-OUTSOURCE", {
+        stage: "Edit",
+        inspectionDate: new Date(2026, 6, 22),
+        outsource: "Vendor A",
+      }),
+      task("EXCLUDED-PENDING", {
+        stage: "Quay",
+        startDate: new Date(2026, 6, 21),
+        status: "Pending / Cancel",
+      }),
+    ],
+  };
+
+  const result = calculateMediaCapacity(
+    data,
+    new Date(2026, 6, 26),
+    new Date(2026, 6, 22, 14),
+  );
+
+  assert.equal(result.focusWeek.label, "20/07–26/07");
+  assert.equal(result.elapsedWorkingDays, 3);
+  assert.equal(result.focusWeek.shootTasks.length, 1);
+  assert.equal(result.focusWeek.shootMinutes, 120);
+  assert.equal(result.focusWeek.outputTasks.length, 2);
+  assert.equal(result.focusWeek.outputMinutes, 150);
+  assert.equal(result.focusWeek.videoTasks.length, 1);
+  assert.equal(result.focusWeek.graphicTasks.length, 1);
+  assert.equal(result.focusWeek.onTimeTasks.length, 1);
+  assert.equal(result.focusWeek.lateTasks.length, 1);
+  assert.equal(result.focusWeek.feedbackRows.length, 1);
+  assert.equal(result.shootReference.p50Minutes, 60);
+  assert.equal(result.outputReference.p50Minutes, 30);
+  assert.equal(result.snapshot.weekKey, "2026-07-20");
 });

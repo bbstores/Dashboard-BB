@@ -102,6 +102,7 @@ test("keeps phase 6 UI sections isolated behind typed view models", async () => 
     "PeopleSection",
     "CollectionSection",
     "PublicationSection",
+    "MediaCapacitySection",
     "SlaSection",
   ];
   const sectionSources = await Promise.all(

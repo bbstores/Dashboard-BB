@@ -4,6 +4,7 @@ import "./styles/filters.css";
 import "./styles/charts.css";
 import "./styles/comparison.css";
 import "./sections/collection/collection.css";
+import "./sections/capacity/capacity.css";
 import "./sections/publication/publication.css";
 import "./sections/sla/sla.css";
 import "./styles/dialogs.css";
@@ -26,6 +27,7 @@ import { useWorkbookData } from "./hooks/useWorkbookData";
 import type { ReportDepartment, SavedReport } from "./model/types";
 import { useSavedReports } from "./saved-reports/useSavedReports";
 import { CollectionSection } from "./sections/CollectionSection";
+import { MediaCapacitySection } from "./sections/MediaCapacitySection";
 import { OverviewSection } from "./sections/OverviewSection";
 import { PeopleSection } from "./sections/PeopleSection";
 import { PostingSection } from "./sections/PostingSection";
@@ -61,11 +63,18 @@ export function Dashboard() {
   }
   function saveCurrentReport() {
     const name = dialogs.reportName.trim();
-    if (!name) return;
+    if (!name || !analytics) return;
     reports.saveReport({
       name,
       department: dialogs.saveDepartment,
       filters: filters.savedReportFilters,
+      mediaCapacitySnapshot:
+        dialogs.saveDepartment === "media"
+          ? {
+              ...analytics.mediaCapacity.snapshot,
+              savedAt: new Date().toISOString(),
+            }
+          : undefined,
     });
     dialogs.finishSaveReport(dialogs.saveDepartment);
   }
@@ -91,19 +100,11 @@ export function Dashboard() {
           onFileSelected={(file) => void workbook.loadWorkbook(file)}
         />
         {!dialogs.comparisonActive && (
-          <DashboardHero
-            data={workbook.data}
-            department={dialogs.dashboardDepartment}
-          />
+          <DashboardHero data={workbook.data} department={dialogs.dashboardDepartment} />
         )}
-        {workbook.error && (
-          <div className="errorBanner">{workbook.error}</div>
-        )}
+        {workbook.error && <div className="errorBanner">{workbook.error}</div>}
         {!workbook.data || !analytics ? (
-          <EmptyDashboard
-            fileRef={workbook.fileRef}
-            loading={workbook.loading}
-          />
+          <EmptyDashboard fileRef={workbook.fileRef} loading={workbook.loading} />
         ) : dialogs.comparisonActive ? (
           <ComparisonDashboard
             data={workbook.data}
@@ -227,6 +228,7 @@ export function Dashboard() {
                     }
                     onOpenDetail={dialogs.setDetail}
                   />
+                  <MediaCapacitySection viewModel={analytics.mediaCapacity} onOpenDetail={dialogs.setDetail} />
                   <SlaSection
                     viewModel={{
                       sla: analytics.sla,
@@ -263,10 +265,7 @@ export function Dashboard() {
           </>
         )}
         {dialogs.detail && (
-          <DetailDrawer
-            detail={dialogs.detail}
-            onClose={() => dialogs.setDetail(null)}
-          />
+          <DetailDrawer detail={dialogs.detail} onClose={() => dialogs.setDetail(null)} />
         )}
         {dialogs.percentileDetail && (
           <PercentileDialog

@@ -78,3 +78,29 @@ test("returns an empty list for corrupt or unsupported storage", () => {
   );
   assert.deepEqual(loadSavedReports(storage), []);
 });
+
+test("preserves the locked Media capacity snapshot in a saved report", () => {
+  const storage = new MemoryStorage();
+  const reportWithCapacity: SavedReport = {
+    ...report,
+    id: "report-capacity",
+    mediaCapacitySnapshot: {
+      version: 1,
+      weekKey: "2026-07-20",
+      weekLabel: "20/07–26/07",
+      savedAt: "2026-07-26T10:00:00.000Z",
+      baselineWeekCount: 8,
+      workingDays: 6,
+      elapsedWorkingDays: 6,
+      shootActualMinutes: 4800,
+      shootReferenceMinutes: 4500,
+      outputActualMinutes: 6200,
+      outputReferenceMinutes: 5900,
+      shootTaskCount: 34,
+      outputTaskCount: 82,
+    },
+  };
+
+  saveSavedReports(storage, [reportWithCapacity]);
+  assert.deepEqual(loadSavedReports(storage), [reportWithCapacity]);
+});
