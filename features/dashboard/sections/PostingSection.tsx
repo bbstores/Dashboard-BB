@@ -1,8 +1,7 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import {
   calculatePublicationDailyRows,
   calculatePublicationStats,
-  OLD_ASSET_CUTOFF,
   type ClassifiedPublication,
   type PublicationDailyRow,
   type PublicationPlatformRow,
@@ -54,25 +53,18 @@ function PostingKpi({
   note,
   variant = "",
   onClick,
-  tooltip,
 }: {
   label: string;
   value: number;
   note: string;
   variant?: string;
   onClick?: () => void;
-  tooltip?: ReactNode;
 }) {
   const content = (
     <>
       <span>{label}</span>
       <strong>{formatNumber(value)}</strong>
       <small>{note}</small>
-      {tooltip && (
-        <span className="postingKpiTooltip" role="tooltip">
-          {tooltip}
-        </span>
-      )}
     </>
   );
   return onClick ? (
@@ -607,45 +599,56 @@ export function PostingSection({
             )
           }
         />
-        <PostingKpi
-          label="Chưa lên lịch"
-          value={stats.unscheduledTasks.length}
-          note={`${formatNumber(stats.unscheduledVideoTasks.length)} video · ${formatNumber(stats.unscheduledGraphicTasks.length)} hình`}
-          tooltip={
-            <>
-              <b>BẮT ĐẦU TỪ 01/07/2026</b>
-              <strong>
-                {formatNumber(stats.recentUnscheduledTasks.length)} task
-              </strong>
-              <small>
-                {formatNumber(stats.recentUnscheduledVideoTasks.length)} video
-                {" · "}
-                {formatNumber(stats.recentUnscheduledGraphicTasks.length)} hình
-              </small>
-            </>
-          }
-          onClick={() =>
+        <PieChart
+          compact
+          className="postingUnscheduledBreakdown"
+          title="Ấn phẩm chưa lên lịch"
+          data={stats.unscheduledBreakdown}
+          totalLabel="Task"
+          onSelect={(label) => {
+            const groups = {
+              "Ấn phẩm cũ": {
+                tasks: stats.oldAssets,
+                subtitle:
+                  "Ấn phẩm chưa lên lịch có ngày sẵn sàng trước 01/07/2026",
+              },
+              "Bắt đầu từ 01/07": {
+                tasks: stats.recentUnscheduledTasks,
+                subtitle:
+                  "Ấn phẩm chưa lên lịch có Ngày Bắt Đầu từ 01/07/2026",
+              },
+              "Ấn phẩm chuyển tiếp": {
+                tasks: stats.transitionUnscheduledTasks,
+                subtitle:
+                  "Bắt đầu trước 01/07 nhưng đạt mốc sẵn sàng từ 01/07/2026",
+              },
+              "Chưa đủ mốc ngày": {
+                tasks: stats.undatedUnscheduledTasks,
+                subtitle:
+                  "Ấn phẩm chưa lên lịch không có đủ mốc ngày để xếp vào ba nhóm còn lại",
+              },
+            } as const;
+            const group = groups[label as keyof typeof groups];
+            if (!group) return;
             onOpenDetail({
-              title: "Ấn phẩm chưa lên lịch từ 01/07/2026",
-              subtitle:
-                "Task thành phẩm cuối có Ngày Bắt Đầu từ 01/07/2026 và cột 2.7 Đăng Bài để trống",
-              tasks: stats.recentUnscheduledTasks,
-            })
-          }
-        />
-        <PostingKpi
-          label="Ấn phẩm cũ"
-          value={stats.oldAssets.length}
-          note={`Sẵn sàng trước ${formatDate(OLD_ASSET_CUTOFF)}`}
-          variant="warning"
-          onClick={() =>
-            onOpenDetail({
-              title: "Ấn phẩm cũ",
-              subtitle:
-                "Ấn phẩm cuối chưa có lịch, sẵn sàng trước 01/07/2026",
-              tasks: stats.oldAssets,
-            })
-          }
+              title: `Ấn phẩm chưa lên lịch · ${label}`,
+              subtitle: group.subtitle,
+              tasks: group.tasks,
+            });
+          }}
+          help={{
+            title: "Ấn phẩm chưa lên lịch",
+            purpose:
+              "Phân rã toàn bộ task thành phẩm chưa có liên kết Đăng Bài để tổng luôn đối soát được.",
+            objective:
+              "Tách rõ tồn cũ, ấn phẩm mới, ấn phẩm chuyển tiếp và task thiếu mốc ngày.",
+            calculation:
+              "Đầu tiên lấy task Video–Edit hoặc Hình ảnh–Graphic Design, loại Nền Tảng = Không Đăng Social và chỉ giữ task chưa có liên kết 2.7 Đăng Bài. Ấn phẩm cũ có ngày sẵn sàng trước 01/07; Bắt đầu từ 01/07 dùng Ngày Bắt Đầu; Chuyển tiếp bắt đầu trước mốc nhưng sẵn sàng từ mốc; phần còn lại là Chưa đủ mốc ngày.",
+            example:
+              "703 task được tách thành 508 cũ + 43 bắt đầu mới + 3 chuyển tiếp + 149 thiếu mốc ngày.",
+            note:
+              "Bốn lát loại trừ nhau và luôn cộng đúng bằng tổng ở giữa donut.",
+          }}
         />
         <PostingKpi
           label="Dữ liệu cần kiểm tra · Không Đăng Social"

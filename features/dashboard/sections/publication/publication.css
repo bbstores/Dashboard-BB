@@ -168,46 +168,20 @@
 .postingKpiCard.warning > small {
   color: var(--red);
 }
-.postingKpiTooltip {
-  background: rgba(30, 42, 38, .96);
-  border: 1px solid rgba(217, 255, 114, .28);
-  border-radius: 13px;
-  box-shadow: 0 14px 34px rgba(20, 32, 28, .2);
-  color: white;
-  display: grid;
-  gap: 5px;
-  left: 50%;
-  min-width: 225px;
-  opacity: 0;
-  padding: 12px 14px;
-  pointer-events: none;
-  position: absolute;
-  text-transform: none;
-  top: calc(100% + 10px);
-  transform: translate(-50%, -4px);
-  transition: opacity .15s ease, transform .15s ease, visibility .15s;
-  visibility: hidden;
-  z-index: 120;
+.postingUnscheduledBreakdown {
+  grid-column: span 2;
+  overflow: visible;
+  padding: 15px 17px;
 }
-.postingKpiCard:hover .postingKpiTooltip,
-.postingKpiCard:focus-visible .postingKpiTooltip {
-  opacity: 1;
-  transform: translate(-50%, 0);
-  visibility: visible;
+.postingUnscheduledBreakdown .chartTitle {
+  margin-bottom: 10px;
+  min-height: 34px;
 }
-.postingKpiCard > .postingKpiTooltip > b {
-  color: var(--lime);
-  font-size: 9px;
-  letter-spacing: .08em;
+.postingUnscheduledBreakdown .chartTitle h3 {
+  font-size: 17px;
 }
-.postingKpiCard > .postingKpiTooltip > strong {
-  color: white;
-  font-size: 22px;
-  line-height: 1;
-}
-.postingKpiCard > .postingKpiTooltip > small {
-  color: rgba(255, 255, 255, .74);
-  font-size: 9px;
+.postingUnscheduledBreakdown .pieLayout {
+  gap: 14px;
 }
 .postingOverviewGrid {
   display: grid;
@@ -566,5 +540,8 @@
 @media (max-width: 460px) {
   .postingKpis {
     grid-template-columns: 1fr;
+  }
+  .postingUnscheduledBreakdown {
+    grid-column: auto;
   }
 }

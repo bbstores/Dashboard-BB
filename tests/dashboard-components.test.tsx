@@ -596,10 +596,17 @@ test("posting section shows source mix and counts multi-platform posts independe
   assert.ok(
     screen.getByText("Tình trạng đăng của task đã lên lịch"),
   );
-  assert.ok(screen.getByText("BẮT ĐẦU TỪ 01/07/2026"));
-  assert.match(
-    container.querySelector(".postingKpiTooltip")?.textContent ?? "",
-    /1 task.*0 video.*1 hình/,
+  assert.ok(screen.getByText("Ấn phẩm chưa lên lịch"));
+  assert.equal(container.querySelector(".postingKpiTooltip"), null);
+  assert.equal(
+    Array.from(
+      container.querySelectorAll<HTMLButtonElement>(
+        ".postingKpiCard",
+      ),
+    ).some((element) =>
+      element.textContent?.startsWith("Ấn phẩm cũ"),
+    ),
+    false,
   );
   assert.ok(screen.getByText("Chưa đăng"));
   assert.ok(
@@ -672,15 +679,11 @@ test("posting section shows source mix and counts multi-platform posts independe
     ["POST-1", "POST-3"],
   );
 
-  const unscheduledKpi = Array.from(
-    container.querySelectorAll<HTMLButtonElement>(
-      ".postingKpiCard",
-    ),
-  ).find((element) =>
-    element.textContent?.startsWith("Chưa lên lịch"),
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Lát biểu đồ Bắt đầu từ 01/07: 1 Task",
+    }),
   );
-  assert.ok(unscheduledKpi);
-  fireEvent.click(unscheduledKpi);
   assert.deepEqual(
     postingDetailState.current?.tasks?.map((item) => item.code),
     ["GRAPHIC-NOT-SCHEDULED"],

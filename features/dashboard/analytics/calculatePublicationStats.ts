@@ -211,6 +211,26 @@ export function calculatePublicationStats(
     const readyAt = publicationReadyDate(task);
     return Boolean(readyAt && readyAt < OLD_ASSET_CUTOFF);
   });
+  const recentUnscheduledSet = new Set(recentUnscheduledTasks);
+  const oldAssetSet = new Set(oldAssets);
+  const transitionUnscheduledTasks = unscheduledTasks.filter(
+    (task) => {
+      if (oldAssetSet.has(task) || recentUnscheduledSet.has(task)) {
+        return false;
+      }
+      const readyAt = publicationReadyDate(task);
+      return Boolean(readyAt && readyAt >= OLD_ASSET_CUTOFF);
+    },
+  );
+  const transitionUnscheduledSet = new Set(
+    transitionUnscheduledTasks,
+  );
+  const undatedUnscheduledTasks = unscheduledTasks.filter(
+    (task) =>
+      !oldAssetSet.has(task) &&
+      !recentUnscheduledSet.has(task) &&
+      !transitionUnscheduledSet.has(task),
+  );
   const postsByTaskCode = new Map<string, PublicationPost[]>();
   const postById = new Map(
     publications.map((post) => [normalize(post.id), post]),
@@ -319,6 +339,23 @@ export function calculatePublicationStats(
       recentUnscheduledTasks.filter(isVideoPublication),
     recentUnscheduledGraphicTasks:
       recentUnscheduledTasks.filter(isGraphicPublication),
+    transitionUnscheduledTasks,
+    undatedUnscheduledTasks,
+    unscheduledBreakdown: [
+      { label: "Ấn phẩm cũ", value: oldAssets.length },
+      {
+        label: "Bắt đầu từ 01/07",
+        value: recentUnscheduledTasks.length,
+      },
+      {
+        label: "Ấn phẩm chuyển tiếp",
+        value: transitionUnscheduledTasks.length,
+      },
+      {
+        label: "Chưa đủ mốc ngày",
+        value: undatedUnscheduledTasks.length,
+      },
+    ],
     scheduledPostedTasks,
     scheduledUnpostedTasks,
     assetStatusTasks,

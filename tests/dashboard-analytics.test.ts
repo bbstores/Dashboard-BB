@@ -578,6 +578,12 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
   );
   assert.equal(stats.recentUnscheduledVideoTasks.length, 0);
   assert.equal(stats.recentUnscheduledGraphicTasks.length, 1);
+  assert.deepEqual(stats.unscheduledBreakdown, [
+    { label: "Ấn phẩm cũ", value: 1 },
+    { label: "Bắt đầu từ 01/07", value: 1 },
+    { label: "Ấn phẩm chuyển tiếp", value: 0 },
+    { label: "Chưa đủ mốc ngày", value: 0 },
+  ]);
   assert.deepEqual(stats.assetScheduleMix, [
     { label: "Đã lên lịch", value: 3 },
     { label: "Chưa lên lịch", value: 1 },
@@ -635,6 +641,47 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
       { day: 10, total: 2, posted: 1 },
       { day: 11, total: 1, posted: 1 },
     ],
+  );
+});
+
+test("partitions every unscheduled asset into one exclusive age group", () => {
+  const stats = calculatePublicationStats(
+    [
+      task("OLD", {
+        publicationIds: [],
+        startDate: new Date(2026, 5, 20),
+        completedDate: new Date(2026, 5, 21),
+      }),
+      task("RECENT", {
+        publicationIds: [],
+        startDate: new Date(2026, 6, 2),
+      }),
+      task("TRANSITION", {
+        publicationIds: [],
+        startDate: new Date(2026, 5, 28),
+        completedDate: new Date(2026, 6, 2),
+      }),
+      task("UNDATED", {
+        publicationIds: [],
+        startDate: null,
+      }),
+    ],
+    [],
+    { from: null, to: null, hasFilter: false },
+  );
+
+  assert.deepEqual(stats.unscheduledBreakdown, [
+    { label: "Ấn phẩm cũ", value: 1 },
+    { label: "Bắt đầu từ 01/07", value: 1 },
+    { label: "Ấn phẩm chuyển tiếp", value: 1 },
+    { label: "Chưa đủ mốc ngày", value: 1 },
+  ]);
+  assert.equal(
+    stats.unscheduledBreakdown.reduce(
+      (sum, item) => sum + item.value,
+      0,
+    ),
+    stats.unscheduledTasks.length,
   );
 });
 
