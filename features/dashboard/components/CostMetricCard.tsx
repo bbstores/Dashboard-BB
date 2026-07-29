@@ -23,9 +23,9 @@ export function CostMetricCard({
             title: "Số tiền đã chi",
             purpose: "Quy đổi các phiếu chi đã thanh toán thành chi phí của từng task.",
             objective: "Theo dõi chi phí gắn với khối lượng task bắt đầu trong khoảng ngày đang lọc.",
-            calculation: "Chỉ lấy phiếu có Link Approval và trạng thái Đã Thanh Toán. Dashboard dùng Thành Tiền / Đơn vị có sẵn để chia tiếp cho task, đồng thời kiểm tra Tổng tiền = Thành Tiền / Đơn vị × số đơn vị.",
+            calculation: "Chỉ lấy phiếu có Link Approval và trạng thái Đã Thanh Toán. Dashboard dùng Thành Tiền / Đơn vị có sẵn để chia tiếp cho task. Đối soát kiểm tra: Tổng tiền bill = Tiền đã phân bổ + Tiền chưa phân bổ. PASS khi phần chênh lệch không vượt quá sai số làm tròn cho phép: 0,5 đồng × tổng số đơn vị; vượt ngưỡng này là FAIL.",
             example: "Bill khách sạn 10 triệu, 2 ca quay → mức kỳ vọng là 5 triệu/ca. Nếu mỗi ca có 15 task thì mỗi task nhận khoảng 333.333 đồng.",
-            note: "Dashboard không ghi đè số liệu Lark. Bill có Thành Tiền / Đơn vị khác mức kỳ vọng sẽ được đánh dấu lệch; task được đưa vào kỳ theo Ngày Bắt Đầu.",
+            note: "Dashboard không ghi đè số liệu Lark. Bill có Thành Tiền / Đơn vị khác mức kỳ vọng từ 0,5 đồng/đơn vị trở lên sẽ được đánh dấu lệch. Sai số nhỏ hơn mức này được xem là làm tròn tiền hợp lệ; task được đưa vào kỳ theo Ngày Bắt Đầu.",
           }}
         />
       </div>

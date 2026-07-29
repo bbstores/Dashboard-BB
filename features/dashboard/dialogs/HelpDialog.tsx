@@ -6,11 +6,7 @@ export function HelpDialog({ help, onClose }: { help: DashboardHelp; onClose: ()
   return (
     <div className="helpOverlay" role="presentation" onMouseDown={onClose}>
       <aside
-        className={`helpDialog ${
-          help.title === "Số tiền đã chi"
-            ? "costSimulatorHelpDialog"
-            : ""
-        }`}
+        className="helpDialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="dashboard-help-title"

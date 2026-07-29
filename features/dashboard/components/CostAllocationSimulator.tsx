@@ -109,6 +109,7 @@ function entityCount(rowsText: string) {
 
 export function CostAllocationSimulator() {
   const [bills, setBills] = useState<BillDraft[]>(DEFAULT_BILLS);
+  const [toolOpen, setToolOpen] = useState(false);
   const [result, setResult] =
     useState<CostSimulationResult | null>(null);
 
@@ -134,15 +135,48 @@ export function CostAllocationSimulator() {
   }
 
   return (
-    <section className="costSimulator">
-      <div className="costSimulatorHeading">
+    <>
+      <section className="costSimulatorLauncher">
         <div>
-          <span className="chartKicker">CÔNG CỤ KIỂM THỬ</span>
-          <h3>Giả lập phân bổ chi phí</h3>
+          <h3>Kiểm tra bằng dữ liệu giả lập</h3>
+          <p>4 bill mẫu cho BST, Ca Quay, Mã SP và Task.</p>
         </div>
-        <small>4 bill mẫu · dữ liệu chỉ tồn tại trong cửa sổ này.</small>
-      </div>
-      <div className="costSimulatorBills">
+        <button type="button" onClick={() => setToolOpen(true)}>
+          Mở công cụ giả lập
+        </button>
+      </section>
+
+      {toolOpen && (
+        <div
+          className="costSimulationOverlay"
+          role="presentation"
+          onMouseDown={() => setToolOpen(false)}
+        >
+          <aside
+            className="costSimulationDialog costSimulatorDialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Công cụ giả lập phân bổ chi phí"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <span className="chartKicker">CÔNG CỤ KIỂM THỬ</span>
+                <h3>Giả lập phân bổ chi phí</h3>
+                <small>
+                  4 bill mẫu · dữ liệu chỉ tồn tại trong cửa sổ này.
+                </small>
+              </div>
+              <button
+                type="button"
+                onClick={() => setToolOpen(false)}
+                aria-label="Đóng công cụ giả lập"
+              >
+                ×
+              </button>
+            </header>
+            <section className="costSimulator costSimulatorModalBody">
+              <div className="costSimulatorBills">
         {bills.map((bill, index) => (
           <fieldset className="costSimulatorBill" key={bill.classification}>
             <legend>
@@ -254,19 +288,24 @@ export function CostAllocationSimulator() {
             </div>
           </fieldset>
         ))}
-      </div>
-      <p className="costSimulationFootnote">
-        Kịch bản có task nhận tiền từ nhiều bill và một đơn vị
-        TSK-CHUA-LINK chưa có task để kiểm tra phần chưa phân bổ. Tổng tiền
-        mỗi bill được chia đều theo số đơn vị trước khi chia tiếp cho task.
-      </p>
-      <button
-        type="button"
-        className="costSimulatorSubmit"
-        onClick={runSimulation}
-      >
-        Xác nhận và xem bảng giả lập
-      </button>
+              </div>
+              <p className="costSimulationFootnote">
+                Kịch bản có task nhận tiền từ nhiều bill và một đơn vị
+                TSK-CHUA-LINK chưa có task để kiểm tra phần chưa phân bổ.
+                Tổng tiền mỗi bill được chia đều theo số đơn vị trước khi
+                chia tiếp cho task.
+              </p>
+              <button
+                type="button"
+                className="costSimulatorSubmit"
+                onClick={runSimulation}
+              >
+                Xác nhận và xem bảng giả lập
+              </button>
+            </section>
+          </aside>
+        </div>
+      )}
 
       {result && (
         <div
@@ -386,6 +425,6 @@ export function CostAllocationSimulator() {
           </aside>
         </div>
       )}
-    </section>
+    </>
   );
 }
