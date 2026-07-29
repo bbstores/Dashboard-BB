@@ -16,7 +16,7 @@
 
 .comparisonHero > div:first-child > span,
 .comparisonReportPicker header span,
-.comparisonCard header > span {
+.comparisonCard header > div > span {
   color: var(--lime);
   font-size: 10px;
   font-weight: 900;
@@ -168,6 +168,13 @@
   padding: 24px;
 }
 
+.comparisonCard > header {
+  align-items: flex-start;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+}
+
 .comparisonTrendCard,
 .comparisonHeatmapCard {
   grid-column: 1 / -1;
@@ -179,7 +186,7 @@
   margin: 7px 0 0;
 }
 
-.comparisonCard header > span,
+.comparisonCard header > div > span,
 .comparisonReportPicker header span {
   color: var(--green);
 }

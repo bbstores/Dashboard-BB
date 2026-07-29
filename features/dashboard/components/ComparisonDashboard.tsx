@@ -10,6 +10,7 @@ import {
 } from "../analytics/calculateReportComparison";
 import type {
   DashboardData,
+  DashboardHelp,
   ReportDepartment,
   SavedReport,
 } from "../model/types";
@@ -17,6 +18,7 @@ import {
   formatCurrency,
   formatNumber,
 } from "@/shared/formatting/format";
+import { HelpButton } from "./HelpButton";
 
 type ComparisonPoint = MediaComparisonPoint | BusinessComparisonPoint;
 type Series<T> = {
@@ -26,6 +28,149 @@ type Series<T> = {
 };
 
 const COLORS = ["#195b47", "#8fc33c", "#ccff58", "#f3b252", "#d96b5f"];
+
+const COMPARISON_HELP: Record<string, DashboardHelp> = {
+  "Cơ cấu task thực hiện": {
+    title: "Cơ cấu task thực hiện",
+    purpose: "So sánh nguồn hình thành tổng task của từng kỳ.",
+    objective: "Phân biệt tải mới với phần việc từ kỳ trước được bàn giao hoặc hoàn thành trong kỳ này.",
+    calculation: "Bắt đầu là task có Ngày Bắt Đầu trong kỳ. Carry-in bàn giao có Ngày Bắt Đầu trước kỳ và Ngày Kiểm Duyệt trong kỳ. Carry-in hoàn thành tương tự nhưng dùng Ngày Hoàn Thành.",
+    example: "Tuần A có 100 task bắt đầu và 20 carry-in bàn giao; tuần B có 80 và 45 cho thấy tải cũ đang dồn sang tuần B.",
+  },
+  "Tổng tải công việc": {
+    title: "Tổng tải công việc",
+    purpose: "So sánh tổng phút dự kiến được ghi nhận cho nhân sự ở mỗi kỳ.",
+    objective: "Nhận biết kỳ nào có tải nguồn lực cao nhất.",
+    calculation: "Cộng Số phút dự kiến theo từng assignee của task trong kỳ và carry-in bàn giao. Task có nhiều assignee được cộng đủ phút cho từng người như leaderboard.",
+    example: "Task 120 phút có An và Bình đóng góp 120 phút cho An và 120 phút cho Bình.",
+  },
+  "Phút dự kiến của nhân sự": {
+    title: "Phút dự kiến của nhân sự",
+    purpose: "Heatmap thể hiện tải của từng người qua các kỳ đã chọn.",
+    objective: "Phát hiện nhân sự tăng tải liên tục, giảm tải hoặc phân bổ không đều.",
+    calculation: "Mỗi ô là tổng phút của một assignee trong một báo cáo. Màu càng đậm nghĩa là phút càng cao so với ô lớn nhất đang hiển thị.",
+    example: "Nếu hàng của An đậm dần qua ba tuần, tải dự kiến của An đang tăng liên tục.",
+  },
+  "Tuân thủ SLA": {
+    title: "Tuân thủ SLA qua các kỳ",
+    purpose: "Theo dõi tỷ lệ bàn giao và hoàn thành đúng hạn.",
+    objective: "Đánh giá chất lượng tiến độ đang cải thiện hay suy giảm.",
+    calculation: "Bàn giao đúng hạn chia cho tổng task đã bàn giao đủ điều kiện KPI. Hoàn thành đúng hạn chia cho tổng task đã hoàn thành đủ điều kiện. Các nhóm không tính KPI không nằm trong mẫu số.",
+    example: "Tỷ lệ bàn giao từ 82% lên 91% cho thấy khả năng bàn giao đúng ngày được cải thiện.",
+  },
+  "Điểm cần chú ý": {
+    title: "Điểm cần chú ý",
+    purpose: "So sánh số lần task bị trả về và số task quá hạn bàn giao.",
+    objective: "Phát hiện kỳ có dấu hiệu giảm chất lượng hoặc tắc nghẽn.",
+    calculation: "Lần trả về được đếm từ sheet 2.9 trong kỳ. Quá hạn là task đã qua ngày bắt đầu nhưng chưa có Ngày Kiểm Duyệt tại ngày cuối kỳ.",
+    example: "Tổng task không đổi nhưng số lần trả về tăng mạnh là tín hiệu cần kiểm tra chất lượng đầu ra.",
+  },
+  "Mức độ trễ và kiểm duyệt": {
+    title: "Mức độ trễ và kiểm duyệt",
+    purpose: "So sánh trung vị và vùng chậm của thời gian xử lý.",
+    objective: "Nhìn thấy độ trễ thực tế thay vì chỉ nhìn tỷ lệ đúng hạn.",
+    calculation: "P50 là mốc 50% quan sát không vượt quá; P90 là mốc 90% không vượt quá. Thời gian Checking chỉ tính trong giờ làm việc cấu hình của dashboard.",
+    example: "Checking P50 là 480 phút nghĩa là một nửa task hoàn thành Checking trong tối đa 480 phút làm việc.",
+  },
+  "Sản lượng ấn phẩm": {
+    title: "Sản lượng ấn phẩm",
+    purpose: "So sánh số task thành phẩm Video và Graphic giữa các kỳ.",
+    objective: "Theo dõi cơ cấu và năng lực sản xuất ấn phẩm.",
+    calculation: "Video là task có Format Type chứa Video và Công đoạn Edit. Graphic là task không phải Video và Công đoạn Graphic Design. Quy tắc trừ outsource lấy theo bộ lọc đã lưu.",
+    example: "Tuần B tăng Video nhưng Graphic giảm cho thấy nguồn lực đang chuyển sang sản xuất video.",
+  },
+  "Chi phí đã phân bổ": {
+    title: "Chi phí đã phân bổ qua các kỳ",
+    purpose: "So sánh tổng chi phí gắn với task và chi phí trung bình mỗi task.",
+    objective: "Phân biệt tăng chi phí do sản lượng tăng hay do chi phí trên từng task tăng.",
+    calculation: "Tổng chi phí là phần tiền đã phân bổ cho task có Ngày Bắt Đầu trong kỳ. Chi phí/task bằng tổng này chia số task nhận chi phí.",
+    example: "Tổng chi phí tăng 20% nhưng chi phí/task không đổi thường phản ánh sản lượng tăng.",
+  },
+  "Backlog cuối kỳ": {
+    title: "Backlog cuối kỳ",
+    purpose: "So sánh task tồn và phần tồn lâu trên 7 ngày tại cuối mỗi kỳ.",
+    objective: "Nhận biết tồn kho công việc đang tích lũy và già hóa.",
+    calculation: "Dùng 23:59 ngày cuối báo cáo làm mốc. Không tính outsource, Training, Done, Archived và Pending/Cancel. Trên 7 ngày dựa trên khoảng cách từ Ngày Bắt Đầu đến mốc cuối kỳ.",
+    example: "Tổng tồn giảm nhưng nhóm trên 7 ngày tăng nghĩa là các task khó vẫn chưa được xử lý.",
+  },
+  "Tỷ lệ bài đã đăng": {
+    title: "Tỷ lệ bài đã đăng",
+    purpose: "So sánh tỷ lệ dòng lịch đăng đã hoàn tất giữa các kỳ.",
+    objective: "Theo dõi mức độ thực thi lịch nội dung.",
+    calculation: "Số dòng có Đã Đăng chia tổng dòng bài đăng trong khoảng Ngày Đăng của báo cáo.",
+    example: "95/100 dòng đã đăng tương ứng tỷ lệ 95%.",
+  },
+  "Bình quân bài/ngày": {
+    title: "Bình quân bài mỗi ngày",
+    purpose: "Chuẩn hóa sản lượng theo số ngày làm việc của từng kỳ.",
+    objective: "So sánh công bằng giữa tháng hoặc kỳ có số ngày làm việc khác nhau.",
+    calculation: "Tổng bài trong kỳ chia số ngày làm việc từ thứ Hai đến thứ Bảy, đã loại Chủ nhật và ngày nghỉ lễ Việt Nam.",
+    example: "120 bài trong 24 ngày làm việc tương ứng 5 bài/ngày.",
+  },
+  "Cơ cấu nguồn bài": {
+    title: "Cơ cấu nguồn bài",
+    purpose: "So sánh tỷ trọng Reup, Media Video, Media Hình ảnh và dữ liệu chưa xác định.",
+    objective: "Theo dõi chiến lược nội dung đang dựa vào tái sử dụng hay sản xuất mới.",
+    calculation: "Book Task trống là Reup; Book Task nối task Video + Edit là Video; nối task Graphic Design là Hình ảnh.",
+    example: "Tỷ trọng Reup tăng từ 20% lên 45% cho thấy lịch đăng đang dùng lại nội dung nhiều hơn.",
+  },
+  "Phễu điều phối ấn phẩm": {
+    title: "Phễu điều phối ấn phẩm",
+    purpose: "So sánh trạng thái lên lịch của task thành phẩm.",
+    objective: "Nhìn thấy lượng ấn phẩm sẵn sàng nhưng chưa được đưa vào lịch đăng.",
+    calculation: "Task thành phẩm có liên kết 2.7 Đăng Bài là Đã lên lịch; không có liên kết là Chưa lên lịch. Ấn phẩm cũ sẵn sàng trước mốc 01/07/2026.",
+    example: "Sản xuất 80 ấn phẩm nhưng chỉ 50 đã lên lịch nghĩa là còn 30 ấn phẩm cần điều phối.",
+  },
+  "Hiệu quả sử dụng media": {
+    title: "Hiệu quả sử dụng media",
+    purpose: "So sánh số task media gốc và số bài tạo ra trên mỗi task.",
+    objective: "Đánh giá mức độ tái sử dụng một ấn phẩm trên nhiều nền tảng.",
+    calculation: "Task media gốc là số Book Task Video/Hình ảnh duy nhất. Bài/task bằng tổng bài dùng media chia số task media gốc.",
+    example: "20 task tạo 40 bài tương ứng trung bình 2 bài trên mỗi task.",
+  },
+  "Dữ liệu cần kiểm tra": {
+    title: "Dữ liệu cần kiểm tra",
+    purpose: "So sánh số dòng đăng bài không tuân theo quy tắc liên kết.",
+    objective: "Theo dõi chất lượng dữ liệu vận hành qua từng kỳ.",
+    calculation: "Gồm Book Task không tìm thấy hoặc không phải thành phẩm cuối và dòng liên kết tới task có Nền Tảng = Không Đăng Social.",
+    example: "Số lỗi giảm từ 12 xuống 3 cho thấy quy trình nhập Book Task đã tốt hơn.",
+  },
+  "Bài đăng theo nền tảng": {
+    title: "Bài đăng theo nền tảng qua các kỳ",
+    purpose: "So sánh cơ cấu phân phối nội dung trên các nền tảng.",
+    objective: "Nhìn thấy kênh nào đang tăng hoặc giảm khối lượng đăng.",
+    calculation: "Mỗi dòng 2.7 Đăng Bài đóng góp một bài cho nền tảng của dòng đó. Chart hiển thị năm nền tảng có tổng lớn nhất trong các kỳ đang chọn.",
+    example: "TikTok tăng liên tục trong khi Facebook giữ nguyên cho thấy trọng tâm phân phối đang dịch chuyển.",
+  },
+};
+
+function comparisonHelp(title: string): DashboardHelp {
+  if (title.startsWith("Luồng task")) {
+    return {
+      title: "Luồng task qua các kỳ",
+      purpose: "So sánh lượng task đi vào, được bàn giao và còn tồn tại cuối từng kỳ.",
+      objective: "Phát hiện tốc độ xử lý có theo kịp tốc độ nhận việc hay không.",
+      calculation: "Task trong kỳ dùng Ngày Bắt Đầu; bàn giao carry-in dùng Ngày Kiểm Duyệt của task bắt đầu trước kỳ; tồn dùng 23:59 ngày cuối kỳ và không tính outsource.",
+      example: "Nếu task vào giữ nguyên nhưng đường tồn tăng qua ba tuần, nhóm đang tích lũy backlog.",
+    };
+  }
+  if (title.startsWith("Sản lượng đăng bài")) {
+    return {
+      title: "Sản lượng đăng bài qua các kỳ",
+      purpose: "So sánh tổng dòng bài đăng và số dòng đã đăng.",
+      objective: "Theo dõi khối lượng lịch nội dung và mức hoàn thành qua thời gian.",
+      calculation: "Lọc sheet 2.7 theo Ngày Đăng của từng báo cáo. Mỗi dòng/nền tảng là một bài; Đã đăng dựa trên cột Đã Đăng.",
+      example: "Tuần A có 70 bài và 65 đã đăng; tuần B có 90 bài nhưng chỉ 60 đã đăng, cho thấy lịch tăng nhưng tỷ lệ thực thi giảm.",
+    };
+  }
+  return COMPARISON_HELP[title] ?? {
+    title,
+    purpose: "So sánh chỉ số giữa các báo cáo đã chọn.",
+    objective: "Theo dõi xu hướng thay đổi qua các kỳ.",
+    calculation: "Mỗi điểm hoặc hàng là kết quả tính lại từ bộ lọc ngày của một báo cáo đã lưu.",
+    example: "Đọc các kỳ từ trái sang phải theo thứ tự thời gian.",
+  };
+}
 
 function formatPercent(value: number) {
   return `${new Intl.NumberFormat("vi-VN", {
@@ -53,8 +198,11 @@ function ComparisonBars<T extends ComparisonPoint>({
   return (
     <article className="comparisonCard">
       <header>
-        <span>{subtitle}</span>
-        <h3>{title}</h3>
+        <div>
+          <span>{subtitle}</span>
+          <h3>{title}</h3>
+        </div>
+        <HelpButton help={comparisonHelp(title)} />
       </header>
       <div className="comparisonLegend">
         {series.map((item) => (
@@ -108,8 +256,11 @@ function ComparisonStack<T extends ComparisonPoint>({
   return (
     <article className="comparisonCard">
       <header>
-        <span>{subtitle}</span>
-        <h3>{title}</h3>
+        <div>
+          <span>{subtitle}</span>
+          <h3>{title}</h3>
+        </div>
+        <HelpButton help={comparisonHelp(title)} />
       </header>
       <div className="comparisonLegend">
         {series.map((item) => (
@@ -193,8 +344,11 @@ function ComparisonTrend<T extends ComparisonPoint>({
   return (
     <article className="comparisonCard comparisonTrendCard">
       <header>
-        <span>{subtitle}</span>
-        <h3>{title}</h3>
+        <div>
+          <span>{subtitle}</span>
+          <h3>{title}</h3>
+        </div>
+        <HelpButton help={comparisonHelp(title)} />
       </header>
       <div className="comparisonLegend">
         {series.map((item) => (
@@ -300,8 +454,11 @@ function StaffHeatmap({ points }: { points: MediaComparisonPoint[] }) {
   return (
     <article className="comparisonCard comparisonHeatmapCard">
       <header>
-        <span>TẢI CÔNG VIỆC THEO ASSIGNEE</span>
-        <h3>Phút dự kiến của nhân sự</h3>
+        <div>
+          <span>TẢI CÔNG VIỆC THEO ASSIGNEE</span>
+          <h3>Phút dự kiến của nhân sự</h3>
+        </div>
+        <HelpButton help={comparisonHelp("Phút dự kiến của nhân sự")} />
       </header>
       <div
         className="comparisonHeatmap"
