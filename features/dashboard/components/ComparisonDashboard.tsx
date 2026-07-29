@@ -8,9 +8,14 @@ import {
   type ComparisonPeriod,
   type MediaComparisonPoint,
 } from "../analytics/calculateReportComparison";
+import {
+  buildComparisonDetail,
+  type ComparisonEvidenceSelection,
+} from "../analytics/buildComparisonDetail";
 import type {
   DashboardData,
   DashboardHelp,
+  DetailView,
   ReportDepartment,
   SavedReport,
 } from "../model/types";
@@ -22,10 +27,16 @@ import { HelpButton } from "./HelpButton";
 
 type ComparisonPoint = MediaComparisonPoint | BusinessComparisonPoint;
 type Series<T> = {
+  key: string;
   label: string;
   color: string;
   value: (point: T) => number;
 };
+type ComparisonSelect<T extends ComparisonPoint> = (
+  selection: Omit<ComparisonEvidenceSelection, "point"> & {
+    point: T;
+  },
+) => void;
 
 const COLORS = ["#195b47", "#8fc33c", "#ccff58", "#f3b252", "#d96b5f"];
 
@@ -184,12 +195,14 @@ function ComparisonBars<T extends ComparisonPoint>({
   points,
   series,
   format = formatNumber,
+  onSelect,
 }: {
   title: string;
   subtitle: string;
   points: T[];
   series: Series<T>[];
   format?: (value: number) => string;
+  onSelect: ComparisonSelect<T>;
 }) {
   const max = Math.max(
     1,
@@ -223,7 +236,22 @@ function ComparisonBars<T extends ComparisonPoint>({
               {series.map((item) => {
                 const value = item.value(point);
                 return (
-                  <div className="comparisonBarTrack" key={item.label}>
+                  <button
+                    type="button"
+                    className="comparisonBarTrack interactive"
+                    key={item.label}
+                    aria-label={`${point.name} · ${item.label}: ${format(value)} · Xem dẫn chứng`}
+                    onClick={() =>
+                      onSelect({
+                        chartTitle: title,
+                        formattedValue: format(value),
+                        key: item.key,
+                        point,
+                        seriesLabel: item.label,
+                        value,
+                      })
+                    }
+                  >
                     <span
                       style={{
                         background: item.color,
@@ -231,7 +259,7 @@ function ComparisonBars<T extends ComparisonPoint>({
                       }}
                     />
                     <b>{format(value)}</b>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -247,11 +275,13 @@ function ComparisonStack<T extends ComparisonPoint>({
   subtitle,
   points,
   series,
+  onSelect,
 }: {
   title: string;
   subtitle: string;
   points: T[];
   series: Series<T>[];
+  onSelect: ComparisonSelect<T>;
 }) {
   return (
     <article className="comparisonCard">
@@ -283,9 +313,21 @@ function ComparisonStack<T extends ComparisonPoint>({
               <div>
                 <div className="comparisonStackTrack">
                   {series.map((item, index) => (
-                    <span
+                    <button
+                      type="button"
                       key={item.label}
                       title={`${item.label}: ${formatNumber(values[index])}`}
+                      aria-label={`${point.name} · ${item.label}: ${formatNumber(values[index])} · Xem dẫn chứng`}
+                      onClick={() =>
+                        onSelect({
+                          chartTitle: title,
+                          formattedValue: formatNumber(values[index]),
+                          key: item.key,
+                          point,
+                          seriesLabel: item.label,
+                          value: values[index],
+                        })
+                      }
                       style={{
                         background: item.color,
                         width: `${total ? (values[index] / total) * 100 : 0}%`,
@@ -316,12 +358,14 @@ function ComparisonTrend<T extends ComparisonPoint>({
   points,
   series,
   format = formatNumber,
+  onSelect,
 }: {
   title: string;
   subtitle: string;
   points: T[];
   series: Series<T>[];
   format?: (value: number) => string;
+  onSelect: ComparisonSelect<T>;
 }) {
   const width = 920;
   const height = 280;
@@ -407,7 +451,39 @@ function ComparisonTrend<T extends ComparisonPoint>({
                     Math.min(height - bottom + 18, y(value) + labelOffset),
                   );
                   return (
-                    <g key={point.id}>
+                    <g
+                      className="comparisonTrendPoint interactive"
+                      key={point.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${point.name} · ${item.label}: ${format(value)} · Xem dẫn chứng`}
+                      onClick={() =>
+                        onSelect({
+                          chartTitle: title,
+                          formattedValue: format(value),
+                          key: item.key,
+                          point,
+                          seriesLabel: item.label,
+                          value,
+                        })
+                      }
+                      onKeyDown={(event) => {
+                        if (
+                          event.key === "Enter" ||
+                          event.key === " "
+                        ) {
+                          event.preventDefault();
+                          onSelect({
+                            chartTitle: title,
+                            formattedValue: format(value),
+                            key: item.key,
+                            point,
+                            seriesLabel: item.label,
+                            value,
+                          });
+                        }
+                      }}
+                    >
                       <circle
                         cx={x(index)}
                         cy={y(value)}
@@ -449,7 +525,13 @@ function ComparisonTrend<T extends ComparisonPoint>({
   );
 }
 
-function StaffHeatmap({ points }: { points: MediaComparisonPoint[] }) {
+function StaffHeatmap({
+  points,
+  onSelect,
+}: {
+  points: MediaComparisonPoint[];
+  onSelect: ComparisonSelect<MediaComparisonPoint>;
+}) {
   const people = Array.from(
     new Set(points.flatMap((point) => Object.keys(point.assigneeMinutes))),
   )
@@ -496,8 +578,38 @@ function StaffHeatmap({ points }: { points: MediaComparisonPoint[] }) {
               return (
                 <span
                   key={point.id}
+                  className="interactive"
+                  role="button"
+                  tabIndex={0}
                   style={{ background: `rgba(25, 91, 71, ${opacity})` }}
                   title={`${person.name} · ${point.name}: ${formatNumber(value)} phút`}
+                  aria-label={`${person.name} · ${point.name}: ${formatNumber(value)} phút · Xem dẫn chứng`}
+                  onClick={() =>
+                    onSelect({
+                      chartTitle: "Phút dự kiến của nhân sự",
+                      formattedValue: `${formatNumber(value)} phút`,
+                      key: `assignee:${person.name}`,
+                      point,
+                      seriesLabel: person.name,
+                      value,
+                    })
+                  }
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" ||
+                      event.key === " "
+                    ) {
+                      event.preventDefault();
+                      onSelect({
+                        chartTitle: "Phút dự kiến của nhân sự",
+                        formattedValue: `${formatNumber(value)} phút`,
+                        key: `assignee:${person.name}`,
+                        point,
+                        seriesLabel: person.name,
+                        value,
+                      });
+                    }
+                  }}
                 >
                   {formatNumber(value)}
                 </span>
@@ -513,9 +625,11 @@ function StaffHeatmap({ points }: { points: MediaComparisonPoint[] }) {
 function MediaCharts({
   points,
   period,
+  onSelect,
 }: {
   points: MediaComparisonPoint[];
   period: ComparisonPeriod;
+  onSelect: ComparisonSelect<MediaComparisonPoint>;
 }) {
   const unit = period === "week" ? "TUẦN" : "THÁNG";
   return (
@@ -524,59 +638,65 @@ function MediaCharts({
         title={`Luồng task qua từng ${period === "week" ? "tuần" : "tháng"}`}
         subtitle={`KHỐI LƯỢNG MEDIA THEO ${unit}`}
         points={points}
+        onSelect={onSelect}
         series={[
-          { label: "Task trong kỳ", color: COLORS[0], value: (p) => p.started },
-          { label: "Bàn giao carry-in", color: COLORS[1], value: (p) => p.inspectionCarry },
-          { label: "Tồn cuối kỳ", color: COLORS[3], value: (p) => p.backlog },
+          { key: "started", label: "Task trong kỳ", color: COLORS[0], value: (p) => p.started },
+          { key: "inspectionCarry", label: "Bàn giao carry-in", color: COLORS[1], value: (p) => p.inspectionCarry },
+          { key: "backlog", label: "Tồn cuối kỳ", color: COLORS[3], value: (p) => p.backlog },
         ]}
       />
       <ComparisonBars
         title="Cơ cấu task thực hiện"
         subtitle="TASK TRONG KỲ VÀ HAI LOẠI CARRY-IN"
         points={points}
+        onSelect={onSelect}
         series={[
-          { label: "Bắt đầu", color: COLORS[0], value: (p) => p.started },
-          { label: "Carry-in bàn giao", color: COLORS[1], value: (p) => p.inspectionCarry },
-          { label: "Carry-in hoàn thành", color: COLORS[2], value: (p) => p.completionCarry },
+          { key: "started", label: "Bắt đầu", color: COLORS[0], value: (p) => p.started },
+          { key: "inspectionCarry", label: "Carry-in bàn giao", color: COLORS[1], value: (p) => p.inspectionCarry },
+          { key: "completionCarry", label: "Carry-in hoàn thành", color: COLORS[2], value: (p) => p.completionCarry },
         ]}
       />
       <ComparisonBars
         title="Tổng tải công việc"
         subtitle="PHÚT DỰ KIẾN ĐÃ CỘNG THEO ASSIGNEE"
         points={points}
+        onSelect={onSelect}
         series={[
-          { label: "Tổng phút", color: COLORS[0], value: (p) => p.totalMinutes },
+          { key: "totalMinutes", label: "Tổng phút", color: COLORS[0], value: (p) => p.totalMinutes },
         ]}
         format={(value) => `${formatNumber(value)} phút`}
       />
-      <StaffHeatmap points={points} />
+      <StaffHeatmap points={points} onSelect={onSelect} />
       <ComparisonTrend
         title="Tuân thủ SLA"
         subtitle="TỶ LỆ ĐÚNG HẠN"
         points={points}
+        onSelect={onSelect}
         format={formatPercent}
         series={[
-          { label: "Bàn giao", color: COLORS[0], value: (p) => p.handoffOnTimeRate },
-          { label: "Hoàn thành", color: COLORS[1], value: (p) => p.overallOnTimeRate },
+          { key: "handoffOnTimeRate", label: "Bàn giao", color: COLORS[0], value: (p) => p.handoffOnTimeRate },
+          { key: "overallOnTimeRate", label: "Hoàn thành", color: COLORS[1], value: (p) => p.overallOnTimeRate },
         ]}
       />
       <ComparisonBars
         title="Điểm cần chú ý"
         subtitle="LẦN TRẢ VỀ VÀ TASK QUÁ HẠN BÀN GIAO"
         points={points}
+        onSelect={onSelect}
         series={[
-          { label: "Lần trả về", color: COLORS[3], value: (p) => p.feedback },
-          { label: "Quá hạn", color: COLORS[4], value: (p) => p.overdue },
+          { key: "feedback", label: "Lần trả về", color: COLORS[3], value: (p) => p.feedback },
+          { key: "overdue", label: "Quá hạn", color: COLORS[4], value: (p) => p.overdue },
         ]}
       />
       <ComparisonBars
         title="Mức độ trễ và kiểm duyệt"
         subtitle="P50 / P90 THEO PHÚT"
         points={points}
+        onSelect={onSelect}
         series={[
-          { label: "Trễ bàn giao P50", color: COLORS[3], value: (p) => p.handoffLateP50 },
-          { label: "Checking P50", color: COLORS[0], value: (p) => p.checkingP50 },
-          { label: "Checking P90", color: COLORS[4], value: (p) => p.checkingP90 },
+          { key: "handoffLateP50", label: "Trễ bàn giao P50", color: COLORS[3], value: (p) => p.handoffLateP50 },
+          { key: "checkingP50", label: "Checking P50", color: COLORS[0], value: (p) => p.checkingP50 },
+          { key: "checkingP90", label: "Checking P90", color: COLORS[4], value: (p) => p.checkingP90 },
         ]}
         format={(value) => `${formatNumber(value)} phút`}
       />
@@ -584,18 +704,20 @@ function MediaCharts({
         title="Sản lượng ấn phẩm"
         subtitle="VIDEO VÀ GRAPHIC"
         points={points}
+        onSelect={onSelect}
         series={[
-          { label: "Video", color: COLORS[0], value: (p) => p.video },
-          { label: "Graphic", color: COLORS[2], value: (p) => p.graphic },
+          { key: "video", label: "Video", color: COLORS[0], value: (p) => p.video },
+          { key: "graphic", label: "Graphic", color: COLORS[2], value: (p) => p.graphic },
         ]}
       />
       <ComparisonBars
         title="Chi phí đã phân bổ"
         subtitle="TỔNG CHI PHÍ VÀ CHI PHÍ / TASK"
         points={points}
+        onSelect={onSelect}
         series={[
-          { label: "Tổng chi phí", color: COLORS[0], value: (p) => p.cost },
-          { label: "Chi phí / task", color: COLORS[3], value: (p) => p.costPerTask },
+          { key: "cost", label: "Tổng chi phí", color: COLORS[0], value: (p) => p.cost },
+          { key: "costPerTask", label: "Chi phí / task", color: COLORS[3], value: (p) => p.costPerTask },
         ]}
         format={formatCurrency}
       />
@@ -603,9 +725,10 @@ function MediaCharts({
         title="Backlog cuối kỳ"
         subtitle="TỔNG TỒN VÀ TASK TRÊN 7 NGÀY"
         points={points}
+        onSelect={onSelect}
         series={[
-          { label: "Tổng tồn", color: COLORS[0], value: (p) => p.backlog },
-          { label: "Trên 7 ngày", color: COLORS[4], value: (p) => p.backlogOverSevenDays },
+          { key: "backlog", label: "Tổng tồn", color: COLORS[0], value: (p) => p.backlog },
+          { key: "backlogOverSevenDays", label: "Trên 7 ngày", color: COLORS[4], value: (p) => p.backlogOverSevenDays },
         ]}
       />
     </section>
@@ -615,9 +738,11 @@ function MediaCharts({
 function BusinessCharts({
   points,
   period,
+  onSelect,
 }: {
   points: BusinessComparisonPoint[];
   period: ComparisonPeriod;
+  onSelect: ComparisonSelect<BusinessComparisonPoint>;
 }) {
   return (
     <section className="comparisonCharts">
@@ -625,17 +750,19 @@ function BusinessCharts({
         title={`Sản lượng đăng bài theo ${period === "week" ? "tuần" : "tháng"}`}
         subtitle="TỔNG BÀI VÀ BÀI ĐÃ ĐĂNG"
         points={points}
+        onSelect={onSelect}
         series={[
-          { label: "Tổng bài", color: COLORS[0], value: (p) => p.total },
-          { label: "Đã đăng", color: COLORS[1], value: (p) => p.posted },
+          { key: "totalPosts", label: "Tổng bài", color: COLORS[0], value: (p) => p.total },
+          { key: "posted", label: "Đã đăng", color: COLORS[1], value: (p) => p.posted },
         ]}
       />
       <ComparisonBars
         title="Tỷ lệ bài đã đăng"
         subtitle="TỶ LỆ HOÀN THÀNH LỊCH ĐĂNG"
         points={points}
+        onSelect={onSelect}
         series={[
-          { label: "Tỷ lệ đã đăng", color: COLORS[0], value: (p) => p.postedRate },
+          { key: "postedRate", label: "Tỷ lệ đã đăng", color: COLORS[0], value: (p) => p.postedRate },
         ]}
         format={formatPercent}
       />
@@ -643,8 +770,9 @@ function BusinessCharts({
         title="Bình quân bài/ngày"
         subtitle="CHUẨN HÓA THEO NGÀY LÀM VIỆC"
         points={points}
+        onSelect={onSelect}
         series={[
-          { label: "Bài / ngày", color: COLORS[1], value: (p) => p.perDay },
+          { key: "perDay", label: "Bài / ngày", color: COLORS[1], value: (p) => p.perDay },
         ]}
         format={(value) =>
           new Intl.NumberFormat("vi-VN", {
@@ -656,30 +784,33 @@ function BusinessCharts({
         title="Cơ cấu nguồn bài"
         subtitle="REUP VÀ ẤN PHẨM MEDIA"
         points={points}
+        onSelect={onSelect}
         series={[
-          { label: "Reup", color: COLORS[3], value: (p) => p.reup },
-          { label: "Video", color: COLORS[0], value: (p) => p.video },
-          { label: "Hình ảnh", color: COLORS[2], value: (p) => p.graphic },
-          { label: "Chưa xác định", color: COLORS[4], value: (p) => p.unknown },
+          { key: "reup", label: "Reup", color: COLORS[3], value: (p) => p.reup },
+          { key: "video", label: "Video", color: COLORS[0], value: (p) => p.video },
+          { key: "graphic", label: "Hình ảnh", color: COLORS[2], value: (p) => p.graphic },
+          { key: "unknown", label: "Chưa xác định", color: COLORS[4], value: (p) => p.unknown },
         ]}
       />
       <ComparisonStack
         title="Phễu điều phối ấn phẩm"
         subtitle="ĐÃ LÊN LỊCH VÀ CHƯA LÊN LỊCH"
         points={points}
+        onSelect={onSelect}
         series={[
-          { label: "Đã lên lịch", color: COLORS[0], value: (p) => p.scheduled },
-          { label: "Chưa lên lịch", color: COLORS[2], value: (p) => p.unscheduled },
-          { label: "Ấn phẩm cũ", color: COLORS[4], value: (p) => p.oldAssets },
+          { key: "scheduled", label: "Đã lên lịch", color: COLORS[0], value: (p) => p.scheduled },
+          { key: "unscheduled", label: "Chưa lên lịch", color: COLORS[2], value: (p) => p.unscheduled },
+          { key: "oldAssets", label: "Ấn phẩm cũ", color: COLORS[4], value: (p) => p.oldAssets },
         ]}
       />
       <ComparisonBars
         title="Hiệu quả sử dụng media"
         subtitle="TASK MEDIA GỐC VÀ BÀI / TASK"
         points={points}
+        onSelect={onSelect}
         series={[
-          { label: "Task media gốc", color: COLORS[0], value: (p) => p.uniqueMediaTasks },
-          { label: "Bài / task", color: COLORS[1], value: (p) => p.postsPerMediaTask },
+          { key: "uniqueMediaTasks", label: "Task media gốc", color: COLORS[0], value: (p) => p.uniqueMediaTasks },
+          { key: "postsPerMediaTask", label: "Bài / task", color: COLORS[1], value: (p) => p.postsPerMediaTask },
         ]}
         format={(value) =>
           new Intl.NumberFormat("vi-VN", {
@@ -691,16 +822,23 @@ function BusinessCharts({
         title="Dữ liệu cần kiểm tra"
         subtitle="BOOK TASK VÀ KHÔNG ĐĂNG SOCIAL"
         points={points}
+        onSelect={onSelect}
         series={[
-          { label: "Số dòng lỗi", color: COLORS[4], value: (p) => p.dataIssues },
+          { key: "dataIssues", label: "Số dòng lỗi", color: COLORS[4], value: (p) => p.dataIssues },
         ]}
       />
-      <PlatformComparison points={points} />
+      <PlatformComparison points={points} onSelect={onSelect} />
     </section>
   );
 }
 
-function PlatformComparison({ points }: { points: BusinessComparisonPoint[] }) {
+function PlatformComparison({
+  points,
+  onSelect,
+}: {
+  points: BusinessComparisonPoint[];
+  onSelect: ComparisonSelect<BusinessComparisonPoint>;
+}) {
   const platforms = Array.from(
     new Set(points.flatMap((point) => Object.keys(point.platforms))),
   )
@@ -718,7 +856,9 @@ function PlatformComparison({ points }: { points: BusinessComparisonPoint[] }) {
       title="Bài đăng theo nền tảng"
       subtitle="TOP 5 NỀN TẢNG TRONG CÁC KỲ ĐÃ CHỌN"
       points={points}
+      onSelect={onSelect}
       series={platforms.map((platform, index) => ({
+        key: `platform:${platform.label}`,
         label: platform.label,
         color: COLORS[index % COLORS.length],
         value: (point) => point.platforms[platform.label] ?? 0,
@@ -730,9 +870,11 @@ function PlatformComparison({ points }: { points: BusinessComparisonPoint[] }) {
 export function ComparisonDashboard({
   data,
   reports,
+  onOpenDetail,
 }: {
   data: DashboardData;
   reports: SavedReport[];
+  onOpenDetail: (detail: DetailView) => void;
 }) {
   const [department, setDepartment] =
     useState<ReportDepartment>("media");
@@ -767,6 +909,22 @@ export function ComparisonDashboard({
       ),
     [data, department, period, selectedReports],
   );
+  function openComparisonDetail(
+    selection: ComparisonEvidenceSelection,
+  ) {
+    const report = selectedReports.find(
+      (item) => item.id === selection.point.id,
+    );
+    if (!report) return;
+    onOpenDetail(
+      buildComparisonDetail(
+        data,
+        report,
+        department,
+        selection,
+      ),
+    );
+  }
 
   return (
     <section className="comparisonDashboard">
@@ -873,11 +1031,13 @@ export function ComparisonDashboard({
           <MediaCharts
             points={points as MediaComparisonPoint[]}
             period={period}
+            onSelect={openComparisonDetail}
           />
         ) : (
           <BusinessCharts
             points={points as BusinessComparisonPoint[]}
             period={period}
+            onSelect={openComparisonDetail}
           />
         )
       ) : available.length ? (

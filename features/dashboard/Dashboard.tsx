@@ -108,6 +108,7 @@ export function Dashboard() {
           <ComparisonDashboard
             data={workbook.data}
             reports={reports.savedReports}
+            onOpenDetail={dialogs.setDetail}
           />
         ) : (
           <>
