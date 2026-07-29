@@ -245,6 +245,47 @@ test("calculates the daily chart as a pure function", () => {
   assert.equal(monthlyChart.rows[30].date.getDate(), 31);
 });
 
+test("daily chart excludes outsource from assignees and every metric", () => {
+  const data: DashboardData = {
+    fileName: "daily-outsource.xlsx",
+    publications: [],
+    feedback: [],
+    norms: [],
+    tasks: [
+      task("INTERNAL", {
+        assignee: "An",
+        startDate: date(10),
+        inspectionDate: date(10, 16),
+        status: "Done",
+      }),
+      task("OUTSOURCE", {
+        assignee: "Agency only",
+        startDate: date(10),
+        inspectionDate: date(10, 15),
+        status: "Done",
+        outsource: "Agency",
+      }),
+    ],
+  };
+  const chart = calculateDailyTaskChart(data, "", {
+    from: date(10),
+    to: date(10, 23),
+    hasFilter: true,
+  });
+
+  assert.deepEqual(chart.assignees, ["An"]);
+  assert.deepEqual(
+    chart.rows[0].assignedTasks.map((item) => item.code),
+    ["INTERNAL"],
+  );
+  assert.deepEqual(
+    chart.rows[0].handedSameDayTasks.map((item) => item.code),
+    ["INTERNAL"],
+  );
+  assert.equal(chart.rows[0].handedBacklogTasks.length, 0);
+  assert.equal(chart.rows[0].backlogTasks.length, 0);
+});
+
 test("separates backlog rules from invalid Done chronology", () => {
   const cutoff = new Date(2026, 6, 20);
   const data: DashboardData = {

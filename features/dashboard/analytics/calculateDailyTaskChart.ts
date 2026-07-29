@@ -5,6 +5,7 @@ import {
 } from "@/shared/date/dateUtils";
 import {
   assigneeNames,
+  normalizedKey,
 } from "../model/taskUtils";
 import type {
   DashboardData,
@@ -18,14 +19,19 @@ export function calculateDailyTaskChart(
   dailyAssignee: string,
   dateWindow: DateWindow,
 ) {
+  const internalTasks = data.tasks.filter(
+    (task) => !normalizedKey(task.outsource),
+  );
   const assignees = Array.from(
-    new Set(data.tasks.flatMap((task) => assigneeNames(task.assignee))),
+    new Set(
+      internalTasks.flatMap((task) => assigneeNames(task.assignee)),
+    ),
   ).sort((a, b) => a.localeCompare(b, "vi"));
   const tasks = dailyAssignee
-    ? data.tasks.filter((task) =>
+    ? internalTasks.filter((task) =>
         assigneeNames(task.assignee).includes(dailyAssignee),
       )
-    : data.tasks;
+    : internalTasks;
   const relevantDates = tasks
     .flatMap((task) => [task.startDate, task.inspectionDate])
     .filter((value): value is Date => Boolean(value));
