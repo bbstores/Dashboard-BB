@@ -62,6 +62,401 @@
   color: #bdcec7;
   font-size: 9px;
 }
+.capacityFlowIntro,
+.capacityWorkloadIntro {
+  align-items: end;
+  display: flex;
+  gap: 28px;
+  justify-content: space-between;
+  margin-top: 30px;
+}
+.capacityFlowIntro h3,
+.capacityWorkloadIntro h3 {
+  font-size: 22px;
+  letter-spacing: -.035em;
+  margin: 5px 0 0;
+}
+.capacityFlowIntro p,
+.capacityWorkloadIntro p {
+  color: #b9cac3;
+  font-size: 9px;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 450px;
+}
+.capacityFlowGrid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 15px;
+}
+.capacityFlowCard {
+  background: rgba(7, 38, 29, .26);
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 22px;
+  min-width: 0;
+  padding: 20px;
+  position: relative;
+}
+.capacityFlowCard.sessions {
+  border-color: rgba(174, 225, 210, .55);
+}
+.capacityFlowCard.outputs {
+  border-color: rgba(217, 255, 114, .58);
+}
+.capacityFlowCard:not(:last-child)::after {
+  align-items: center;
+  background: #d9ff72;
+  border: 4px solid #174f3d;
+  border-radius: 50%;
+  color: #174f3d;
+  content: "→";
+  display: flex;
+  font-size: 13px;
+  font-weight: 900;
+  height: 27px;
+  justify-content: center;
+  position: absolute;
+  right: -21px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 27px;
+  z-index: 2;
+}
+.capacityFlowBody {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: block;
+  margin-top: 22px;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+.capacityFlowPrimary {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 9px;
+}
+.capacityFlowPrimary > strong {
+  font-size: clamp(42px, 4vw, 64px);
+  letter-spacing: -.065em;
+  line-height: .9;
+}
+.capacityFlowPrimary > span {
+  color: #d7e3df;
+  font-size: 11px;
+  font-weight: 800;
+}
+.capacityFlowPrimary .capacityBandStatus {
+  font-style: normal;
+  margin-left: auto;
+}
+.capacityFlowP50 {
+  color: #d9ff72;
+  font-size: 9px;
+  font-weight: 850;
+  margin: 11px 0 0;
+}
+.capacityForecast {
+  align-items: baseline;
+  background: rgba(217, 255, 114, .1);
+  border-left: 3px solid #d9ff72;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  justify-content: space-between;
+  margin-top: 13px;
+  padding: 9px 10px;
+}
+.capacityForecast span {
+  color: #b9cac3;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+.capacityForecast strong {
+  color: #d9ff72;
+  font-size: 10px;
+}
+.capacityQuantityBand {
+  align-items: center;
+  background: rgba(255, 255, 255, .07);
+  border-radius: 10px;
+  color: #aebfb8;
+  display: flex;
+  font-size: 8px;
+  gap: 6px;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 9px 10px;
+}
+.capacityQuantityBand strong {
+  color: #fff;
+  font-size: 9px;
+}
+.capacityFlowBreakdown {
+  border-top: 1px solid rgba(255, 255, 255, .12);
+  display: grid;
+  gap: 8px;
+  margin-top: 15px;
+  padding-top: 14px;
+}
+.capacityFlowBreakdown span {
+  align-items: baseline;
+  color: #b9cac3;
+  display: flex;
+  font-size: 9px;
+  gap: 7px;
+}
+.capacityFlowBreakdown b {
+  color: #fff;
+  font-size: 14px;
+}
+.capacityEvidenceHint {
+  color: #d9ff72;
+  display: block;
+  font-size: 8px;
+  margin-top: 15px;
+}
+.capacityBaselineEvidence {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, .12);
+  color: #aee1d2;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 850;
+  margin-top: 14px;
+  padding: 11px 0 0;
+  text-align: left;
+  width: 100%;
+}
+.capacityBaselineEvidence:hover {
+  color: #d9ff72;
+}
+.capacityTypeBaselineCard {
+  background: rgba(255, 255, 255, .075);
+  border: 1px solid rgba(217, 255, 114, .35);
+  border-radius: 22px;
+  margin-top: 16px;
+  padding: 21px;
+}
+.capacityTypeHeaderTools {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+}
+.capacityTypeDateFilters {
+  align-items: end;
+  display: flex;
+  gap: 8px;
+}
+.capacityTypeDateFilters label {
+  color: #aebfb8;
+  display: grid;
+  font-size: 7px;
+  font-weight: 850;
+  gap: 5px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.capacityTypeDateFilters input {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 9px;
+  color: #fff;
+  font: inherit;
+  font-size: 9px;
+  min-height: 34px;
+  padding: 0 9px;
+}
+.capacityTypeDateFilters > span {
+  color: #aebfb8;
+  font-size: 10px;
+  padding-bottom: 10px;
+}
+.capacityTypeDateFilters > button {
+  background: rgba(217, 255, 114, .12);
+  border: 1px solid rgba(217, 255, 114, .35);
+  border-radius: 9px;
+  color: #d9ff72;
+  cursor: pointer;
+  font-size: 7px;
+  font-weight: 900;
+  min-height: 34px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+.capacityTypeDateFilters > button:hover {
+  background: rgba(217, 255, 114, .2);
+}
+.capacityTypeRangeSummary {
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, .12);
+  color: #aebfb8;
+  display: flex;
+  font-size: 8px;
+  gap: 16px;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-bottom: 12px;
+}
+.capacityTypeRangeSummary strong {
+  color: #fff;
+}
+.capacityCompositeBaseline {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 16px;
+}
+.capacityCompositeBaseline > button {
+  background: rgba(174, 225, 210, .1);
+  border: 1px solid rgba(174, 225, 210, .28);
+  border-radius: 14px;
+  color: inherit;
+  cursor: pointer;
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px;
+  text-align: left;
+}
+.capacityCompositeBaseline > button.weekly {
+  background: rgba(217, 255, 114, .11);
+  border-color: rgba(217, 255, 114, .38);
+}
+.capacityCompositeBaseline > button.observed {
+  background: rgba(255, 255, 255, .07);
+}
+.capacityCompositeBaseline > button:hover {
+  border-color: #d9ff72;
+}
+.capacityCompositeBaseline > button span {
+  color: #aee1d2;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+.capacityCompositeBaseline > button.weekly span {
+  color: #d9ff72;
+}
+.capacityCompositeBaseline > button strong {
+  font-size: 25px;
+  letter-spacing: -.04em;
+}
+.capacityCompositeBaseline > button small {
+  color: #b9cac3;
+  font-size: 8px;
+}
+.capacityCompositeBaseline > p {
+  color: #aebfb8;
+  font-size: 8px;
+  grid-column: 1 / -1;
+  line-height: 1.5;
+  margin: 0;
+}
+.capacityCompositeBaseline > p strong {
+  color: #d9ff72;
+}
+.capacityTypeRows {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+}
+.capacityTypeRows > button {
+  align-items: center;
+  background: rgba(4, 30, 22, .22);
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 13px;
+  color: inherit;
+  cursor: pointer;
+  display: grid;
+  gap: 13px;
+  grid-template-columns: minmax(110px, 1.1fr) minmax(120px, 2fr) 92px 92px;
+  padding: 12px 14px;
+  text-align: left;
+}
+.capacityTypeRows > button:hover {
+  border-color: rgba(217, 255, 114, .55);
+  transform: translateY(-1px);
+}
+.capacityTypeName,
+.capacityTypeMetric {
+  display: grid;
+  gap: 3px;
+}
+.capacityTypeName strong {
+  font-size: 11px;
+}
+.capacityTypeName small,
+.capacityTypeMetric small {
+  color: #aebfb8;
+  font-size: 7px;
+}
+.capacityTypeName > i {
+  align-self: start;
+  border-radius: 999px;
+  font-size: 6px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: .05em;
+  margin-top: 2px;
+  padding: 4px 6px;
+  text-transform: uppercase;
+}
+.capacityTypeConfidence.stable {
+  background: #d9ff72;
+  color: #174f3d;
+}
+.capacityTypeConfidence.reference {
+  background: #fff0b7;
+  color: #805514;
+}
+.capacityTypeConfidence.insufficient {
+  background: #f6d8d2;
+  color: #98443b;
+}
+.capacityTypeName > em {
+  color: #f3c6bd;
+  font-size: 6px;
+  font-style: normal;
+}
+.capacityTypeBar {
+  background: rgba(255, 255, 255, .1);
+  border-radius: 999px;
+  display: block;
+  height: 10px;
+  overflow: hidden;
+}
+.capacityTypeBar i {
+  background: linear-gradient(90deg, #8fc442, #d9ff72);
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+.capacityTypeMetric {
+  text-align: right;
+}
+.capacityTypeMetric strong {
+  color: #d9ff72;
+  font-size: 14px;
+}
+.capacityTypeEmpty {
+  color: #aebfb8;
+  font-size: 9px;
+  margin: 18px 0 0;
+}
+.capacityWorkloadIntro {
+  border-top: 1px solid rgba(255, 255, 255, .14);
+  margin-top: 30px;
+  padding-top: 22px;
+}
+.capacityWorkloadIntro h3 {
+  font-size: 18px;
+}
 .capacityTopGrid,
 .capacityBottomGrid {
   display: grid;
@@ -427,13 +822,31 @@
 }
 @media (max-width: 900px) {
   .mediaCapacityHeader,
-  .capacityMethodNote {
+  .capacityMethodNote,
+  .capacityFlowIntro,
+  .capacityWorkloadIntro {
     align-items: stretch;
     flex-direction: column;
   }
   .capacityLockSummary { min-width: 0; }
+  .capacityFlowGrid { grid-template-columns: 1fr; }
+  .capacityFlowCard:not(:last-child)::after {
+    bottom: -21px;
+    content: "↓";
+    left: 50%;
+    right: auto;
+    top: auto;
+    transform: translateX(-50%);
+  }
   .capacityTopGrid,
   .capacityBottomGrid { grid-template-columns: 1fr; }
+  .capacityTypeRows > button {
+    grid-template-columns: minmax(100px, 1fr) minmax(110px, 1.5fr) 80px 80px;
+  }
+  .capacityTypeBaselineCard .capacityCardHeader,
+  .capacityTypeHeaderTools {
+    flex-direction: column;
+  }
   .capacityMethodNote > span { flex-basis: auto; }
 }
 @media (max-width: 560px) {
@@ -450,4 +863,34 @@
   .capacityLegend { justify-content: flex-start; }
   .capacityReferenceCopy { gap: 7px; }
   .capacityReferenceCopy span { max-width: 90px; }
+  .capacityTypeDateFilters {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+  .capacityTypeDateFilters > span {
+    display: none;
+  }
+  .capacityTypeDateFilters > button {
+    grid-column: 1 / -1;
+  }
+  .capacityTypeRangeSummary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .capacityCompositeBaseline {
+    grid-template-columns: 1fr;
+  }
+  .capacityCompositeBaseline > p {
+    grid-column: auto;
+  }
+  .capacityTypeRows > button {
+    grid-template-columns: 1fr auto auto;
+  }
+  .capacityTypeBar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
 }

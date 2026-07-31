@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { DetailView, Task } from "../model/types";
+import type { DetailView, ShootSession, Task } from "../model/types";
 import {
   formatCurrency,
   formatNumber,
@@ -18,13 +18,15 @@ type CostAllocationEvidence = NonNullable<
 type CostTaskSummaryEvidence = NonNullable<
   DetailView["costTaskSummaries"]
 >[number];
+type ShootSessionEvidence = ShootSession;
 
 type DetailRecord =
   | { kind: "task"; value: Task }
   | { kind: "feedback"; value: FeedbackEvidence }
   | { kind: "publication"; value: PublicationEvidence }
   | { kind: "costAllocation"; value: CostAllocationEvidence }
-  | { kind: "costTaskSummary"; value: CostTaskSummaryEvidence };
+  | { kind: "costTaskSummary"; value: CostTaskSummaryEvidence }
+  | { kind: "shootSession"; value: ShootSessionEvidence };
 
 type DetailColumn = {
   key: string;
@@ -47,6 +49,12 @@ function normalizeSearch(value: unknown) {
 }
 
 function detailRecords(detail: DetailView): DetailRecord[] {
+  if (detail.shootSessions) {
+    return detail.shootSessions.map((value) => ({
+      kind: "shootSession",
+      value,
+    }));
+  }
   if (detail.publicationEvidence) {
     return detail.publicationEvidence.map((value) => ({
       kind: "publication",
@@ -78,6 +86,74 @@ function detailRecords(detail: DetailView): DetailRecord[] {
 }
 
 function detailColumns(detail: DetailView): DetailColumn[] {
+  if (detail.shootSessions) {
+    return [
+      {
+        key: "id",
+        label: "Mã ca quay",
+        value: (record) =>
+          record.kind === "shootSession" ? record.value.id : "",
+      },
+      {
+        key: "date",
+        label: "Ngày quay",
+        value: (record) =>
+          record.kind === "shootSession"
+            ? (record.value.date?.getTime() ?? -1)
+            : -1,
+        search: (record) =>
+          record.kind === "shootSession"
+            ? formatDate(record.value.date)
+            : "",
+      },
+      {
+        key: "duration",
+        label: "Thời lượng",
+        value: (record) =>
+          record.kind === "shootSession"
+            ? `${record.value.duration} ${record.value.timeWindow}`
+            : "",
+      },
+      {
+        key: "sessionUnits",
+        label: "Buổi quy đổi",
+        value: (record) =>
+          record.kind === "shootSession"
+            ? record.value.sessionUnits
+            : 0,
+      },
+      {
+        key: "taskCount",
+        label: "Số task",
+        value: (record) =>
+          record.kind === "shootSession" ? record.value.taskCount : 0,
+      },
+      {
+        key: "productCount",
+        label: "Số mã",
+        value: (record) =>
+          record.kind === "shootSession"
+            ? record.value.productCount
+            : 0,
+        search: (record) =>
+          record.kind === "shootSession"
+            ? `${record.value.productCount} ${record.value.productCodes.join(" ")}`
+            : "",
+      },
+      {
+        key: "type",
+        label: "Định dạng",
+        value: (record) =>
+          record.kind === "shootSession" ? record.value.type : "",
+      },
+      {
+        key: "status",
+        label: "Trạng thái",
+        value: (record) =>
+          record.kind === "shootSession" ? record.value.status : "",
+      },
+    ];
+  }
   if (detail.publicationEvidence) {
     return [
       {
@@ -327,6 +403,12 @@ function detailColumns(detail: DetailView): DetailColumn[] {
         record.kind === "task" ? record.value.status : "",
     },
     {
+      key: "shootSession",
+      label: "Ca Quay",
+      value: (record) =>
+        record.kind === "task" ? record.value.shootSession ?? "" : "",
+    },
+    {
       key: "timeline",
       label: "Timeline công việc",
       value: (record) =>
@@ -440,6 +522,9 @@ function TaskDetailRow({
         <span className="statusPill">
           {task.status || "Chưa xác định"}
         </span>
+      </td>
+      <td data-label="Ca Quay" className="shootSessionCell">
+        {task.shootSession || "Chưa có Ca Quay"}
       </td>
       <td
         data-label="Timeline"
@@ -567,6 +652,8 @@ export function DetailDrawer({
     (Boolean(filterColumn) && normalizeSearch(filterValue).length > 0);
   const unit = detail.publicationEvidence
     ? "bài đăng"
+    : detail.shootSessions
+      ? "ca quay"
     : detail.costTaskSummaries
       ? "task có chi phí"
       : detail.costAllocations
@@ -577,6 +664,9 @@ export function DetailDrawer({
 
   const costTaskSummaryRows = visibleRecords.flatMap((record) =>
     record.kind === "costTaskSummary" ? [record.value] : [],
+  );
+  const shootSessionRows = visibleRecords.flatMap((record) =>
+    record.kind === "shootSession" ? [record.value] : [],
   );
   const costAllocationRows = visibleRecords.flatMap((record) =>
     record.kind === "costAllocation" ? [record.value] : [],
@@ -703,7 +793,65 @@ export function DetailDrawer({
           </button>
         </div>
         <div className="detailTableWrap">
-          {detail.costTaskSummaries ? (
+          {detail.shootSessions ? (
+            <table className="detailTable shootSessionDetailTable">
+              <thead>
+                <tr>
+                  <th>STT</th>
+                  <th>Mã ca quay</th>
+                  <th>Ngày quay</th>
+                  <th>Thời lượng</th>
+                  <th>Buổi 4 giờ</th>
+                  <th>Số task</th>
+                  <th>Mã sản phẩm</th>
+                  <th>Định dạng</th>
+                  <th>Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shootSessionRows.map((row, index) => (
+                  <tr key={`${row.id}-${index}`}>
+                    <td data-label="STT" className="detailRowNumber">
+                      {index + 1}
+                    </td>
+                    <td data-label="Mã ca quay" className="taskIdentity">
+                      <strong>{row.id}</strong>
+                      <span>{row.model || "Chưa ghi mẫu"}</span>
+                    </td>
+                    <td data-label="Ngày quay">
+                      {formatDate(row.date)}
+                    </td>
+                    <td data-label="Thời lượng">
+                      <strong>{row.duration || "Chưa xác định"}</strong>
+                      <br />
+                      <small>{row.timeWindow || "Chưa có khung giờ"}</small>
+                    </td>
+                    <td data-label="Buổi 4 giờ">
+                      <strong>{formatNumber(row.sessionUnits)}</strong>
+                    </td>
+                    <td data-label="Số task">
+                      <strong>{formatNumber(row.taskCount)}</strong>
+                    </td>
+                    <td data-label="Mã sản phẩm" className="detailTitleCell">
+                      <strong>{formatNumber(row.productCount)} mã</strong>
+                      <br />
+                      <small>
+                        {row.productCodes.join(", ") || "Không có mã"}
+                      </small>
+                    </td>
+                    <td data-label="Định dạng">
+                      {row.type || "Chưa xác định"}
+                    </td>
+                    <td data-label="Trạng thái">
+                      <span className="statusPill">
+                        {row.status || "Chưa xác định"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : detail.costTaskSummaries ? (
             <table className="detailTable costTaskSummaryTable">
               <thead>
                 <tr>
@@ -898,6 +1046,7 @@ export function DetailDrawer({
                   <th>Task</th>
                   <th>Assignee</th>
                   <th>Trạng thái</th>
+                  <th>Ca Quay</th>
                   <th>Timeline công việc</th>
                   <th>Phút dự kiến</th>
                   {detail.taskMetric && <th>{detail.taskMetric.label}</th>}

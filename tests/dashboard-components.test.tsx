@@ -11,6 +11,7 @@ import { DetailDrawer } from "../features/dashboard/dialogs/DetailDrawer";
 import { PercentileDialog } from "../features/dashboard/dialogs/PercentileDialog";
 import { HelpProvider } from "../features/dashboard/help/HelpProvider";
 import { PostingSection } from "../features/dashboard/sections/PostingSection";
+import { MediaCapacitySection } from "../features/dashboard/sections/MediaCapacitySection";
 import type {
   DashboardData,
   DetailView,
@@ -181,6 +182,84 @@ test("DashboardFilters hides task backlog date on business dashboard", () => {
   assert.equal(screen.queryByLabelText(/Mốc task tồn/), null);
   assert.ok(screen.getByLabelText("Từ ngày"));
   assert.ok(screen.getByLabelText("Đến ngày"));
+});
+
+test("Media shoot-type baseline uses an independent date range", () => {
+  const data: DashboardData = {
+    fileName: "media-baseline-range.xlsx",
+    tasks: [],
+    feedback: [],
+    norms: [],
+    publications: [],
+    shootSessions: [
+      {
+        id: "JULY-21",
+        date: new Date(2026, 6, 21, 9),
+        duration: "Một buổi",
+        sessionUnits: 1,
+        taskCount: 8,
+        productCount: 4,
+        productCodes: ["A", "B", "C", "D"],
+        taskCodes: [],
+        type: "Bộ Sưu Tập",
+        timeWindow: "",
+        model: "",
+        status: "Đóng",
+      },
+      {
+        id: "JULY-28",
+        date: new Date(2026, 6, 28, 9),
+        duration: "Một buổi",
+        sessionUnits: 1,
+        taskCount: 6,
+        productCount: 3,
+        productCodes: ["E", "F", "G"],
+        taskCodes: [],
+        type: "Order Lại",
+        timeWindow: "",
+        model: "",
+        status: "Đóng",
+      },
+    ],
+  };
+  const stats = calculateDashboardStats(data, {
+    dateWindow: {
+      from: new Date(2026, 6, 20),
+      to: new Date(2026, 6, 26, 23, 59),
+      hasFilter: true,
+    },
+    collectionMonth: "",
+    backlogDate: "2026-07-30",
+  });
+
+  render(
+    <HelpProvider>
+      <MediaCapacitySection
+        viewModel={stats.mediaCapacity}
+        globalDateFrom="2026-07-20"
+        globalDateTo="2026-07-26"
+        onOpenDetail={() => undefined}
+      />
+    </HelpProvider>,
+  );
+
+  assert.ok(screen.getByText("20/7/2026–26/7/2026"));
+  assert.ok(screen.getByRole("button", { name: /Bộ Sưu Tập/ }));
+  assert.equal(screen.queryByRole("button", { name: /Order Lại/ }), null);
+
+  fireEvent.change(screen.getByLabelText("Từ ngày"), {
+    target: { value: "2026-07-27" },
+  });
+  fireEvent.change(screen.getByLabelText("Đến ngày"), {
+    target: { value: "2026-08-02" },
+  });
+
+  assert.ok(screen.getByText("27/7/2026–2/8/2026"));
+  assert.ok(screen.getByRole("button", { name: /Order Lại/ }));
+  assert.equal(
+    screen.queryByRole("button", { name: /Bộ Sưu Tập/ }),
+    null,
+  );
 });
 
 test("comparison charts open evidence and line charts select the clicked point", () => {
@@ -430,6 +509,51 @@ test("evidence tables support global search, column filters and sorting", () => 
   );
   assert.match(taskCodes()[0], /FILTER-ALPHA/);
   assert.match(taskCodes()[2], /FILTER-BETA/);
+});
+
+test("shooting-session evidence exposes units, task counts and product codes", () => {
+  render(
+    <DetailDrawer
+      detail={{
+        title: "Lịch quay tuần",
+        subtitle: "Một buổi bằng bốn giờ",
+        shootSessions: [
+          {
+            id: "CA-TEST-01",
+            date: new Date(2026, 6, 20),
+            duration: "Một ngày",
+            sessionUnits: 2,
+            taskCount: 12,
+            productCount: 3,
+            productCodes: ["SP01", "SP02", "SP03"],
+            taskCodes: ["TSK01", "TSK02"],
+            type: "Bộ Sưu Tập",
+            timeWindow: "8h30–17h30",
+            model: "Mẫu A",
+            status: "Đóng",
+          },
+        ],
+      }}
+      onClose={() => undefined}
+    />,
+  );
+
+  assert.ok(screen.getByText("CA-TEST-01"));
+  assert.ok(screen.getByText("Một ngày"));
+  assert.ok(screen.getByText("12"));
+  assert.ok(screen.getByText("SP01, SP02, SP03"));
+  assert.match(
+    document.querySelector(".detailCount")?.textContent ?? "",
+    /1\s*ca quay/,
+  );
+
+  fireEvent.change(screen.getByLabelText("Cột cần lọc"), {
+    target: { value: "status" },
+  });
+  fireEvent.change(screen.getByLabelText("Giá trị lọc theo cột"), {
+    target: { value: "Đóng" },
+  });
+  assert.ok(screen.getByText("CA-TEST-01"));
 });
 
 test("attention KPI opens invalid Done chronology as standalone detail", () => {

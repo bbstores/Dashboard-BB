@@ -3,7 +3,11 @@ import test from "node:test";
 import { calculateDailyTaskChart } from "../features/dashboard/analytics/calculateDailyTaskChart";
 import { calculateDashboardStats } from "../features/dashboard/analytics/calculateDashboardStats";
 import { calculateCollections } from "../features/dashboard/analytics/calculateCollections";
-import { calculateMediaCapacity } from "../features/dashboard/analytics/calculateMediaCapacity";
+import {
+  calculateMediaCapacity,
+  calculateShootTypeBaselinePlan,
+  calculateShootTypeBaselines,
+} from "../features/dashboard/analytics/calculateMediaCapacity";
 import { calculatePublicationStats } from "../features/dashboard/analytics/calculatePublicationStats";
 import {
   calculateReportComparison,
@@ -783,6 +787,36 @@ test("calculates weekly Media capacity from standard minutes and handoff dates",
         assignee: "An",
       },
     ],
+    shootSessions: [
+      {
+        id: "BASE-SESSION",
+        date: new Date(2026, 6, 13),
+        duration: "Một ngày",
+        sessionUnits: 2,
+        taskCount: 10,
+        productCount: 4,
+        productCodes: ["BASE-1", "BASE-2", "BASE-3", "BASE-4"],
+        taskCodes: ["BASE-SHOOT"],
+        type: "Bộ Sưu Tập",
+        timeWindow: "8h30–17h30",
+        model: "",
+        status: "Đóng",
+      },
+      {
+        id: "FOCUS-SESSION",
+        date: new Date(2026, 6, 21),
+        duration: "Một buổi",
+        sessionUnits: 1,
+        taskCount: 6,
+        productCount: 3,
+        productCodes: ["SP-1", "SP-2", "SP-3"],
+        taskCodes: ["FOCUS-SHOOT"],
+        type: "Bộ Sưu Tập",
+        timeWindow: "8h30–12h",
+        model: "",
+        status: "Mở",
+      },
+    ],
     tasks: [
       task("BASE-SHOOT", {
         stage: "Quay",
@@ -795,6 +829,7 @@ test("calculates weekly Media capacity from standard minutes and handoff dates",
       task("FOCUS-SHOOT", {
         stage: "Quay",
         startDate: new Date(2026, 6, 20),
+        shootSession: "FOCUS-SESSION",
       }),
       task("FOCUS-VIDEO", {
         stage: "Edit",
@@ -830,6 +865,11 @@ test("calculates weekly Media capacity from standard minutes and handoff dates",
   assert.equal(result.elapsedWorkingDays, 3);
   assert.equal(result.focusWeek.shootTasks.length, 1);
   assert.equal(result.focusWeek.shootMinutes, 120);
+  assert.equal(result.focusWeek.linkedShootTasks.length, 1);
+  assert.equal(result.focusWeek.unlinkedShootTasks.length, 0);
+  assert.equal(result.focusWeek.sessionUnits, 1);
+  assert.equal(result.focusWeek.scheduledTaskCount, 6);
+  assert.equal(result.focusWeek.uniqueProductCount, 3);
   assert.equal(result.focusWeek.outputTasks.length, 2);
   assert.equal(result.focusWeek.outputMinutes, 150);
   assert.equal(result.focusWeek.videoTasks.length, 1);
@@ -839,5 +879,127 @@ test("calculates weekly Media capacity from standard minutes and handoff dates",
   assert.equal(result.focusWeek.feedbackRows.length, 1);
   assert.equal(result.shootReference.p50Minutes, 60);
   assert.equal(result.outputReference.p50Minutes, 30);
+  assert.equal(result.sessionReference.p50, 2);
+  assert.equal(result.scheduledTaskReference.p50, 10);
+  assert.equal(result.productReference.p50, 4);
   assert.equal(result.snapshot.weekKey, "2026-07-20");
+});
+
+test("locks Media baseline by month and forecasts an incomplete week", () => {
+  const baselineStarts = Array.from(
+    { length: 12 },
+    (_, index) => new Date(2026, 4, 4 + index * 7, 9),
+  );
+  const baselineTasks = baselineStarts.flatMap((start, weekIndex) =>
+    Array.from({ length: 10 }, (_, taskIndex) =>
+      task(`BASE-${weekIndex}-${taskIndex}`, {
+        inspectionDate: new Date(start),
+      }),
+    ),
+  );
+  const data: DashboardData = {
+    fileName: "baseline.xlsx",
+    publications: [],
+    feedback: [],
+    norms: [],
+    tasks: [
+      ...baselineTasks,
+      task("FOCUS-1", {
+        inspectionDate: new Date(2026, 6, 27, 10),
+      }),
+      task("FOCUS-2", {
+        inspectionDate: new Date(2026, 6, 29, 10),
+      }),
+      task("FUTURE-SHOOT", {
+        stage: "Quay",
+        startDate: new Date(2026, 7, 1, 10),
+        shootSession: "FOCUS-SESSION",
+      }),
+    ],
+    shootSessions: [
+      ...baselineStarts.map((start, index) => ({
+        id: `BASE-SESSION-${index}`,
+        date: new Date(start),
+        duration: "Nhiều buổi",
+        sessionUnits: 5,
+        taskCount: 60,
+        productCount: 22,
+        productCodes: Array.from(
+          { length: 22 },
+          (_, codeIndex) => `SP-${index}-${codeIndex}`,
+        ),
+        taskCodes: [],
+        type: "Bộ Sưu Tập",
+        timeWindow: "",
+        model: "",
+        status: "Đóng",
+      })),
+      {
+        id: "FOCUS-SESSION",
+        date: new Date(2026, 7, 1, 10),
+        duration: "Nhiều buổi",
+        sessionUnits: 5,
+        taskCount: 60,
+        productCount: 22,
+        productCodes: Array.from(
+          { length: 22 },
+          (_, index) => `FOCUS-SP-${index}`,
+        ),
+        taskCodes: ["FUTURE-SHOOT"],
+        type: "Bộ Sưu Tập",
+        timeWindow: "",
+        model: "",
+        status: "Mở",
+      },
+    ],
+  };
+
+  const result = calculateMediaCapacity(
+    data,
+    new Date(2026, 6, 30),
+    new Date(2026, 6, 30, 12),
+  );
+
+  assert.equal(result.officialBaseline.versionLabel, "08/2026");
+  assert.equal(
+    result.officialBaseline.windowLabel,
+    "04/05/2026–26/07/2026",
+  );
+  assert.equal(result.officialBaseline.sessionWeekCount, 12);
+  assert.equal(result.officialBaseline.outputWeekCount, 12);
+  assert.equal(result.officialBaseline.sessionReference.p50, 5);
+  assert.equal(result.officialBaseline.scheduledTaskReference.p50, 60);
+  assert.equal(result.officialBaseline.productReference.p50, 22);
+  assert.equal(result.officialBaseline.outputReference.p50, 10);
+  assert.equal(result.focusWeek.sessionUnits, 0);
+  assert.equal(result.focusFullWeek.sessionUnits, 5);
+  assert.equal(result.forecastOutputCount, 3);
+  assert.equal(result.snapshot.baselineVersion, "08/2026");
+  assert.equal(result.snapshot.sessionReferenceUnits, 5);
+
+  const customRange = calculateShootTypeBaselines(
+    data.shootSessions ?? [],
+    new Date(2026, 6, 20),
+    new Date(2026, 6, 26, 23, 59),
+  );
+  assert.equal(customRange.length, 1);
+  assert.equal(customRange[0].type, "Bộ Sưu Tập");
+  assert.equal(customRange[0].sessions.length, 1);
+  assert.equal(customRange[0].taskPerSessionP50, 12);
+
+  const plan = calculateShootTypeBaselinePlan(
+    data.shootSessions ?? [],
+    new Date(2026, 4, 4),
+    new Date(2026, 6, 26, 23, 59),
+  );
+  assert.equal(plan.weekCount, 12);
+  assert.equal(plan.weeklySessionP50, 5);
+  assert.equal(plan.overallTaskPerSessionP50, 12);
+  assert.equal(plan.weeklyTaskBaseline, 60);
+  assert.equal(plan.weeklyProductBaseline, 22);
+  assert.equal(plan.observedWeeklyTaskP50, 60);
+  assert.equal(plan.observedWeeklyProductP50, 22);
+  assert.equal(plan.modelToObservedPercentage, 100);
+  assert.equal(plan.rows[0].confidence, "stable");
+  assert.equal(plan.fallbackTypeCount, 0);
 });

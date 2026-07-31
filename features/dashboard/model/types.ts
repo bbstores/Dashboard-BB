@@ -19,8 +19,24 @@ export type Task = {
   overallRating: string;
   type: string;
   outsource: string;
+  shootSession?: string;
   publicationIds?: string[];
   platform?: string;
+};
+
+export type ShootSession = {
+  id: string;
+  date: Date | null;
+  duration: string;
+  sessionUnits: number;
+  taskCount: number;
+  productCount: number;
+  productCodes: string[];
+  taskCodes: string[];
+  type: string;
+  timeWindow: string;
+  model: string;
+  status: string;
 };
 
 export type WorkNorm = {
@@ -76,6 +92,7 @@ export type DashboardData = {
   feedback: Feedback[];
   norms: WorkNorm[];
   publications: PublicationPost[];
+  shootSessions?: ShootSession[];
   costs?: CostData;
   fileName: string;
 };
@@ -134,6 +151,23 @@ export type MediaCapacitySnapshot = {
   outputReferenceMinutes: number;
   shootTaskCount: number;
   outputTaskCount: number;
+  shootLinkCoverage?: number;
+  sessionUnits?: number;
+  sessionReferenceUnits?: number;
+  scheduledTaskCount?: number;
+  scheduledTaskReferenceCount?: number;
+  uniqueProductCount?: number;
+  productReferenceCount?: number;
+  outputCountReference?: number;
+  videoTaskCount?: number;
+  videoReferenceCount?: number;
+  graphicTaskCount?: number;
+  graphicReferenceCount?: number;
+  baselineVersion?: string;
+  forecastSessionUnits?: number;
+  forecastScheduledTaskCount?: number;
+  forecastUniqueProductCount?: number;
+  forecastOutputTaskCount?: number;
 };
 
 export type SavedReportFilters = {
@@ -167,6 +201,7 @@ export type DetailView = {
   publicationEvidenceLabel?: string;
   costAllocations?: CostAllocation[];
   costTaskSummaries?: CostTaskSummary[];
+  shootSessions?: ShootSession[];
   taskMetric?: {
     label: string;
     value: (task: Task) => number;

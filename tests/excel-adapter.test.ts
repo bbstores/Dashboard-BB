@@ -7,6 +7,7 @@ import {
   excelDateTime,
 } from "../features/dashboard/data/excel/excelDate";
 import { parseFeedback } from "../features/dashboard/data/excel/parseFeedback";
+import { parseShootSessions } from "../features/dashboard/data/excel/parseShootSessions";
 import { parseTasks } from "../features/dashboard/data/excel/parseTasks";
 import { readDashboardWorkbook } from "../features/dashboard/data/excel/readWorkbook";
 import {
@@ -17,6 +18,8 @@ import {
   NORM_REQUIRED_HEADERS,
   PUBLICATION_COLUMNS,
   PUBLICATION_REQUIRED_HEADERS,
+  SHOOT_SESSION_COLUMNS,
+  SHOOT_SESSION_REQUIRED_HEADERS,
   TASK_COLUMNS,
   TASK_REQUIRED_HEADERS,
 } from "../features/dashboard/data/excel/workbookSchema";
@@ -228,6 +231,42 @@ test("parses validated task and feedback sheets", () => {
     },
   );
   assert.equal(daily.rows[0].backlog, 0);
+});
+
+test("parses shooting sessions into four-hour units", () => {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = addSheet(
+    workbook,
+    DASHBOARD_SHEETS.shoots,
+    SHOOT_SESSION_REQUIRED_HEADERS,
+  );
+  const values: Record<string, string | number | Date> = {
+    [SHOOT_SESSION_COLUMNS.id]: "CA-001",
+    [SHOOT_SESSION_COLUMNS.productCodes]: "SP01 | SP02 | SP01",
+    [SHOOT_SESSION_COLUMNS.productCount]: 2,
+    [SHOOT_SESSION_COLUMNS.taskCount]: 5,
+    [SHOOT_SESSION_COLUMNS.type]: "Bộ Sưu Tập",
+    [SHOOT_SESSION_COLUMNS.duration]: "Một ngày",
+    [SHOOT_SESSION_COLUMNS.timeWindow]: "8h30–17h30",
+    [SHOOT_SESSION_COLUMNS.date]: new Date(Date.UTC(2026, 6, 20)),
+    [SHOOT_SESSION_COLUMNS.model]: "Mẫu A",
+    [SHOOT_SESSION_COLUMNS.status]: "Đóng",
+    [SHOOT_SESSION_COLUMNS.taskCodes]: "TSK001,TSK002",
+  };
+  sheet.addRow(
+    SHOOT_SESSION_REQUIRED_HEADERS.map(
+      (header) => values[header] ?? "",
+    ),
+  );
+
+  const [session] = parseShootSessions(sheet);
+  assert.equal(session.id, "CA-001");
+  assert.equal(session.sessionUnits, 2);
+  assert.equal(session.taskCount, 5);
+  assert.equal(session.productCount, 2);
+  assert.deepEqual(session.productCodes, ["SP01", "SP02", "SP01"]);
+  assert.deepEqual(session.taskCodes, ["TSK001", "TSK002"]);
+  assert.equal(session.date?.getDate(), 20);
 });
 
 test("normalizes supported Excel date values", () => {

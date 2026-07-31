@@ -48,8 +48,23 @@ export const TASK_COLUMNS = {
   overallRating: "Đánh Giá Tổng",
   type: "Type",
   outsource: "Outsource",
+  shootSession: "Ca Quay",
   publicationIds: "2.7 Đăng Bài",
   platform: "Nền Tảng",
+} as const;
+
+export const SHOOT_SESSION_COLUMNS = {
+  id: "Mã Ca Quay",
+  productCodes: "Danh Sách Mã SP",
+  productCount: "Tổng Số Mã Sản Phẩm",
+  taskCount: "Tổng Số Task",
+  type: "Định Dạng",
+  duration: "Thời Lượng",
+  timeWindow: "Khung Giờ",
+  date: "Ngày Quay",
+  model: "Mẫu",
+  status: "Status",
+  taskCodes: "2.6 Tasklist",
 } as const;
 
 export const FEEDBACK_COLUMNS = {
@@ -77,10 +92,15 @@ export const NORM_COLUMNS = {
 } as const;
 
 export const TASK_REQUIRED_HEADERS = Object.values(TASK_COLUMNS).filter(
-  (header) => header !== TASK_COLUMNS.receivedStartDate,
+  (header) =>
+    header !== TASK_COLUMNS.receivedStartDate &&
+    header !== TASK_COLUMNS.shootSession,
 );
 export const FEEDBACK_REQUIRED_HEADERS = Object.values(FEEDBACK_COLUMNS);
 export const PUBLICATION_REQUIRED_HEADERS = Object.values(
   PUBLICATION_COLUMNS,
 );
 export const NORM_REQUIRED_HEADERS = Object.values(NORM_COLUMNS);
+export const SHOOT_SESSION_REQUIRED_HEADERS = Object.values(
+  SHOOT_SESSION_COLUMNS,
+);

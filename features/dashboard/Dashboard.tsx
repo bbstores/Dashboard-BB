@@ -228,7 +228,7 @@ export function Dashboard() {
                     }
                     onOpenDetail={dialogs.setDetail}
                   />
-                  <MediaCapacitySection viewModel={analytics.mediaCapacity} onOpenDetail={dialogs.setDetail} />
+                  <MediaCapacitySection viewModel={analytics.mediaCapacity} globalDateFrom={filters.dateFrom} globalDateTo={filters.dateTo} onOpenDetail={dialogs.setDetail} />
                   <SlaSection
                     viewModel={{
                       sla: analytics.sla,

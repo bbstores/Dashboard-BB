@@ -4,6 +4,7 @@ import { parseNorms } from "./parseNorms";
 import { parsePublications } from "./parsePublications";
 import { parseTasks } from "./parseTasks";
 import { parseCosts } from "./parseCosts";
+import { parseShootSessions } from "./parseShootSessions";
 import { validateDashboardWorkbook } from "./validateWorkbook";
 
 export async function readDashboardWorkbook(
@@ -22,6 +23,7 @@ export async function readDashboardWorkbook(
     collectionSheet,
     productSheet,
     shootSheet,
+    shootSessionSheet,
   } =
     validateDashboardWorkbook(workbook);
   const tasks = parseTasks(taskSheet);
@@ -32,6 +34,9 @@ export async function readDashboardWorkbook(
     norms: normSheet ? parseNorms(normSheet) : [],
     publications: publicationSheet
       ? parsePublications(publicationSheet)
+      : [],
+    shootSessions: shootSessionSheet
+      ? parseShootSessions(shootSessionSheet)
       : [],
     costs: parseCosts({
       costSheet,

@@ -16,6 +16,7 @@ export type DashboardWorksheets = {
   collectionSheet?: import("exceljs").Worksheet;
   productSheet?: import("exceljs").Worksheet;
   shootSheet?: import("exceljs").Worksheet;
+  shootSessionSheet?: import("exceljs").Worksheet;
 };
 
 export class WorkbookValidationError extends Error {
@@ -77,7 +78,6 @@ export function validateDashboardWorkbook(
   if (normSheet) {
     validateRequiredHeaders(normSheet, NORM_REQUIRED_HEADERS);
   }
-
   return {
     taskSheet,
     feedbackSheet,
@@ -87,5 +87,6 @@ export function validateDashboardWorkbook(
     collectionSheet,
     productSheet,
     shootSheet,
+    shootSessionSheet: shootSheet,
   };
 }

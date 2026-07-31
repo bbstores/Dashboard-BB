@@ -1,36 +1,91 @@
+import { useEffect, useMemo, useState } from "react";
+import { inputDate } from "@/shared/date/dateUtils";
 import { formatDate, formatHours, formatNumber, formatPercent } from "@/shared/formatting/format";
 import type {
   CapacityReference,
   MediaCapacityStats,
   MediaCapacityWeek,
+  QuantityReference,
+  ShootTypeBaselinePlan,
+  ShootTypeBaselinePlanRow,
 } from "../analytics/calculateMediaCapacity";
+import { calculateShootTypeBaselinePlan } from "../analytics/calculateMediaCapacity";
 import { HelpButton } from "../components/HelpButton";
 import type { DashboardHelp, DetailView, Task } from "../model/types";
 
 type MediaCapacitySectionProps = {
   viewModel: MediaCapacityStats;
+  globalDateFrom: string;
+  globalDateTo: string;
   onOpenDetail: (detail: DetailView) => void;
 };
 
 const capacityHelp: Record<
-  "shoot" | "output" | "trend" | "mix" | "quality",
+  | "demand"
+  | "sessions"
+  | "outputCount"
+  | "shoot"
+  | "output"
+  | "trend"
+  | "mix"
+  | "quality"
+  | "shootTypes",
   DashboardHelp
 > = {
-  shoot: {
-    title: "Công suất quay/chụp ước tính",
+  demand: {
+    title: "Nhu cầu task quay/chụp",
     purpose:
-      "So sánh tải quay/chụp được phân vào tuần với nhịp chuẩn lịch sử của team.",
+      "Đếm lượng việc team Media được yêu cầu quay hoặc chụp trong tuần.",
     objective:
-      "Nhận diện tuần có kế hoạch quay/chụp thấp, nằm trong vùng thông thường hoặc vượt tải.",
+      "Cho biết đầu vào đang tạo ra bao nhiêu nhu cầu và bao nhiêu task chưa được gắn vào lịch quay.",
+    calculation:
+      "Lấy task nội bộ có Công đoạn Quay hoặc Chụp, Ngày Bắt Đầu thuộc tuần; loại task không tên, Outsource và Pending/Cancel. Sau đó tách theo cột Ca Quay có giá trị hay còn trống.",
+    example:
+      "Tuần có 60 task Quay/Chụp, 52 task có Ca Quay và 8 task chưa gắn → độ phủ lịch quay 86,7%.",
+    note:
+      "Đây là nhu cầu theo Tasklist, không phải số task thực tế đã quay. Với tuần đang chạy, số chính là dữ liệu đến hôm nay và dòng dự kiến hết tuần lấy toàn bộ task đã có lịch trong tuần.",
+  },
+  sessions: {
+    title: "Buổi quay và số mã thực tế",
+    purpose:
+      "Đo năng lực quay/chụp từ sheet 2.11 Lịch Quay bằng một đơn vị chung.",
+    objective:
+      "Trả lời trong một tuần team thực hiện bao nhiêu buổi quay, bao nhiêu task và bao nhiêu mã sản phẩm.",
+    calculation:
+      "Một buổi được quy đổi 4 giờ; Một ngày bằng 2 buổi. Số task lấy Tổng Số Task; số mã là hợp không trùng của Danh Sách Mã SP. Baseline tháng lấy P25/P50/P75 của 12 tuần hoàn chỉnh trước tháng báo cáo, yêu cầu tối thiểu 8 tuần có lịch quay và được khóa suốt tháng.",
+    example:
+      "5 buổi, 49 task và 16 mã; nếu P50 lần lượt là 5, 49 và 16 thì tuần đạt đúng nhịp trung vị lịch sử.",
+    note:
+      "Tuần đang chạy: thực tế chỉ tính ca đến hôm nay; dự kiến hết tuần tính mọi ca đã xếp lịch đến cuối tuần. Ca chưa có Thời Lượng vẫn xuất hiện trong bảng dẫn chứng nhưng đóng góp 0 buổi.",
+  },
+  outputCount: {
+    title: "Ấn phẩm bàn giao trong tuần",
+    purpose:
+      "Đếm số Video và Graphic đã được người làm bàn giao ở mốc Ngày Kiểm Duyệt.",
+    objective:
+      "Trả lời một tuần team trả ra bao nhiêu ấn phẩm và đang cao hay thấp hơn nhịp lịch sử.",
+    calculation:
+      "Lấy task ấn phẩm cuối có Ngày Kiểm Duyệt thuộc tuần, loại Outsource và Pending/Cancel. Baseline tháng lấy 12 tuần hoàn chỉnh trước tháng báo cáo. Nếu tuần chưa kết thúc, dự báo = đầu ra thực tế / số ngày công đã qua × tổng ngày công của tuần.",
+    example:
+      "Tuần bàn giao 117 ấn phẩm và P50 lịch sử cũng là 117 → đạt 100% nhịp trung vị.",
+    note:
+      "Dự báo là phép ngoại suy theo tốc độ, không phải cam kết. P50 Video và P50 Graphic là hai trung vị độc lập nên không bắt buộc cộng lại bằng P50 tổng.",
+  },
+  shoot: {
+    title: "Tải quay/chụp quy đổi",
+    purpose:
+      "Quy đổi nhu cầu Quay/Chụp sang phút chuẩn để nhìn độ nặng nhẹ của cơ cấu task.",
+    objective:
+      "Bổ sung góc nhìn tải công việc; không dùng chỉ số này để suy ra số buổi quay.",
     calculation:
       "Lấy task nội bộ có Công đoạn Quay/Chụp và Ngày Bắt Đầu thuộc tuần. Map Format Type sang phút quay/chụp của bảng định mức 1.7, sau đó so với P25–P75 trên mỗi ngày làm việc của 8 tuần trước.",
     example:
       "Tuần có 4.800 phút chuẩn, vùng lịch sử là 4.200–5.100 phút → nằm trong vùng thông thường.",
     note:
-      "Đây là ước tính theo Ngày Bắt Đầu, chưa phải sản lượng quay thực tế vì file chưa có Ngày Quay Thực Tế.",
+      "Số buổi quay thực tế được tính riêng từ sheet 2.11 Lịch Quay ở chart phía trên.",
   },
   output: {
-    title: "Công suất bàn giao ấn phẩm",
+    title: "Tải bàn giao quy đổi",
     purpose:
       "Đo khối lượng Video và Graphic được người làm bàn giao trong tuần.",
     objective:
@@ -79,6 +134,19 @@ const capacityHelp: Record<
     note:
       "Chỉ số này phản ánh tín hiệu kiểm soát, chưa thay thế đánh giá chất lượng nội dung chuyên môn.",
   },
+  shootTypes: {
+    title: "Baseline theo loại ca quay",
+    purpose:
+      "Cho biết một buổi 4 giờ từng loại ca thường xử lý bao nhiêu task, bao nhiêu mã và tổng hợp thành baseline tuần.",
+    objective:
+      "Tách khác biệt giữa các loại ca nhưng vẫn có một mốc chung để đánh giá tuần đang vượt hay dưới năng lực thực nghiệm.",
+    calculation:
+      "P50 chung được tính từ từng buổi gốc. Baseline theo cơ cấu = P50 buổi/tuần × tỷ trọng loại × năng suất loại. P50 tuần trực tiếp được tính độc lập từ tổng task từng tuần để đối chiếu độ lệch của mô hình.",
+    example:
+      "Nếu P50 là 5 buổi/tuần, cơ cấu Bộ Sưu Tập chiếm 40% và đạt 8 task/buổi thì phần đóng góp dự kiến là 5 × 40% × 8 = 16 task.",
+    note:
+      "Dưới 4 buổi: Chưa đủ mẫu; 4–7: Tham khảo; từ 8: Tương đối ổn định. Bộ lọc này chỉ tác động chart và không đổi baseline khóa tháng phía trên.",
+  },
 };
 
 function detailWithStandardMinutes(
@@ -101,7 +169,9 @@ function detailWithStandardMinutes(
   };
 }
 
-function statusCopy(reference: CapacityReference) {
+function statusCopy(
+  reference: Pick<CapacityReference, "bandStatus">,
+) {
   if (reference.bandStatus === "below") {
     return { label: "Dưới vùng thường", className: "below" };
   }
@@ -112,6 +182,361 @@ function statusCopy(reference: CapacityReference) {
     return { label: "Trong vùng thường", className: "within" };
   }
   return { label: "Chưa đủ baseline", className: "unavailable" };
+}
+
+function formatRate(value: number) {
+  return formatPercent(value, 100);
+}
+
+function formatMetric(value: number) {
+  return new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+function toInputDate(value: Date | null) {
+  if (!value) return "";
+  return [
+    value.getFullYear(),
+    String(value.getMonth() + 1).padStart(2, "0"),
+    String(value.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function typeRangeFromGlobal({
+  globalDateFrom,
+  globalDateTo,
+  baselineDateFrom,
+  baselineDateTo,
+  dataDateFrom,
+  dataDateTo,
+}: {
+  globalDateFrom: string;
+  globalDateTo: string;
+  baselineDateFrom: string;
+  baselineDateTo: string;
+  dataDateFrom: string;
+  dataDateTo: string;
+}) {
+  if (globalDateFrom || globalDateTo) {
+    return {
+      from: globalDateFrom || dataDateFrom || baselineDateFrom,
+      to: globalDateTo || dataDateTo || baselineDateTo,
+    };
+  }
+  return {
+    from: baselineDateFrom || dataDateFrom,
+    to: baselineDateTo || dataDateTo,
+  };
+}
+
+function formatHourPoint(minutes: number) {
+  return formatHours(minutes).replace(" giờ", "h");
+}
+
+function QuantityBand({
+  reference,
+  unit,
+}: {
+  reference: QuantityReference;
+  unit: string;
+}) {
+  return (
+    <div className="capacityQuantityBand">
+      <span>P25 {formatMetric(reference.p25)} {unit}</span>
+      <strong>
+        P50 {formatMetric(reference.p50)} {unit}
+      </strong>
+      <span>P75 {formatMetric(reference.p75)} {unit}</span>
+    </div>
+  );
+}
+
+function CapacityFlowCard({
+  type,
+  kicker,
+  title,
+  primaryValue,
+  primaryUnit,
+  reference,
+  forecastValue,
+  completeWeek = true,
+  baselineLabel,
+  onOpenBaseline,
+  help,
+  onClick,
+  children,
+}: {
+  type: "demand" | "sessions" | "outputs";
+  kicker: string;
+  title: string;
+  primaryValue: number;
+  primaryUnit: string;
+  reference?: QuantityReference;
+  forecastValue?: number;
+  completeWeek?: boolean;
+  baselineLabel?: string;
+  onOpenBaseline?: () => void;
+  help: DashboardHelp;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const status = reference ? statusCopy(reference) : null;
+  return (
+    <article className={`capacityFlowCard ${type}`}>
+      <div className="capacityCardHeader">
+        <div>
+          <span className="chartKicker">{kicker}</span>
+          <h3>{title}</h3>
+        </div>
+        <HelpButton help={help} />
+      </div>
+      <button
+        type="button"
+        className="capacityFlowBody"
+        onClick={onClick}
+      >
+        <div className="capacityFlowPrimary">
+          <strong>{formatMetric(primaryValue)}</strong>
+          <span>{primaryUnit}</span>
+          {status && (
+            <i className={`capacityBandStatus ${status.className}`}>
+              {status.label}
+            </i>
+          )}
+        </div>
+        {!completeWeek && forecastValue !== undefined && (
+          <div className="capacityForecast">
+            <span>THỰC TẾ ĐẾN HIỆN TẠI</span>
+            <strong>
+              Dự báo hết tuần {formatMetric(forecastValue)} {primaryUnit}
+            </strong>
+          </div>
+        )}
+        {reference && (
+          <>
+            <p className="capacityFlowP50">
+              {formatRate(reference.percentage)} so với P50
+            </p>
+            <QuantityBand reference={reference} unit={primaryUnit} />
+          </>
+        )}
+        <div className="capacityFlowBreakdown">{children}</div>
+        <small className="capacityEvidenceHint">
+          Nhấn để xem bảng dẫn chứng
+        </small>
+      </button>
+      {onOpenBaseline && (
+        <button
+          type="button"
+          className="capacityBaselineEvidence"
+          onClick={onOpenBaseline}
+        >
+          Xem dữ liệu tạo {baselineLabel ?? "baseline"}
+        </button>
+      )}
+    </article>
+  );
+}
+
+function ShootTypeBaselineChart({
+  plan,
+  dateFrom,
+  dateTo,
+  sessionCount,
+  sessionUnits,
+  invalidRange,
+  onDateFromChange,
+  onDateToChange,
+  onResetRange,
+  onSelectAll,
+  onSelect,
+}: {
+  plan: ShootTypeBaselinePlan;
+  dateFrom: string;
+  dateTo: string;
+  sessionCount: number;
+  sessionUnits: number;
+  invalidRange: boolean;
+  onDateFromChange: (value: string) => void;
+  onDateToChange: (value: string) => void;
+  onResetRange: () => void;
+  onSelectAll: () => void;
+  onSelect: (row: ShootTypeBaselinePlanRow) => void;
+}) {
+  const rows = plan.rows;
+  const maxTasks = Math.max(
+    1,
+    ...rows.map((row) => row.taskPerSessionP50),
+  );
+  return (
+    <article className="capacityTypeBaselineCard">
+      <div className="capacityCardHeader">
+        <div>
+          <span className="chartKicker">
+            BASELINE LINH ĐỘNG · THEO LOẠI CA
+          </span>
+          <h3>Năng suất thực nghiệm trong một buổi 4 giờ</h3>
+        </div>
+        <div className="capacityTypeHeaderTools">
+          <div className="capacityTypeDateFilters">
+            <label>
+              Từ ngày
+              <input
+                type="date"
+                value={dateFrom}
+                max={dateTo || undefined}
+                onChange={(event) =>
+                  onDateFromChange(event.target.value)
+                }
+              />
+            </label>
+            <span>→</span>
+            <label>
+              Đến ngày
+              <input
+                type="date"
+                value={dateTo}
+                min={dateFrom || undefined}
+                onChange={(event) =>
+                  onDateToChange(event.target.value)
+                }
+              />
+            </label>
+            <button type="button" onClick={onResetRange}>
+              Theo bộ lọc tổng
+            </button>
+          </div>
+          <HelpButton help={capacityHelp.shootTypes} />
+        </div>
+      </div>
+      <div className="capacityTypeRangeSummary">
+        <span>
+          Khoảng đang tính:{" "}
+          <strong>
+            {formatDate(inputDate(dateFrom))}–{formatDate(inputDate(dateTo))}
+          </strong>
+        </span>
+        <span>
+          <strong>{formatNumber(sessionCount)}</strong> ca ·{" "}
+          <strong>{formatMetric(sessionUnits)}</strong> buổi mẫu hợp lệ ·{" "}
+          <strong>{formatNumber(plan.weekCount)}</strong>{" "}
+          {plan.usesPartialRange ? "khoảng tham khảo" : "tuần hoàn chỉnh"}
+        </span>
+      </div>
+      {invalidRange ? (
+        <p className="capacityTypeEmpty">
+          Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.
+        </p>
+      ) : rows.length ? (
+        <>
+          <div className="capacityCompositeBaseline">
+            <button type="button" onClick={onSelectAll}>
+              <span>P50 CHUNG TỪ TỪNG BUỔI</span>
+              <strong>
+                {formatMetric(plan.overallTaskPerSessionP50)} task
+              </strong>
+              <small>
+                {formatMetric(plan.overallProductPerSessionP50)} mã / buổi
+              </small>
+            </button>
+            <button
+              type="button"
+              className="weekly"
+              onClick={onSelectAll}
+            >
+              <span>BASELINE TUẦN THEO CƠ CẤU</span>
+              <strong>
+                {formatMetric(plan.weeklyTaskBaseline)} task
+              </strong>
+              <small>
+                {formatMetric(plan.weeklyProductBaseline)} mã ·{" "}
+                {formatMetric(plan.weeklySessionP50)} buổi / tuần
+              </small>
+            </button>
+            <button
+              type="button"
+              className="observed"
+              onClick={onSelectAll}
+            >
+              <span>P50 TUẦN QUAN SÁT TRỰC TIẾP</span>
+              <strong>
+                {formatMetric(plan.observedWeeklyTaskP50)} task
+              </strong>
+              <small>
+                {formatMetric(plan.observedWeeklyProductP50)} mã không
+                trùng / tuần
+              </small>
+            </button>
+            <p>
+              Không lấy trung bình cộng các loại.{" "}
+              {plan.fallbackTypeCount > 0
+                ? `${plan.fallbackTypeCount}/${rows.length} loại chưa đủ 8 buổi nên dùng P50 chung khi tổng hợp.`
+                : "Tất cả loại đã có tối thiểu 8 buổi mẫu."}{" "}
+              Mô hình theo cơ cấu đang bằng{" "}
+              <strong>
+                {formatRate(plan.modelToObservedPercentage)}
+              </strong>{" "}
+              P50 tuần quan sát.
+            </p>
+          </div>
+          <div className="capacityTypeRows">
+            {rows.map((row) => (
+              <button
+                type="button"
+                key={row.type}
+                onClick={() => onSelect(row)}
+              >
+                <span className="capacityTypeName">
+                  <strong>{row.type}</strong>
+                  <small>
+                    {formatMetric(row.sessionUnits)} buổi mẫu ·{" "}
+                    {formatRate(row.mixPercentage)} cơ cấu
+                  </small>
+                  <i
+                    className={`capacityTypeConfidence ${row.confidence}`}
+                  >
+                    {row.confidence === "stable"
+                      ? "Tương đối ổn định"
+                      : row.confidence === "reference"
+                        ? "Tham khảo"
+                        : "Chưa đủ mẫu"}
+                  </i>
+                  {row.usesOverallFallback && (
+                    <em>Dùng P50 chung khi tổng hợp tuần</em>
+                  )}
+                </span>
+                <span className="capacityTypeBar">
+                  <i
+                    style={{
+                      width: `${Math.max(
+                        3,
+                        (row.taskPerSessionP50 / maxTasks) * 100,
+                      )}%`,
+                    }}
+                  />
+                </span>
+                <span className="capacityTypeMetric">
+                  <strong>{formatMetric(row.taskPerSessionP50)}</strong>
+                  <small>task / buổi P50</small>
+                </span>
+                <span className="capacityTypeMetric">
+                  <strong>
+                    {formatMetric(row.productPerSessionP50)}
+                  </strong>
+                  <small>mã / buổi P50</small>
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="capacityTypeEmpty">
+          Chưa có ca đủ dữ liệu trong cửa sổ baseline.
+        </p>
+      )}
+    </article>
+  );
 }
 
 function CapacityCard({
@@ -193,7 +618,7 @@ function CapacityCard({
               ? (
                   <>
                     <span>
-                      {formatNumber(reference.percentage)}% P50
+                      {formatRate(reference.percentage)} P50
                     </span>
                     <small>
                       P50 = {formatHours(reference.p50Minutes)}
@@ -303,7 +728,7 @@ function CapacityTrend({
                   y={y + 4}
                   textAnchor="end"
                 >
-                  {formatNumber((max * ratio) / 60)}h
+                  {formatHourPoint(max * ratio)}
                 </text>
               </g>
             );
@@ -368,7 +793,7 @@ function CapacityTrend({
                   y={shootPoints[index].y - 11}
                   textAnchor="middle"
                 >
-                  {formatNumber(row.shootMinutes / 60)}h
+                  {formatHourPoint(row.shootMinutes)}
                 </text>
               </g>
               <g
@@ -395,7 +820,7 @@ function CapacityTrend({
                   y={outputPoints[index].y + 19}
                   textAnchor="middle"
                 >
-                  {formatNumber(row.outputMinutes / 60)}h
+                  {formatHourPoint(row.outputMinutes)}
                 </text>
               </g>
             </g>
@@ -479,14 +904,96 @@ function SegmentChart({
 
 export function MediaCapacitySection({
   viewModel,
+  globalDateFrom,
+  globalDateTo,
   onOpenDetail,
 }: MediaCapacitySectionProps) {
   const {
     focusWeek,
+    focusFullWeek,
+    officialBaseline,
+    forecastOutputCount,
+    forecastVideoCount,
+    forecastGraphicCount,
+    isCompleteWeek,
     shootReference,
     outputReference,
     standardMinutes,
   } = viewModel;
+  const baselineDateFrom = toInputDate(
+    officialBaseline.weeks[0]?.start ?? null,
+  );
+  const baselineDateTo = toInputDate(
+    officialBaseline.weeks.at(-1)?.end ?? null,
+  );
+  const sessionDates = useMemo(
+    () =>
+      viewModel.shootTypeSessions
+        .flatMap((session) => (session.date ? [session.date] : []))
+        .sort((left, right) => left.getTime() - right.getTime()),
+    [viewModel.shootTypeSessions],
+  );
+  const dataDateFrom = toInputDate(sessionDates[0] ?? null);
+  const dataDateTo = toInputDate(sessionDates.at(-1) ?? null);
+  const commonTypeRange = useMemo(
+    () =>
+      typeRangeFromGlobal({
+        globalDateFrom,
+        globalDateTo,
+        baselineDateFrom,
+        baselineDateTo,
+        dataDateFrom,
+        dataDateTo,
+      }),
+    [
+      globalDateFrom,
+      globalDateTo,
+      baselineDateFrom,
+      baselineDateTo,
+      dataDateFrom,
+      dataDateTo,
+    ],
+  );
+  const [typeDateFrom, setTypeDateFrom] = useState(
+    commonTypeRange.from,
+  );
+  const [typeDateTo, setTypeDateTo] = useState(commonTypeRange.to);
+  useEffect(() => {
+    setTypeDateFrom(commonTypeRange.from);
+    setTypeDateTo(commonTypeRange.to);
+  }, [commonTypeRange]);
+  const typeRangeStart = inputDate(typeDateFrom);
+  const typeRangeEnd = inputDate(typeDateTo, true);
+  const invalidTypeRange = Boolean(
+    typeRangeStart &&
+      typeRangeEnd &&
+      typeRangeStart > typeRangeEnd,
+  );
+  const typeBaselinePlan = useMemo(
+    () =>
+      invalidTypeRange
+        ? calculateShootTypeBaselinePlan([], null, null)
+        : calculateShootTypeBaselinePlan(
+            viewModel.shootTypeSessions,
+            typeRangeStart,
+            typeRangeEnd,
+          ),
+    [
+      invalidTypeRange,
+      typeRangeEnd,
+      typeRangeStart,
+      viewModel.shootTypeSessions,
+    ],
+  );
+  const typeBaselineSessions = typeBaselinePlan.sessions;
+  const typeBaselineSessionUnits = typeBaselinePlan.rows.reduce(
+    (total, row) => total + row.sessionUnits,
+    0,
+  );
+  const shootCoverage = focusWeek.shootTasks.length
+    ? (focusWeek.linkedShootTasks.length / focusWeek.shootTasks.length) *
+      100
+    : 0;
   const openStandardTasks = (
     title: string,
     subtitle: string,
@@ -550,30 +1057,198 @@ export function MediaCapacitySection({
             <span className="chartKicker">
               TUẦN {focusWeek.label}
             </span>
-            <h2>Nhịp sản xuất so với 8 tuần trước</h2>
+            <h2>Baseline Media v1 · nhịp sản xuất tuần</h2>
             <p>
-              Mốc tham chiếu tính theo ngày làm việc Thứ Hai–Thứ Bảy,
-              đã trừ ngày lễ Việt Nam. Tuần đang chạy chỉ so đến ngày
-              hiện tại.
+              Chuẩn P50 được khóa theo tháng từ 12 tuần hoàn chỉnh trước
+              đó. Tuần đang chạy hiển thị riêng thực tế đến hôm nay và
+              dự báo hết tuần để tránh kết luận sớm.
             </p>
           </div>
           <div className="capacityLockSummary">
-            <span>BASELINE TUẦN</span>
-            <strong>
-              {formatNumber(viewModel.baselineWeekCount)} tuần có dữ liệu
-            </strong>
+            <span>BASELINE {officialBaseline.versionLabel}</span>
+            <strong>P50 khóa theo tháng</strong>
             <small>
-              {formatNumber(viewModel.elapsedWorkingDays)} /{" "}
-              {formatNumber(focusWeek.workingDays)} ngày công ·{" "}
-              {formatNumber(viewModel.activeAssignees)} nhân sự phát sinh
+              {officialBaseline.windowLabel} ·{" "}
+              {formatNumber(officialBaseline.sessionWeekCount)} tuần lịch
+              quay · {formatNumber(officialBaseline.outputWeekCount)} tuần
+              đầu ra
             </small>
           </div>
         </div>
 
+        <div className="capacityFlowIntro">
+          <div>
+            <span className="chartKicker">MẪU SỐ CHUNG THEO TUẦN</span>
+            <h3>Nhu cầu → Buổi quay → Ấn phẩm bàn giao</h3>
+          </div>
+          <p>
+            Ba lớp dùng ba mốc riêng để không đánh đồng task được giao,
+            ca quay thực tế và đầu ra đã bàn giao.
+          </p>
+        </div>
+        <div className="capacityFlowGrid">
+          <CapacityFlowCard
+            type="demand"
+            kicker="01 · NHU CẦU"
+            title="Task cần quay/chụp"
+            primaryValue={focusWeek.shootTasks.length}
+            primaryUnit="task"
+            forecastValue={focusFullWeek.shootTasks.length}
+            completeWeek={isCompleteWeek}
+            help={capacityHelp.demand}
+            onClick={() =>
+              openStandardTasks(
+                `Nhu cầu Quay/Chụp · ${focusWeek.label}`,
+                "Task Quay/Chụp phân tuần theo Ngày Bắt Đầu; dùng cột Ca Quay để lọc task đã/chưa xếp lịch",
+                focusWeek.shootTasks,
+              )
+            }
+          >
+            <span>
+              <b>{formatNumber(focusWeek.linkedShootTasks.length)}</b>
+              đã có Ca Quay
+            </span>
+            <span>
+              <b>{formatNumber(focusWeek.unlinkedShootTasks.length)}</b>
+              chưa có Ca Quay
+            </span>
+            <span>
+              <b>{formatRate(shootCoverage)}</b>
+              độ phủ lịch quay
+            </span>
+          </CapacityFlowCard>
+
+          <CapacityFlowCard
+            type="sessions"
+            kicker="02 · NĂNG LỰC QUAY"
+            title="Buổi quay 4 giờ"
+            primaryValue={focusWeek.sessionUnits}
+            primaryUnit="buổi"
+            reference={officialBaseline.sessionReference}
+            forecastValue={focusFullWeek.sessionUnits}
+            completeWeek={isCompleteWeek}
+            baselineLabel={`baseline ${officialBaseline.versionLabel}`}
+            onOpenBaseline={() =>
+              onOpenDetail({
+                title: `Ca quay tạo baseline ${officialBaseline.versionLabel}`,
+                subtitle: `${officialBaseline.windowLabel} · chỉ các tuần hoàn chỉnh trước tháng báo cáo`,
+                shootSessions: officialBaseline.weeks.flatMap(
+                  (week) => week.shootSessions,
+                ),
+              })
+            }
+            help={capacityHelp.sessions}
+            onClick={() =>
+              onOpenDetail({
+                title: `Lịch quay · ${focusWeek.label}`,
+                subtitle:
+                  "Ca có Ngày Quay trong tuần; Một buổi = 4 giờ, Một ngày = 2 buổi",
+                shootSessions: focusWeek.shootSessions,
+              })
+            }
+          >
+            <span>
+              <b>{formatNumber(focusFullWeek.scheduledTaskCount)}</b>
+              task đã xếp cả tuần · P50{" "}
+              {formatMetric(officialBaseline.scheduledTaskReference.p50)}
+            </span>
+            <span>
+              <b>{formatNumber(focusFullWeek.uniqueProductCount)}</b>
+              mã đã xếp cả tuần · P50{" "}
+              {formatMetric(officialBaseline.productReference.p50)}
+            </span>
+            <span>
+              <b>{formatNumber(focusWeek.shootSessions.length)}</b>
+              ca trong sheet 2.11
+            </span>
+          </CapacityFlowCard>
+
+          <CapacityFlowCard
+            type="outputs"
+            kicker="03 · ĐẦU RA"
+            title="Ấn phẩm đã bàn giao"
+            primaryValue={focusWeek.outputTasks.length}
+            primaryUnit="ấn phẩm"
+            reference={officialBaseline.outputReference}
+            forecastValue={forecastOutputCount}
+            completeWeek={isCompleteWeek}
+            baselineLabel={`baseline ${officialBaseline.versionLabel}`}
+            onOpenBaseline={() =>
+              openStandardTasks(
+                `Ấn phẩm tạo baseline ${officialBaseline.versionLabel}`,
+                `${officialBaseline.windowLabel} · chỉ các tuần hoàn chỉnh trước tháng báo cáo`,
+                officialBaseline.weeks.flatMap(
+                  (week) => week.outputTasks,
+                ),
+              )
+            }
+            help={capacityHelp.outputCount}
+            onClick={() =>
+              openStandardTasks(
+                `Ấn phẩm bàn giao · ${focusWeek.label}`,
+                "Task ấn phẩm có Ngày Kiểm Duyệt trong tuần",
+                focusWeek.outputTasks,
+              )
+            }
+          >
+            <span>
+              <b>{formatNumber(focusWeek.videoTasks.length)}</b>
+              Video · dự báo {formatMetric(forecastVideoCount)} · P50{" "}
+              {formatMetric(officialBaseline.videoReference.p50)}
+            </span>
+            <span>
+              <b>{formatNumber(focusWeek.graphicTasks.length)}</b>
+              Graphic · dự báo {formatMetric(forecastGraphicCount)} · P50{" "}
+              {formatMetric(officialBaseline.graphicReference.p50)}
+            </span>
+            <span>
+              <b>{formatHours(focusWeek.outputMinutes)}</b>
+              tải chuẩn 1.7
+            </span>
+          </CapacityFlowCard>
+        </div>
+
+        <ShootTypeBaselineChart
+          plan={typeBaselinePlan}
+          dateFrom={typeDateFrom}
+          dateTo={typeDateTo}
+          sessionCount={typeBaselineSessions.length}
+          sessionUnits={typeBaselineSessionUnits}
+          invalidRange={invalidTypeRange}
+          onDateFromChange={setTypeDateFrom}
+          onDateToChange={setTypeDateTo}
+          onResetRange={() => {
+            setTypeDateFrom(commonTypeRange.from);
+            setTypeDateTo(commonTypeRange.to);
+          }}
+          onSelectAll={() =>
+            onOpenDetail({
+              title: "Dữ liệu tạo baseline tổng hợp",
+              subtitle: `${formatDate(typeRangeStart)}–${formatDate(typeRangeEnd)} · P50 chung ${formatMetric(typeBaselinePlan.overallTaskPerSessionP50)} task/buổi · baseline tuần ${formatMetric(typeBaselinePlan.weeklyTaskBaseline)} task`,
+              shootSessions: typeBaselinePlan.sessions,
+            })
+          }
+          onSelect={(row) =>
+            onOpenDetail({
+              title: `${row.type} · baseline linh động`,
+              subtitle: `${formatDate(typeRangeStart)}–${formatDate(typeRangeEnd)} · ${formatMetric(row.sessionUnits)} buổi mẫu · P50 ${formatMetric(row.taskPerSessionP50)} task/buổi · ${formatMetric(row.productPerSessionP50)} mã/buổi`,
+              shootSessions: row.sessions,
+            })
+          }
+        />
+
+        <div className="capacityWorkloadIntro">
+          <span className="chartKicker">GÓC NHÌN TẢI QUY ĐỔI</span>
+          <h3>Phút chuẩn dùng để giải thích độ nặng của cơ cấu task</h3>
+          <p>
+            Chỉ số phụ này không được dùng để quy đổi ngược thành số
+            buổi quay.
+          </p>
+        </div>
         <div className="capacityTopGrid">
           <CapacityCard
             type="shoot"
-            title="Công suất quay/chụp ước tính"
+            title="Tải quay/chụp quy đổi"
             actualMinutes={focusWeek.shootMinutes}
             taskCount={focusWeek.shootTasks.length}
             mappedCount={focusWeek.shootMapped}
@@ -588,7 +1263,7 @@ export function MediaCapacitySection({
           />
           <CapacityCard
             type="output"
-            title="Công suất bàn giao ấn phẩm"
+            title="Tải bàn giao quy đổi"
             actualMinutes={focusWeek.outputMinutes}
             taskCount={focusWeek.outputTasks.length}
             mappedCount={focusWeek.outputMapped}
@@ -672,10 +1347,11 @@ export function MediaCapacitySection({
         <div className="capacityMethodNote">
           <span>MỐC ĐANG DÙNG</span>
           <p>
-            Quay/Chụp đang ước tính theo Ngày Bắt Đầu. Đầu ra dùng Ngày
-            Kiểm Duyệt. Chỉ cộng phút chuẩn map được từ định mức 1.7;
-            task Outsource và Pending/Cancel bị loại. Snapshot baseline
-            được ghi kèm khi lưu báo cáo Media.
+            Baseline {officialBaseline.versionLabel} dùng 12 tuần hoàn
+            chỉnh {officialBaseline.windowLabel}, yêu cầu tối thiểu 8 tuần
+            hợp lệ và được chuẩn hóa theo số ngày làm việc Thứ Hai–Thứ
+            Bảy, trừ ngày lễ Việt Nam. Nhu cầu dùng Ngày Bắt Đầu; lịch
+            quay dùng sheet 2.11; đầu ra dùng Ngày Kiểm Duyệt.
           </p>
           <small>
             Dữ liệu đến {formatDate(viewModel.asOfDate)}
