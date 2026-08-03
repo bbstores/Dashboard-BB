@@ -1,21 +1,14 @@
-import {
-  inputDate,
-  operationalMinute,
-  percentile,
-} from "@/shared/date/dateUtils";
+import { inputDate } from "@/shared/date/dateUtils";
 import {
   formatDate,
   formatNumber,
-  formatOperationalTime,
   formatSlaMinutes,
-  formatWorkDays,
 } from "@/shared/formatting/format";
 import type { DashboardStats } from "../analytics/calculateDashboardStats";
 import { HelpButton } from "../components/HelpButton";
 import { HorizontalBars } from "../components/HorizontalBars";
 import { PieChart } from "../components/PieChart";
 import { SlaMetricCard } from "../components/SlaMetricCard";
-import { StaffTimeOfDayChart } from "../components/StaffTimeOfDayChart";
 import { dashboardHelp } from "../help/helpContent";
 import {
   handoffLateMinutes,
@@ -200,24 +193,6 @@ export function SlaSection({
           />
         </section>
 
-        <StaffTimeOfDayChart
-          rows={sla.staffTimeOfDayRows}
-          onSelect={(row, metric, tasks, context) => {
-            const isInspection = metric === "inspection";
-            const values = tasks
-              .map((task) =>
-                isInspection ? task.inspectionDate : task.completedDate,
-              )
-              .filter((value): value is Date => Boolean(value))
-              .map(operationalMinute);
-            onOpenDetail({
-              title: `${isInspection ? "Giờ bàn giao" : "Giờ hoàn thành"} · ${row.name}`,
-              subtitle: `${context} · P50 ${values.length ? formatOperationalTime(percentile(values, 0.5), true) : "—"} theo ngày vận hành 08:30–08:30`,
-              tasks,
-            });
-          }}
-        />
-
         <div className="slaMetrics">
           <SlaMetricCard
             kicker="CYCLE TIME"
@@ -376,57 +351,6 @@ export function SlaSection({
           </div>
         </article>
 
-        <div className="slaChartGrid">
-          <PieChart
-            title="Đối chiếu kế hoạch với định mức 1.7"
-            data={sla.normDistribution}
-            compact
-            onSelect={(label) =>
-              onOpenDetail({
-                title: `Kế hoạch phút · ${label}`,
-                subtitle:
-                  "Đối chiếu phút dự kiến với chuẩn tham chiếu theo Format Type/Công đoạn; không phải thời gian làm thực tế",
-                tasks: sla.normRows
-                  .filter((row) => row.label === label)
-                  .map((row) => row.task),
-              })
-            }
-          />
-          <article className="normSummary">
-            <HelpButton
-              help={dashboardHelp(
-                "Đối chiếu kế hoạch với định mức 1.7",
-              )}
-            />
-            <span className="chartKicker">ĐỐI CHIẾU KẾ HOẠCH</span>
-            <h3>Phút dự kiến và phút chuẩn tham chiếu</h3>
-            <div className="normDisclaimer">
-              <strong>Không phải đánh giá năng suất thực tế</strong>
-              <span>
-                Chưa có thời điểm bắt đầu và hoàn thành công việc thực tế, nên
-                các số liệu dưới đây chỉ so sánh kế hoạch nhập trên Tasklist
-                với bảng chuẩn 1.7.
-              </span>
-            </div>
-            <div>
-              <span>
-                <small>PHÚT DỰ KIẾN TRÊN TASKLIST</small>
-                <strong>{formatNumber(sla.normExpectedMinutes)}</strong>
-                <em>{formatWorkDays(sla.normExpectedMinutes)}</em>
-              </span>
-              <span>
-                <small>PHÚT CHUẨN THAM CHIẾU 1.7</small>
-                <strong>{formatNumber(sla.normStandardMinutes)}</strong>
-                <em>{formatWorkDays(sla.normStandardMinutes)}</em>
-              </span>
-            </div>
-            <p>
-              Chỉ đối chiếu các task map được Format Type và Công đoạn. Quy
-              đổi 480 phút bằng một ngày công chỉ để dễ đọc tổng tải kế hoạch,
-              không phải số ngày làm thực tế.
-            </p>
-          </article>
-        </div>
       </section>
     </>
   );

@@ -233,7 +233,7 @@ test("Media shoot-type baseline uses an independent date range", () => {
   });
 
   let openedTrendDetail: DetailView | null = null;
-  render(
+  const { container } = render(
     <HelpProvider>
       <MediaCapacitySection
         viewModel={stats.mediaCapacity}
@@ -255,6 +255,17 @@ test("Media shoot-type baseline uses an independent date range", () => {
   );
   assert.ok(screen.getByText(/Tổng tải · P50/));
   assert.ok(screen.getByText("TB trượt 4 kỳ"));
+  const shootLegend = screen.getByRole("button", {
+    name: /Quay\/Chụp · P50/,
+  });
+  const trendSvg = container.querySelector(".capacityTrendSvg");
+  assert.ok(trendSvg);
+  fireEvent.click(shootLegend);
+  assert.equal(shootLegend.getAttribute("aria-pressed"), "true");
+  assert.ok(trendSvg.classList.contains("focus-shoot"));
+  fireEvent.click(shootLegend);
+  assert.equal(shootLegend.getAttribute("aria-pressed"), "false");
+  assert.equal(trendSvg.classList.contains("seriesFocus"), false);
   fireEvent.click(screen.getByRole("button", { name: "1W" }));
   assert.ok(screen.getByText("THEO NGÀY"));
   fireEvent.click(

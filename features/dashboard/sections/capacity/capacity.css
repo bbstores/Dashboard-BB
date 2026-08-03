@@ -615,12 +615,29 @@
   gap: 12px;
   justify-content: flex-end;
 }
-.capacityLegend span {
+.capacityLegend span,
+.capacityLegend button {
+  align-items: center;
+  background: transparent;
+  border: 0;
   color: #c1d0ca;
+  display: inline-flex;
   font-size: 9px;
   gap: 6px;
+  padding: 0;
   white-space: nowrap;
 }
+.capacityLegend button {
+  cursor: pointer;
+  transition: color .18s ease, opacity .18s ease;
+}
+.capacityLegend button:hover,
+.capacityLegend button:focus-visible,
+.capacityLegend button.active {
+  color: #fff;
+  outline: none;
+}
+.capacityLegend.hasFocus button:not(.active) { opacity: .38; }
 .capacityLegend i {
   border-radius: 50%;
   display: block;
@@ -733,6 +750,21 @@
   display: block;
   min-width: 980px;
   width: 100%;
+}
+.capacityTrendLine,
+.capacityBaseline,
+.capacityPointGroup {
+  transition: opacity .2s ease;
+}
+.capacityTrendSvg.seriesFocus .capacityTrendLine,
+.capacityTrendSvg.seriesFocus .capacityBaseline,
+.capacityTrendSvg.seriesFocus .capacityPointGroup {
+  opacity: .12;
+}
+.capacityTrendSvg.focus-shoot .shoot,
+.capacityTrendSvg.focus-output .output,
+.capacityTrendSvg.focus-total .total {
+  opacity: 1;
 }
 .capacityGridLine {
   stroke: rgba(255, 255, 255, .13);

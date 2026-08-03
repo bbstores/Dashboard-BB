@@ -112,7 +112,7 @@ const capacityHelp: Record<
     example:
       "Tuần 1 tải quay tăng mạnh nhưng đầu ra chỉ tăng ở tuần 2 có thể phản ánh độ trễ sản xuất.",
     note:
-      "Bộ lọc này chỉ tác động chart. 1W và khoảng tối đa 14 ngày hiển thị theo ngày; 15–100 ngày theo tuần; dài hơn 100 ngày theo tháng. Chủ nhật không phát sinh bị ẩn ở chế độ ngày. Điểm viền rỗng là mốc chưa hoàn tất và không tham gia P50 hay trung bình trượt. Nhấn điểm Tổng tải để mở hợp không trùng của task quay/chụp và task bàn giao trong mốc.",
+      "Bộ lọc này chỉ tác động chart. 1W và khoảng tối đa 14 ngày hiển thị theo ngày; 15–100 ngày theo tuần; dài hơn 100 ngày theo tháng. Chủ nhật không phát sinh bị ẩn ở chế độ ngày. Điểm viền rỗng là mốc chưa hoàn tất và không tham gia P50 hay trung bình trượt. Nhấn chú thích Quay/Chụp, Bàn giao hoặc Tổng tải để làm nổi riêng đường đó; nhấn lại để hiện tất cả. Nhấn điểm Tổng tải để mở hợp không trùng của task quay/chụp và task bàn giao trong mốc.",
   },
   mix: {
     title: "Cơ cấu sản lượng bàn giao",
@@ -728,6 +728,9 @@ function CapacityTrend({
     metric: "shoot" | "output" | "total",
   ) => void;
 }) {
+  const [activeMetric, setActiveMetric] = useState<
+    "shoot" | "output" | "total" | null
+  >(null);
   const width = Math.max(1060, 78 + Math.max(1, rows.length - 1) * 88);
   const height = 330;
   const left = 54;
@@ -781,19 +784,48 @@ function CapacityTrend({
           <h3>Giờ chuẩn quay/chụp &amp; bàn giao</h3>
         </div>
         <div className="capacityHeaderTools">
-          <div className="capacityLegend">
-            <span>
+          <div
+            className={`capacityLegend${activeMetric ? " hasFocus" : ""}`}
+          >
+            <button
+              type="button"
+              className={activeMetric === "shoot" ? "active" : ""}
+              aria-pressed={activeMetric === "shoot"}
+              onClick={() =>
+                setActiveMetric((current) =>
+                  current === "shoot" ? null : "shoot",
+                )
+              }
+            >
               <i className="shoot" />Quay/Chụp · P50{" "}
               {formatHourPoint(shootReference.p50Minutes)}
-            </span>
-            <span>
+            </button>
+            <button
+              type="button"
+              className={activeMetric === "output" ? "active" : ""}
+              aria-pressed={activeMetric === "output"}
+              onClick={() =>
+                setActiveMetric((current) =>
+                  current === "output" ? null : "output",
+                )
+              }
+            >
               <i className="output" />Bàn giao · P50{" "}
               {formatHourPoint(outputReference.p50Minutes)}
-            </span>
-            <span>
+            </button>
+            <button
+              type="button"
+              className={activeMetric === "total" ? "active" : ""}
+              aria-pressed={activeMetric === "total"}
+              onClick={() =>
+                setActiveMetric((current) =>
+                  current === "total" ? null : "total",
+                )
+              }
+            >
               <i className="total" />Tổng tải · P50{" "}
               {formatHourPoint(totalReference.p50Minutes)}
-            </span>
+            </button>
             <span>
               <i className="rolling" />TB trượt 4 kỳ
             </span>
@@ -860,7 +892,7 @@ function CapacityTrend({
       ) : rows.length ? (
         <div className="capacityTrendScroller">
         <svg
-          className="capacityTrendSvg"
+          className={`capacityTrendSvg${activeMetric ? ` seriesFocus focus-${activeMetric}` : ""}`}
           style={{ minWidth: `${width}px` }}
           viewBox={`0 0 ${width} ${height}`}
           role="img"
@@ -944,7 +976,7 @@ function CapacityTrend({
                 {row.label}
               </text>
               <g
-                className="capacityPointGroup"
+                className="capacityPointGroup shoot"
                 role="button"
                 tabIndex={0}
                 aria-label={`${row.label} · Quay/Chụp ${formatHours(row.shootMinutes)}${row.isComplete ? "" : " · Chưa hoàn tất"}`}
@@ -971,7 +1003,7 @@ function CapacityTrend({
                 </text>
               </g>
               <g
-                className="capacityPointGroup"
+                className="capacityPointGroup output"
                 role="button"
                 tabIndex={0}
                 aria-label={`${row.label} · Bàn giao ${formatHours(row.outputMinutes)}${row.isComplete ? "" : " · Chưa hoàn tất"}`}
@@ -998,7 +1030,7 @@ function CapacityTrend({
                 </text>
               </g>
               <g
-                className="capacityPointGroup"
+                className="capacityPointGroup total"
                 role="button"
                 tabIndex={0}
                 aria-label={`${row.label} · Tổng tải ${formatHours(row.totalMinutes)}${row.isComplete ? "" : " · Chưa hoàn tất"}`}
@@ -1033,77 +1065,6 @@ function CapacityTrend({
           Chưa có dữ liệu Media trong khoảng đã chọn.
         </p>
       )}
-    </article>
-  );
-}
-
-function SegmentChart({
-  title,
-  kicker,
-  total,
-  rows,
-  help,
-  onSelect,
-  footer,
-}: {
-  title: string;
-  kicker: string;
-  total: number;
-  rows: Array<{
-    label: string;
-    value: number;
-    className: string;
-    tasks: Task[];
-  }>;
-  help: DashboardHelp;
-  onSelect: (row: (typeof rows)[number]) => void;
-  footer?: React.ReactNode;
-}) {
-  return (
-    <article className="capacitySegmentCard">
-      <div className="capacityCardHeader">
-        <div>
-          <span className="chartKicker">{kicker}</span>
-          <h3>{title}</h3>
-        </div>
-        <HelpButton help={help} />
-      </div>
-      <div className="capacitySegmentTotal">
-        <strong>{formatNumber(total)}</strong>
-        <span>task bàn giao</span>
-      </div>
-      <div className="capacitySegments">
-        {total > 0 ? (
-          rows.map((row) => (
-            <button
-              type="button"
-              key={row.label}
-              className={row.className}
-              style={{ width: `${(row.value / total) * 100}%` }}
-              title={`${row.label}: ${row.value} task`}
-              aria-label={`${row.label}: ${row.value} task, ${formatPercent(row.value, total)}`}
-              onClick={() => onSelect(row)}
-            />
-          ))
-        ) : (
-          <span className="capacityEmptyBar" />
-        )}
-      </div>
-      <div className="capacitySegmentLegend">
-        {rows.map((row) => (
-          <button
-            type="button"
-            key={row.label}
-            onClick={() => onSelect(row)}
-          >
-            <i className={row.className} />
-            <span>{row.label}</span>
-            <strong>{formatNumber(row.value)}</strong>
-            <small>{formatPercent(row.value, total)}</small>
-          </button>
-        ))}
-      </div>
-      {footer}
     </article>
   );
 }
@@ -1318,41 +1279,6 @@ export function MediaCapacitySection({
         standardMinutes,
       ),
     );
-  const mixRows = [
-    {
-      label: "Video",
-      value: focusWeek.videoTasks.length,
-      className: "video",
-      tasks: focusWeek.videoTasks,
-    },
-    {
-      label: "Graphic",
-      value: focusWeek.graphicTasks.length,
-      className: "graphic",
-      tasks: focusWeek.graphicTasks,
-    },
-  ];
-  const qualityRows = [
-    {
-      label: "Bàn giao đúng hạn",
-      value: focusWeek.onTimeTasks.length,
-      className: "onTime",
-      tasks: focusWeek.onTimeTasks,
-    },
-    {
-      label: "Trễ / quá hạn",
-      value: focusWeek.lateTasks.length,
-      className: "late",
-      tasks: focusWeek.lateTasks,
-    },
-    {
-      label: "Chưa đủ đánh giá",
-      value: focusWeek.unassessedTasks.length,
-      className: "unassessed",
-      tasks: focusWeek.unassessedTasks,
-    },
-  ];
-
   return (
     <>
       <header className="dashboardGroupHeader capacityGroupHeader">
@@ -1623,57 +1549,6 @@ export function MediaCapacitySection({
             )
           }
         />
-
-        <div className="capacityBottomGrid">
-          <SegmentChart
-            kicker="CƠ CẤU ĐẦU RA"
-            title="Video & Graphic bàn giao"
-            total={focusWeek.outputTasks.length}
-            rows={mixRows}
-            help={capacityHelp.mix}
-            onSelect={(row) =>
-              openStandardTasks(
-                `${row.label} bàn giao · ${focusWeek.label}`,
-                "Ấn phẩm có Ngày Kiểm Duyệt trong tuần",
-                row.tasks,
-              )
-            }
-          />
-          <SegmentChart
-            kicker="SẢN LƯỢNG & KIỂM SOÁT"
-            title="Kết quả tại mốc bàn giao"
-            total={focusWeek.outputTasks.length}
-            rows={qualityRows}
-            help={capacityHelp.quality}
-            onSelect={(row) =>
-              openStandardTasks(
-                `${row.label} · ${focusWeek.label}`,
-                "Phân loại theo Đánh Giá Bàn Giao",
-                row.tasks,
-              )
-            }
-            footer={
-              <button
-                type="button"
-                className="capacityFeedbackMetric"
-                onClick={() =>
-                  onOpenDetail({
-                    title: `Lần trả về · ${focusWeek.label}`,
-                    subtitle:
-                      "Phản hồi trong tuần thuộc các task ấn phẩm đã bàn giao",
-                    feedback: focusWeek.feedbackRows,
-                  })
-                }
-              >
-                <span>LẦN TRẢ VỀ TRONG TUẦN</span>
-                <strong>{formatNumber(focusWeek.feedbackRows.length)}</strong>
-                <small>
-                  Nhấn để xem dữ liệu từ sheet 2.9
-                </small>
-              </button>
-            }
-          />
-        </div>
 
         <div className="capacityMethodNote">
           <span>MỐC ĐANG DÙNG</span>
