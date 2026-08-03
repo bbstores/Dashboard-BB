@@ -1077,5 +1077,45 @@ test("excludes partial Media trend buckets from its matching P50", () => {
   assert.equal(rows.rows.length, 2);
   assert.equal(rows.rows[0].isComplete, true);
   assert.equal(rows.rows[1].isComplete, false);
+  assert.equal(rows.rows[0].totalMinutes, 100);
+  assert.equal(rows.rows[0].rollingAverageMinutes, null);
   assert.equal(rows.shootReference.p50Minutes, 100);
+  assert.equal(rows.totalReference.p50Minutes, 100);
+});
+
+test("calculates total Media load and its four-period moving average", () => {
+  const events = Array.from({ length: 5 }, (_, index) => {
+    const date = new Date(2026, 6, 6 + index * 7, 9);
+    return [
+      {
+        metric: "shoot" as const,
+        date,
+        minutes: 40 * (index + 1),
+        task: task(`SHOOT-${index}`),
+      },
+      {
+        metric: "output" as const,
+        date,
+        minutes: 60 * (index + 1),
+        task: task(`OUTPUT-${index}`),
+      },
+    ];
+  }).flat();
+  const result = calculateMediaTrendSeries(
+    events,
+    new Date(2026, 6, 6),
+    new Date(2026, 7, 9, 23, 59),
+    "week",
+    new Date(2026, 7, 20),
+  );
+
+  assert.deepEqual(
+    result.rows.map((row) => row.totalMinutes),
+    [100, 200, 300, 400, 500],
+  );
+  assert.deepEqual(
+    result.rows.map((row) => row.rollingAverageMinutes),
+    [null, null, null, 250, 350],
+  );
+  assert.equal(result.totalReference.p50Minutes, 300);
 });

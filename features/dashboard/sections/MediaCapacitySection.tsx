@@ -108,11 +108,11 @@ const capacityHelp: Record<
     objective:
       "Phát hiện xu hướng tăng/giảm, độ trễ giữa tuần quay và tuần trả ấn phẩm, cùng các tuần bất thường.",
     calculation:
-      "Quay/Chụp dùng Ngày Bắt Đầu; Bàn giao dùng Ngày Kiểm Duyệt. 1W và khoảng tối đa 14 ngày hiển thị theo ngày; 1M/3M và khoảng 15–100 ngày theo tuần; 1Y, All dài hơn 100 ngày theo tháng. P50 được tính lại theo đúng đơn vị đang hiển thị và chỉ dùng các mốc hoàn chỉnh.",
+      "Quay/Chụp dùng Ngày Bắt Đầu; Bàn giao dùng Ngày Kiểm Duyệt. Tổng tải = giờ chuẩn Quay/Chụp + giờ chuẩn Bàn giao trong từng mốc. P50 tổng được tính trực tiếp từ tổng tải của các mốc hoàn chỉnh, không cộng hai P50 riêng. Trung bình trượt chỉ xuất hiện từ khi có đủ 4 mốc hoàn chỉnh và lấy trung bình tổng tải của 4 mốc gần nhất.",
     example:
       "Tuần 1 tải quay tăng mạnh nhưng đầu ra chỉ tăng ở tuần 2 có thể phản ánh độ trễ sản xuất.",
     note:
-      "Bộ lọc này chỉ tác động chart. Chủ nhật không phát sinh bị ẩn ở chế độ ngày; Chủ nhật có dữ liệu vẫn xuất hiện. Điểm viền rỗng là mốc chưa hoàn tất. Nhấn điểm để mở đúng task của mốc đó.",
+      "Bộ lọc này chỉ tác động chart. 1W và khoảng tối đa 14 ngày hiển thị theo ngày; 15–100 ngày theo tuần; dài hơn 100 ngày theo tháng. Chủ nhật không phát sinh bị ẩn ở chế độ ngày. Điểm viền rỗng là mốc chưa hoàn tất và không tham gia P50 hay trung bình trượt. Nhấn điểm Tổng tải để mở hợp không trùng của task quay/chụp và task bàn giao trong mốc.",
   },
   mix: {
     title: "Cơ cấu sản lượng bàn giao",
@@ -692,10 +692,15 @@ function linePath(points: Array<{ x: number; y: number }>) {
     .join(" ");
 }
 
+function uniqueTasks(tasks: Task[]) {
+  return Array.from(new Set(tasks));
+}
+
 function CapacityTrend({
   rows,
   shootReference,
   outputReference,
+  totalReference,
   preset,
   dateFrom,
   dateTo,
@@ -709,6 +714,7 @@ function CapacityTrend({
   rows: MediaTrendBucket[];
   shootReference: CapacityReference;
   outputReference: CapacityReference;
+  totalReference: CapacityReference;
   preset: TrendPreset;
   dateFrom: string;
   dateTo: string;
@@ -719,7 +725,7 @@ function CapacityTrend({
   onDateToChange: (value: string) => void;
   onSelect: (
     bucket: MediaTrendBucket,
-    metric: "shoot" | "output",
+    metric: "shoot" | "output" | "total",
   ) => void;
 }) {
   const width = Math.max(1060, 78 + Math.max(1, rows.length - 1) * 88);
@@ -732,9 +738,15 @@ function CapacityTrend({
   const plotHeight = height - top - bottom;
   const max = Math.max(
     60,
-    ...rows.flatMap((row) => [row.shootMinutes, row.outputMinutes]),
+    ...rows.flatMap((row) => [
+      row.shootMinutes,
+      row.outputMinutes,
+      row.totalMinutes,
+      row.rollingAverageMinutes ?? 0,
+    ]),
     shootReference.p50Minutes,
     outputReference.p50Minutes,
+    totalReference.p50Minutes,
   );
   const point = (value: number, index: number) => ({
     x:
@@ -749,6 +761,14 @@ function CapacityTrend({
   );
   const outputPoints = rows.map((row, index) =>
     point(row.outputMinutes, index),
+  );
+  const totalPoints = rows.map((row, index) =>
+    point(row.totalMinutes, index),
+  );
+  const rollingAveragePoints = rows.flatMap((row, index) =>
+    row.rollingAverageMinutes === null
+      ? []
+      : [point(row.rollingAverageMinutes, index)],
   );
   const yFor = (value: number) =>
     top + plotHeight - (value / max) * plotHeight;
@@ -769,6 +789,13 @@ function CapacityTrend({
             <span>
               <i className="output" />Bàn giao · P50{" "}
               {formatHourPoint(outputReference.p50Minutes)}
+            </span>
+            <span>
+              <i className="total" />Tổng tải · P50{" "}
+              {formatHourPoint(totalReference.p50Minutes)}
+            </span>
+            <span>
+              <i className="rolling" />TB trượt 4 kỳ
             </span>
             <span><i className="partial" />Chưa hoàn tất</span>
           </div>
@@ -879,6 +906,15 @@ function CapacityTrend({
               y2={yFor(outputReference.p50Minutes)}
             />
           )}
+          {totalReference.p50Minutes > 0 && (
+            <line
+              className="capacityBaseline total"
+              x1={left}
+              x2={width - right}
+              y1={yFor(totalReference.p50Minutes)}
+              y2={yFor(totalReference.p50Minutes)}
+            />
+          )}
           <path
             className="capacityTrendLine shoot"
             d={linePath(shootPoints)}
@@ -887,6 +923,16 @@ function CapacityTrend({
             className="capacityTrendLine output"
             d={linePath(outputPoints)}
           />
+          <path
+            className="capacityTrendLine total"
+            d={linePath(totalPoints)}
+          />
+          {rollingAveragePoints.length > 1 && (
+            <path
+              className="capacityTrendLine rolling"
+              d={linePath(rollingAveragePoints)}
+            />
+          )}
           {rows.map((row, index) => (
             <g key={row.key}>
               <text
@@ -949,6 +995,33 @@ function CapacityTrend({
                   textAnchor="middle"
                 >
                   {formatHourPoint(row.outputMinutes)}
+                </text>
+              </g>
+              <g
+                className="capacityPointGroup"
+                role="button"
+                tabIndex={0}
+                aria-label={`${row.label} · Tổng tải ${formatHours(row.totalMinutes)}${row.isComplete ? "" : " · Chưa hoàn tất"}`}
+                onClick={() => onSelect(row, "total")}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    onSelect(row, "total");
+                  }
+                }}
+              >
+                <circle
+                  className={`capacityTrendPoint total${row.isComplete ? "" : " partial"}`}
+                  cx={totalPoints[index].x}
+                  cy={totalPoints[index].y}
+                  r={5}
+                />
+                <text
+                  className="capacityPointValue total"
+                  x={totalPoints[index].x}
+                  y={totalPoints[index].y - 11}
+                  textAnchor="middle"
+                >
+                  {formatHourPoint(row.totalMinutes)}
                 </text>
               </g>
             </g>
@@ -1522,6 +1595,7 @@ export function MediaCapacitySection({
           rows={trendSeries.rows}
           shootReference={trendSeries.shootReference}
           outputReference={trendSeries.outputReference}
+          totalReference={trendSeries.totalReference}
           preset={trendPreset}
           dateFrom={trendRange.from}
           dateTo={trendRange.to}
@@ -1532,13 +1606,20 @@ export function MediaCapacitySection({
           onDateToChange={setTrendCustomTo}
           onSelect={(bucket, metric) =>
             openStandardTasks(
-              `${metric === "shoot" ? "Quay/Chụp" : "Bàn giao"} · ${bucket.label}`,
+              `${metric === "shoot" ? "Quay/Chụp" : metric === "output" ? "Bàn giao" : "Tổng tải chuẩn"} · ${bucket.label}`,
               metric === "shoot"
                 ? `Task Quay/Chụp phân theo ${granularityLabel(trendGranularity)} bằng Ngày Bắt Đầu`
-                : `Task ấn phẩm phân theo ${granularityLabel(trendGranularity)} bằng Ngày Kiểm Duyệt`,
+                : metric === "output"
+                  ? `Task ấn phẩm phân theo ${granularityLabel(trendGranularity)} bằng Ngày Kiểm Duyệt`
+                  : `Hợp không trùng của task Quay/Chụp và Bàn giao trong ${granularityLabel(trendGranularity)}; giá trị trên chart vẫn là tổng giờ chuẩn của hai công đoạn`,
               metric === "shoot"
                 ? bucket.shootTasks
-                : bucket.outputTasks,
+                : metric === "output"
+                  ? bucket.outputTasks
+                  : uniqueTasks([
+                      ...bucket.shootTasks,
+                      ...bucket.outputTasks,
+                    ]),
             )
           }
         />

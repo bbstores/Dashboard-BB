@@ -66,12 +66,15 @@ export type MediaTrendBucket = {
   outputTasks: Task[];
   shootMinutes: number;
   outputMinutes: number;
+  totalMinutes: number;
+  rollingAverageMinutes: number | null;
 };
 
 export type MediaTrendSeries = {
   rows: MediaTrendBucket[];
   shootReference: CapacityReference;
   outputReference: CapacityReference;
+  totalReference: CapacityReference;
   granularity: MediaTrendGranularity;
 };
 
@@ -178,7 +181,7 @@ function endOfMonth(value: Date) {
 
 function trendReference(
   rows: MediaTrendBucket[],
-  metric: "shootMinutes" | "outputMinutes",
+  metric: "shootMinutes" | "outputMinutes" | "totalMinutes",
 ): CapacityReference {
   const values = rows
     .filter((row) => row.isComplete)
@@ -213,6 +216,7 @@ export function calculateMediaTrendSeries(
       rows: [],
       shootReference: trendReference([], "shootMinutes"),
       outputReference: trendReference([], "outputMinutes"),
+      totalReference: trendReference([], "totalMinutes"),
       granularity,
     };
   }
@@ -280,6 +284,14 @@ export function calculateMediaTrendSeries(
       const outputEvents = bucketEvents.filter(
         (event) => event.metric === "output",
       );
+      const shootMinutes = shootEvents.reduce(
+        (total, event) => total + event.minutes,
+        0,
+      );
+      const outputMinutes = outputEvents.reduce(
+        (total, event) => total + event.minutes,
+        0,
+      );
       const label =
         granularity === "day"
           ? dayLabel(start)
@@ -298,22 +310,41 @@ export function calculateMediaTrendSeries(
             naturalEnd < todayStart,
           shootTasks: shootEvents.map((event) => event.task),
           outputTasks: outputEvents.map((event) => event.task),
-          shootMinutes: shootEvents.reduce(
-            (total, event) => total + event.minutes,
-            0,
-          ),
-          outputMinutes: outputEvents.reduce(
-            (total, event) => total + event.minutes,
-            0,
-          ),
+          shootMinutes,
+          outputMinutes,
+          totalMinutes: shootMinutes + outputMinutes,
+          rollingAverageMinutes: null,
         },
       ];
     },
   );
+  const completeTotals: number[] = [];
+  const rowsWithRollingAverage = rows.map((row) => {
+    if (!row.isComplete) return row;
+    completeTotals.push(row.totalMinutes);
+    if (completeTotals.length < 4) return row;
+    const rollingWindow = completeTotals.slice(-4);
+    return {
+      ...row,
+      rollingAverageMinutes:
+        rollingWindow.reduce((sum, value) => sum + value, 0) /
+        rollingWindow.length,
+    };
+  });
   return {
-    rows,
-    shootReference: trendReference(rows, "shootMinutes"),
-    outputReference: trendReference(rows, "outputMinutes"),
+    rows: rowsWithRollingAverage,
+    shootReference: trendReference(
+      rowsWithRollingAverage,
+      "shootMinutes",
+    ),
+    outputReference: trendReference(
+      rowsWithRollingAverage,
+      "outputMinutes",
+    ),
+    totalReference: trendReference(
+      rowsWithRollingAverage,
+      "totalMinutes",
+    ),
     granularity,
   };
 }

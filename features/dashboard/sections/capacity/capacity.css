@@ -629,6 +629,14 @@
 }
 .capacityLegend i.shoot { background: #9bcbbb; }
 .capacityLegend i.output { background: #d9ff72; }
+.capacityLegend i.total { background: #fff4d0; }
+.capacityLegend i.rolling {
+  background: transparent;
+  border-radius: 0;
+  border-top: 2px dashed #f3b562;
+  height: 4px;
+  width: 12px;
+}
 .capacityLegend i.partial {
   background: transparent;
   border: 2px dashed #fff;
@@ -744,6 +752,16 @@
 }
 .capacityTrendLine.shoot { stroke: #9bcbbb; }
 .capacityTrendLine.output { stroke: #d9ff72; }
+.capacityTrendLine.total {
+  stroke: #fff4d0;
+  stroke-width: 4;
+}
+.capacityTrendLine.rolling {
+  opacity: .92;
+  stroke: #f3b562;
+  stroke-dasharray: 6 5;
+  stroke-width: 2;
+}
 .capacityBaseline {
   opacity: .55;
   stroke-dasharray: 8 7;
@@ -751,6 +769,11 @@
 }
 .capacityBaseline.shoot { stroke: #9bcbbb; }
 .capacityBaseline.output { stroke: #d9ff72; }
+.capacityBaseline.total {
+  opacity: .72;
+  stroke: #fff4d0;
+  stroke-width: 2;
+}
 .capacityPointGroup {
   cursor: pointer;
   outline: none;
@@ -766,6 +789,7 @@
 }
 .capacityTrendPoint.shoot { fill: #9bcbbb; }
 .capacityTrendPoint.output { fill: #d9ff72; }
+.capacityTrendPoint.total { fill: #fff4d0; }
 .capacityTrendPoint.partial {
   fill: #174f3d;
   stroke-dasharray: 3 2;
@@ -780,6 +804,7 @@
 }
 .capacityPointValue.shoot { fill: #c6e2d9; }
 .capacityPointValue.output { fill: #eaffaa; }
+.capacityPointValue.total { fill: #fff4d0; }
 .capacityTrendEmpty {
   color: #bdcec7;
   font-size: 10px;

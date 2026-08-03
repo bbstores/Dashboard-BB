@@ -253,12 +253,21 @@ test("Media shoot-type baseline uses an independent date range", () => {
     screen.getByRole("button", { name: "3M" }).getAttribute("aria-pressed"),
     "true",
   );
+  assert.ok(screen.getByText(/Tổng tải · P50/));
+  assert.ok(screen.getByText("TB trượt 4 kỳ"));
   fireEvent.click(screen.getByRole("button", { name: "1W" }));
   assert.ok(screen.getByText("THEO NGÀY"));
   fireEvent.click(
     screen.getByRole("button", { name: /20\/07 · Quay\/Chụp/ }),
   );
   assert.match(openedTrendDetail?.title ?? "", /Quay\/Chụp · 20\/07/);
+  fireEvent.click(
+    screen.getByRole("button", { name: /20\/07 · Tổng tải/ }),
+  );
+  assert.match(
+    openedTrendDetail?.title ?? "",
+    /Tổng tải chuẩn · 20\/07/,
+  );
 
   fireEvent.change(screen.getByLabelText("Từ ngày"), {
     target: { value: "2026-07-27" },
