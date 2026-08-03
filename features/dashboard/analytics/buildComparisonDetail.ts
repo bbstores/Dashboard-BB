@@ -2,15 +2,15 @@ import {
   formatDate,
   formatNumber,
 } from "@/shared/formatting/format";
-import { calculateDashboardStats } from "./calculateDashboardStats";
-import { calculatePublicationStats } from "./calculatePublicationStats";
 import type {
   BusinessComparisonPoint,
   MediaComparisonPoint,
 } from "./calculateReportComparison";
 import {
-  isGraphicPublication,
-  isVideoPublication,
+  getBusinessComparisonStats,
+  getMediaComparisonContext,
+} from "./calculateReportComparison";
+import {
   normalize,
   normalizedKey,
 } from "../model/taskUtils";
@@ -95,23 +95,7 @@ function mediaDetail(
     to: point.to,
     hasFilter: true,
   };
-  const stats = calculateDashboardStats(data, {
-    dateWindow,
-    collectionMonth: report.filters.collectionMonth,
-    backlogDate: report.filters.dateTo,
-  });
-  const videoMetrics =
-    stats.pieMetrics.combined[
-      report.filters.pieExcludeOutsource.videoPublications
-        ? "withoutOutsource"
-        : "all"
-    ];
-  const graphicMetrics =
-    stats.pieMetrics.combined[
-      report.filters.pieExcludeOutsource.graphicPublications
-        ? "withoutOutsource"
-        : "all"
-    ];
+  const stats = getMediaComparisonContext(data, report, dateWindow);
 
   if (selection.key.startsWith("assignee:")) {
     const name = selection.key.slice("assignee:".length);
@@ -182,7 +166,7 @@ function mediaDetail(
         feedback: stats.selectedFeedback.map((item) => ({
           ...item,
           task:
-            stats.taskByCode.get(item.taskCode) ??
+            stats.taskByCode.get(normalizedKey(item.taskCode)) ??
             data.tasks.find(
               (task) =>
                 normalizedKey(task.code) ===
@@ -260,13 +244,13 @@ function mediaDetail(
     case "video":
       return taskDetail(
         selection,
-        videoMetrics.tasks.filter(isVideoPublication),
+        stats.videoTasks,
         "Format Type chứa Video và Công đoạn Edit",
       );
     case "graphic":
       return taskDetail(
         selection,
-        graphicMetrics.tasks.filter(isGraphicPublication),
+        stats.graphicTasks,
         "Không phải Video và Công đoạn Graphic Design",
       );
     case "cost":
@@ -287,18 +271,15 @@ function mediaDetail(
 
 function businessDetail(
   data: DashboardData,
+  report: SavedReport,
   selection: ComparisonEvidenceSelection,
 ): DetailView {
   const point = selection.point as BusinessComparisonPoint;
-  const stats = calculatePublicationStats(
-    data.tasks,
-    data.publications,
-    {
-      from: point.from,
-      to: point.to,
-      hasFilter: true,
-    },
-  );
+  const stats = getBusinessComparisonStats(data, report, {
+    from: point.from,
+    to: point.to,
+    hasFilter: true,
+  });
   const sourceRows = (source: ClassifiedPublication["source"]) =>
     stats.classifiedPosts.filter((row) => row.source === source);
   const mediaRows = stats.classifiedPosts.filter(
@@ -425,5 +406,5 @@ export function buildComparisonDetail(
 ): DetailView {
   return department === "media"
     ? mediaDetail(data, report, selection)
-    : businessDetail(data, selection);
+    : businessDetail(data, report, selection);
 }

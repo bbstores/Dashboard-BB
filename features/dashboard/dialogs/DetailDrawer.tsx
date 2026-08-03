@@ -39,6 +39,7 @@ const detailCollator = new Intl.Collator("vi", {
   numeric: true,
   sensitivity: "base",
 });
+const DETAIL_PAGE_SIZE = 100;
 
 function normalizeSearch(value: unknown) {
   return String(value ?? "")
@@ -589,6 +590,7 @@ export function DetailDrawer({
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">(
     "asc",
   );
+  const [page, setPage] = useState(1);
   const records = useMemo(() => detailRecords(detail), [detail]);
   const columns = useMemo(() => detailColumns(detail), [detail]);
 
@@ -646,6 +648,16 @@ export function DetailDrawer({
 
   const count = records.length;
   const visibleCount = visibleRecords.length;
+  const pageCount = Math.max(
+    1,
+    Math.ceil(visibleCount / DETAIL_PAGE_SIZE),
+  );
+  const safePage = Math.min(page, pageCount);
+  const rowOffset = (safePage - 1) * DETAIL_PAGE_SIZE;
+  const pagedRecords = visibleRecords.slice(
+    rowOffset,
+    rowOffset + DETAIL_PAGE_SIZE,
+  );
   const hasRecords = visibleCount > 0;
   const isFiltered =
     normalizeSearch(search).length > 0 ||
@@ -662,22 +674,22 @@ export function DetailDrawer({
           ? "lần phản hồi"
           : "task";
 
-  const costTaskSummaryRows = visibleRecords.flatMap((record) =>
+  const costTaskSummaryRows = pagedRecords.flatMap((record) =>
     record.kind === "costTaskSummary" ? [record.value] : [],
   );
-  const shootSessionRows = visibleRecords.flatMap((record) =>
+  const shootSessionRows = pagedRecords.flatMap((record) =>
     record.kind === "shootSession" ? [record.value] : [],
   );
-  const costAllocationRows = visibleRecords.flatMap((record) =>
+  const costAllocationRows = pagedRecords.flatMap((record) =>
     record.kind === "costAllocation" ? [record.value] : [],
   );
-  const publicationRows = visibleRecords.flatMap((record) =>
+  const publicationRows = pagedRecords.flatMap((record) =>
     record.kind === "publication" ? [record.value] : [],
   );
-  const feedbackRows = visibleRecords.flatMap((record) =>
+  const feedbackRows = pagedRecords.flatMap((record) =>
     record.kind === "feedback" ? [record.value] : [],
   );
-  const taskRows = visibleRecords.flatMap((record) =>
+  const taskRows = pagedRecords.flatMap((record) =>
     record.kind === "task" ? [record.value] : [],
   );
 
@@ -687,6 +699,7 @@ export function DetailDrawer({
     setFilterValue("");
     setSortColumn("");
     setSortDirection("asc");
+    setPage(1);
   };
 
   return (
@@ -720,7 +733,10 @@ export function DetailDrawer({
             <input
               type="search"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
               placeholder="Mã task, tên, trạng thái..."
               aria-label="Tìm trong bảng dẫn chứng"
             />
@@ -732,6 +748,7 @@ export function DetailDrawer({
               onChange={(event) => {
                 setFilterColumn(event.target.value);
                 setFilterValue("");
+                setPage(1);
               }}
               aria-label="Cột cần lọc"
             >
@@ -748,7 +765,10 @@ export function DetailDrawer({
             <input
               type="search"
               value={filterValue}
-              onChange={(event) => setFilterValue(event.target.value)}
+              onChange={(event) => {
+                setFilterValue(event.target.value);
+                setPage(1);
+              }}
               placeholder={
                 filterColumn ? "Nhập giá trị cần lọc" : "Chọn cột trước"
               }
@@ -760,7 +780,10 @@ export function DetailDrawer({
             <span>Sắp xếp theo</span>
             <select
               value={sortColumn}
-              onChange={(event) => setSortColumn(event.target.value)}
+              onChange={(event) => {
+                setSortColumn(event.target.value);
+                setPage(1);
+              }}
               aria-label="Sắp xếp theo cột"
             >
               <option value="">Thứ tự gốc</option>
@@ -775,11 +798,12 @@ export function DetailDrawer({
             type="button"
             className="detailSortDirection"
             disabled={!sortColumn}
-            onClick={() =>
+            onClick={() => {
               setSortDirection((current) =>
                 current === "asc" ? "desc" : "asc",
-              )
-            }
+              );
+              setPage(1);
+            }}
             aria-label="Đổi hướng sắp xếp"
           >
             {sortDirection === "asc" ? "Tăng dần ↑" : "Giảm dần ↓"}
@@ -812,7 +836,7 @@ export function DetailDrawer({
                 {shootSessionRows.map((row, index) => (
                   <tr key={`${row.id}-${index}`}>
                     <td data-label="STT" className="detailRowNumber">
-                      {index + 1}
+                      {rowOffset + index + 1}
                     </td>
                     <td data-label="Mã ca quay" className="taskIdentity">
                       <strong>{row.id}</strong>
@@ -867,7 +891,7 @@ export function DetailDrawer({
                 {costTaskSummaryRows.map((row, index) => (
                   <tr key={`${row.task.code}-${index}`}>
                     <td data-label="STT" className="detailRowNumber">
-                      {index + 1}
+                      {rowOffset + index + 1}
                     </td>
                     <td data-label="Mã task" className="costTaskCode">
                       <strong>{row.task.code || "Chưa có mã"}</strong>
@@ -921,7 +945,7 @@ export function DetailDrawer({
                     key={`${row.proposalId}-${row.entity}-${row.task.code}-${index}`}
                   >
                     <td data-label="STT" className="detailRowNumber">
-                      {index + 1}
+                      {rowOffset + index + 1}
                     </td>
                     <td data-label="Phiếu chi" className="taskIdentity">
                       <strong>{row.proposalId}</strong>
@@ -967,7 +991,7 @@ export function DetailDrawer({
                   ({ post, task, reason }, index) => (
                     <tr key={`${post.id}-${index}`}>
                       <td data-label="STT" className="detailRowNumber">
-                        {index + 1}
+                        {rowOffset + index + 1}
                       </td>
                       <td data-label="Bài đăng" className="taskIdentity">
                         <strong>{post.id}</strong>
@@ -1021,7 +1045,7 @@ export function DetailDrawer({
                 {feedbackRows.map((item, index) => (
                   <tr key={`${item.taskCode}-${item.at?.getTime() ?? "none"}-${index}`}>
                     <td data-label="STT" className="detailRowNumber">
-                      {index + 1}
+                      {rowOffset + index + 1}
                     </td>
                     <td data-label="Task"><strong>{item.taskCode}</strong></td>
                     <td data-label="Tên task" className="detailTitleCell">
@@ -1056,7 +1080,7 @@ export function DetailDrawer({
                 {taskRows.map((task, index) => (
                   <TaskDetailRow
                     detail={detail}
-                    index={index}
+                    index={rowOffset + index}
                     key={`${task.code}-${index}`}
                     task={task}
                   />
@@ -1072,6 +1096,32 @@ export function DetailDrawer({
             </p>
           )}
         </div>
+        {visibleCount > DETAIL_PAGE_SIZE && (
+          <nav className="detailPagination" aria-label="Phân trang bảng dẫn chứng">
+            <button
+              type="button"
+              disabled={safePage <= 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              ← Trang trước
+            </button>
+            <span>
+              Trang <strong>{formatNumber(safePage)}</strong> /{" "}
+              {formatNumber(pageCount)} · Dòng{" "}
+              {formatNumber(rowOffset + 1)}–
+              {formatNumber(Math.min(rowOffset + DETAIL_PAGE_SIZE, visibleCount))}
+            </span>
+            <button
+              type="button"
+              disabled={safePage >= pageCount}
+              onClick={() =>
+                setPage((current) => Math.min(pageCount, current + 1))
+              }
+            >
+              Trang sau →
+            </button>
+          </nav>
+        )}
       </aside>
     </div>
   );

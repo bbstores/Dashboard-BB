@@ -232,13 +232,16 @@ test("Media shoot-type baseline uses an independent date range", () => {
     backlogDate: "2026-07-30",
   });
 
+  let openedTrendDetail: DetailView | null = null;
   render(
     <HelpProvider>
       <MediaCapacitySection
         viewModel={stats.mediaCapacity}
         globalDateFrom="2026-07-20"
         globalDateTo="2026-07-26"
-        onOpenDetail={() => undefined}
+        onOpenDetail={(detail) => {
+          openedTrendDetail = detail;
+        }}
       />
     </HelpProvider>,
   );
@@ -246,6 +249,16 @@ test("Media shoot-type baseline uses an independent date range", () => {
   assert.ok(screen.getByText("20/7/2026–26/7/2026"));
   assert.ok(screen.getByRole("button", { name: /Bộ Sưu Tập/ }));
   assert.equal(screen.queryByRole("button", { name: /Order Lại/ }), null);
+  assert.equal(
+    screen.getByRole("button", { name: "3M" }).getAttribute("aria-pressed"),
+    "true",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "1W" }));
+  assert.ok(screen.getByText("THEO NGÀY"));
+  fireEvent.click(
+    screen.getByRole("button", { name: /20\/07 · Quay\/Chụp/ }),
+  );
+  assert.match(openedTrendDetail?.title ?? "", /Quay\/Chụp · 20\/07/);
 
   fireEvent.change(screen.getByLabelText("Từ ngày"), {
     target: { value: "2026-07-27" },
@@ -509,6 +522,38 @@ test("evidence tables support global search, column filters and sorting", () => 
   );
   assert.match(taskCodes()[0], /FILTER-ALPHA/);
   assert.match(taskCodes()[2], /FILTER-BETA/);
+});
+
+test("large evidence tables render one hundred rows per page", () => {
+  const tasks = Array.from({ length: 205 }, (_, index) => ({
+    ...task(),
+    code: `PAGE-${String(index + 1).padStart(3, "0")}`,
+    title: `Task page ${index + 1}`,
+  }));
+  render(
+    <DetailDrawer
+      detail={{
+        title: "Bảng lớn",
+        subtitle: "Kiểm thử phân trang",
+        tasks,
+      }}
+      onClose={() => undefined}
+    />,
+  );
+
+  assert.equal(
+    document.querySelectorAll(".taskDetailTable tbody tr").length,
+    100,
+  );
+  assert.ok(screen.getByText("PAGE-001"));
+  assert.equal(screen.queryByText("PAGE-101"), null);
+  fireEvent.click(screen.getByRole("button", { name: "Trang sau →" }));
+  assert.ok(screen.getByText("PAGE-101"));
+  assert.equal(screen.queryByText("PAGE-001"), null);
+  assert.match(
+    document.querySelector(".detailPagination")?.textContent ?? "",
+    /Trang 2 \/ 3/,
+  );
 });
 
 test("shooting-session evidence exposes units, task counts and product codes", () => {
@@ -794,6 +839,11 @@ test("posting section shows source mix and counts multi-platform posts independe
     screen.queryByText("TASKLIST CHƯA CÓ ĐĂNG BÀI"),
     null,
   );
+  const scheduledLegend = screen
+    .getByText("Đã lên lịch")
+    .closest(".legendRow");
+  assert.ok(scheduledLegend);
+  fireEvent.mouseEnter(scheduledLegend);
   assert.ok(
     screen.getByText("Tình trạng đăng của task đã lên lịch"),
   );

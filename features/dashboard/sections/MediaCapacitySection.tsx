@@ -1,15 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { inputDate } from "@/shared/date/dateUtils";
 import { formatDate, formatHours, formatNumber, formatPercent } from "@/shared/formatting/format";
 import type {
   CapacityReference,
   MediaCapacityStats,
-  MediaCapacityWeek,
+  MediaTrendBucket,
+  MediaTrendGranularity,
   QuantityReference,
   ShootTypeBaselinePlan,
   ShootTypeBaselinePlanRow,
 } from "../analytics/calculateMediaCapacity";
-import { calculateShootTypeBaselinePlan } from "../analytics/calculateMediaCapacity";
+import {
+  calculateMediaTrendSeries,
+  calculateShootTypeBaselinePlan,
+} from "../analytics/calculateMediaCapacity";
 import { HelpButton } from "../components/HelpButton";
 import type { DashboardHelp, DetailView, Task } from "../model/types";
 
@@ -98,17 +102,17 @@ const capacityHelp: Record<
       "Ngày Kiểm Duyệt là mốc bàn giao của người thực hiện; không dùng Ngày Hoàn Thành vì còn phụ thuộc người đánh giá.",
   },
   trend: {
-    title: "Xu hướng công suất 12 tuần",
+    title: "Xu hướng công suất theo thời gian",
     purpose:
       "Đặt tải quay/chụp và đầu ra ấn phẩm trên cùng trục thời gian.",
     objective:
       "Phát hiện xu hướng tăng/giảm, độ trễ giữa tuần quay và tuần trả ấn phẩm, cùng các tuần bất thường.",
     calculation:
-      "Mỗi điểm là tổng giờ chuẩn của tuần tương ứng. Quay/Chụp dùng Ngày Bắt Đầu làm mốc ước tính; Bàn giao dùng Ngày Kiểm Duyệt.",
+      "Quay/Chụp dùng Ngày Bắt Đầu; Bàn giao dùng Ngày Kiểm Duyệt. 1W và khoảng tối đa 14 ngày hiển thị theo ngày; 1M/3M và khoảng 15–100 ngày theo tuần; 1Y, All dài hơn 100 ngày theo tháng. P50 được tính lại theo đúng đơn vị đang hiển thị và chỉ dùng các mốc hoàn chỉnh.",
     example:
       "Tuần 1 tải quay tăng mạnh nhưng đầu ra chỉ tăng ở tuần 2 có thể phản ánh độ trễ sản xuất.",
     note:
-      "Nhấn từng điểm để mở đúng danh sách task của tuần và chuỗi dữ liệu đã chọn.",
+      "Bộ lọc này chỉ tác động chart. Chủ nhật không phát sinh bị ẩn ở chế độ ngày; Chủ nhật có dữ liệu vẫn xuất hiện. Điểm viền rỗng là mốc chưa hoàn tất. Nhấn điểm để mở đúng task của mốc đó.",
   },
   mix: {
     title: "Cơ cấu sản lượng bàn giao",
@@ -201,6 +205,50 @@ function toInputDate(value: Date | null) {
     String(value.getMonth() + 1).padStart(2, "0"),
     String(value.getDate()).padStart(2, "0"),
   ].join("-");
+}
+
+type TrendPreset = "all" | "1w" | "1m" | "3m" | "1y" | "custom";
+
+function addCalendarDays(value: Date, days: number) {
+  const result = new Date(value);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function inclusiveDaySpan(from: Date, to: Date) {
+  return Math.max(
+    1,
+    Math.floor(
+      (new Date(to.getFullYear(), to.getMonth(), to.getDate()).getTime() -
+        new Date(from.getFullYear(), from.getMonth(), from.getDate()).getTime()) /
+        86_400_000,
+    ) + 1,
+  );
+}
+
+function trendGranularityFor(
+  preset: TrendPreset,
+  from: Date,
+  to: Date,
+): MediaTrendGranularity {
+  if (preset === "1w") return "day";
+  if (preset === "1m" || preset === "3m") return "week";
+  if (preset === "1y") return "month";
+  const days = inclusiveDaySpan(from, to);
+  return days <= 14 ? "day" : days <= 100 ? "week" : "month";
+}
+
+function presetStart(preset: TrendPreset, anchor: Date, allStart: Date) {
+  if (preset === "all") return allStart;
+  if (preset === "1w") return addCalendarDays(anchor, -6);
+  if (preset === "1m") return addCalendarDays(anchor, -29);
+  if (preset === "3m") return addCalendarDays(anchor, -89);
+  if (preset === "1y") return addCalendarDays(anchor, -364);
+  return allStart;
+}
+
+function granularityLabel(value: MediaTrendGranularity) {
+  return value === "day" ? "ngày" : value === "week" ? "tuần" : "tháng";
 }
 
 function typeRangeFromGlobal({
@@ -648,17 +696,33 @@ function CapacityTrend({
   rows,
   shootReference,
   outputReference,
+  preset,
+  dateFrom,
+  dateTo,
+  granularity,
+  invalidRange,
+  onPresetChange,
+  onDateFromChange,
+  onDateToChange,
   onSelect,
 }: {
-  rows: MediaCapacityWeek[];
+  rows: MediaTrendBucket[];
   shootReference: CapacityReference;
   outputReference: CapacityReference;
+  preset: TrendPreset;
+  dateFrom: string;
+  dateTo: string;
+  granularity: MediaTrendGranularity;
+  invalidRange: boolean;
+  onPresetChange: (value: TrendPreset) => void;
+  onDateFromChange: (value: string) => void;
+  onDateToChange: (value: string) => void;
   onSelect: (
-    week: MediaCapacityWeek,
+    bucket: MediaTrendBucket,
     metric: "shoot" | "output",
   ) => void;
 }) {
-  const width = 1060;
+  const width = Math.max(1060, 78 + Math.max(1, rows.length - 1) * 88);
   const height = 330;
   const left = 54;
   const right = 24;
@@ -693,23 +757,87 @@ function CapacityTrend({
     <article className="capacityTrendCard">
       <div className="capacityCardHeader">
         <div>
-          <span className="chartKicker">XU HƯỚNG 12 TUẦN</span>
+          <span className="chartKicker">XU HƯỚNG LINH ĐỘNG</span>
           <h3>Giờ chuẩn quay/chụp &amp; bàn giao</h3>
         </div>
         <div className="capacityHeaderTools">
           <div className="capacityLegend">
-            <span><i className="shoot" />Quay/Chụp ước tính</span>
-            <span><i className="output" />Bàn giao ấn phẩm</span>
+            <span>
+              <i className="shoot" />Quay/Chụp · P50{" "}
+              {formatHourPoint(shootReference.p50Minutes)}
+            </span>
+            <span>
+              <i className="output" />Bàn giao · P50{" "}
+              {formatHourPoint(outputReference.p50Minutes)}
+            </span>
+            <span><i className="partial" />Chưa hoàn tất</span>
           </div>
           <HelpButton help={capacityHelp.trend} />
         </div>
       </div>
-      <div className="capacityTrendScroller">
+      <div className="capacityTrendToolbar">
+        <div className="capacityTrendPresets" aria-label="Khoảng xu hướng">
+          {([
+            ["all", "ALL"],
+            ["1w", "1W"],
+            ["1m", "1M"],
+            ["3m", "3M"],
+            ["1y", "1Y"],
+            ["custom", "TỰ CHỌN"],
+          ] as const).map(([value, label]) => (
+            <button
+              type="button"
+              key={value}
+              className={preset === value ? "active" : ""}
+              aria-pressed={preset === value}
+              onClick={() => onPresetChange(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {preset === "custom" && (
+          <div className="capacityTrendCustomRange">
+            <label>
+              Từ ngày
+              <input
+                type="date"
+                value={dateFrom}
+                max={dateTo || undefined}
+                onChange={(event) => onDateFromChange(event.target.value)}
+              />
+            </label>
+            <span>→</span>
+            <label>
+              Đến ngày
+              <input
+                type="date"
+                value={dateTo}
+                min={dateFrom || undefined}
+                onChange={(event) => onDateToChange(event.target.value)}
+              />
+            </label>
+          </div>
+        )}
+        <div className="capacityTrendRangeSummary">
+          <span>
+            {formatDate(inputDate(dateFrom))}–{formatDate(inputDate(dateTo))}
+          </span>
+          <strong>THEO {granularityLabel(granularity).toUpperCase()}</strong>
+        </div>
+      </div>
+      {invalidRange ? (
+        <p className="capacityTrendEmpty">
+          Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.
+        </p>
+      ) : rows.length ? (
+        <div className="capacityTrendScroller">
         <svg
           className="capacityTrendSvg"
+          style={{ minWidth: `${width}px` }}
           viewBox={`0 0 ${width} ${height}`}
           role="img"
-          aria-label="Xu hướng giờ chuẩn Media trong 12 tuần"
+          aria-label={`Xu hướng giờ chuẩn Media theo ${granularityLabel(granularity)}`}
         >
           {[0, 0.5, 1].map((ratio) => {
             const y = top + plotHeight * (1 - ratio);
@@ -773,7 +901,7 @@ function CapacityTrend({
                 className="capacityPointGroup"
                 role="button"
                 tabIndex={0}
-                aria-label={`${row.label} · Quay/Chụp ${formatHours(row.shootMinutes)}`}
+                aria-label={`${row.label} · Quay/Chụp ${formatHours(row.shootMinutes)}${row.isComplete ? "" : " · Chưa hoàn tất"}`}
                 onClick={() => onSelect(row, "shoot")}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
@@ -782,7 +910,7 @@ function CapacityTrend({
                 }}
               >
                 <circle
-                  className="capacityTrendPoint shoot"
+                  className={`capacityTrendPoint shoot${row.isComplete ? "" : " partial"}`}
                   cx={shootPoints[index].x}
                   cy={shootPoints[index].y}
                   r={5}
@@ -800,7 +928,7 @@ function CapacityTrend({
                 className="capacityPointGroup"
                 role="button"
                 tabIndex={0}
-                aria-label={`${row.label} · Bàn giao ${formatHours(row.outputMinutes)}`}
+                aria-label={`${row.label} · Bàn giao ${formatHours(row.outputMinutes)}${row.isComplete ? "" : " · Chưa hoàn tất"}`}
                 onClick={() => onSelect(row, "output")}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
@@ -809,7 +937,7 @@ function CapacityTrend({
                 }}
               >
                 <circle
-                  className="capacityTrendPoint output"
+                  className={`capacityTrendPoint output${row.isComplete ? "" : " partial"}`}
                   cx={outputPoints[index].x}
                   cy={outputPoints[index].y}
                   r={5}
@@ -826,7 +954,12 @@ function CapacityTrend({
             </g>
           ))}
         </svg>
-      </div>
+        </div>
+      ) : (
+        <p className="capacityTrendEmpty">
+          Chưa có dữ liệu Media trong khoảng đã chọn.
+        </p>
+      )}
     </article>
   );
 }
@@ -954,14 +1087,21 @@ export function MediaCapacitySection({
       dataDateTo,
     ],
   );
-  const [typeDateFrom, setTypeDateFrom] = useState(
-    commonTypeRange.from,
-  );
-  const [typeDateTo, setTypeDateTo] = useState(commonTypeRange.to);
-  useEffect(() => {
-    setTypeDateFrom(commonTypeRange.from);
-    setTypeDateTo(commonTypeRange.to);
-  }, [commonTypeRange]);
+  const typeRangeKey = `${commonTypeRange.from}|${commonTypeRange.to}`;
+  const [typeRangeInput, setTypeRangeInput] = useState(() => ({
+    sourceKey: typeRangeKey,
+    ...commonTypeRange,
+  }));
+  const activeTypeRange =
+    typeRangeInput.sourceKey === typeRangeKey
+      ? typeRangeInput
+      : commonTypeRange;
+  const typeDateFrom = activeTypeRange.from;
+  const typeDateTo = activeTypeRange.to;
+  const setTypeDateFrom = (from: string) =>
+    setTypeRangeInput({ sourceKey: typeRangeKey, from, to: typeDateTo });
+  const setTypeDateTo = (to: string) =>
+    setTypeRangeInput({ sourceKey: typeRangeKey, from: typeDateFrom, to });
   const typeRangeStart = inputDate(typeDateFrom);
   const typeRangeEnd = inputDate(typeDateTo, true);
   const invalidTypeRange = Boolean(
@@ -989,6 +1129,104 @@ export function MediaCapacitySection({
   const typeBaselineSessionUnits = typeBaselinePlan.rows.reduce(
     (total, row) => total + row.sessionUnits,
     0,
+  );
+  const trendDataFrom = toInputDate(viewModel.trendDateRange.from);
+  const trendDataTo = toInputDate(viewModel.trendDateRange.to);
+  const trendAnchor = useMemo(
+    () => inputDate(globalDateTo || trendDataTo) ?? new Date(),
+    [globalDateTo, trendDataTo],
+  );
+  const trendAllStart = useMemo(
+    () => inputDate(trendDataFrom) ?? trendAnchor,
+    [trendAnchor, trendDataFrom],
+  );
+  const [trendPreset, setTrendPreset] = useState<TrendPreset>("3m");
+  const defaultTrendRange = useMemo(
+    () => ({
+      from: globalDateFrom || trendDataFrom,
+      to: globalDateTo || trendDataTo,
+    }),
+    [globalDateFrom, globalDateTo, trendDataFrom, trendDataTo],
+  );
+  const trendRangeKey = `${defaultTrendRange.from}|${defaultTrendRange.to}`;
+  const [trendCustomInput, setTrendCustomInput] = useState(() => ({
+    sourceKey: trendRangeKey,
+    ...defaultTrendRange,
+  }));
+  const activeTrendCustomRange =
+    trendCustomInput.sourceKey === trendRangeKey
+      ? trendCustomInput
+      : defaultTrendRange;
+  const trendCustomFrom = activeTrendCustomRange.from;
+  const trendCustomTo = activeTrendCustomRange.to;
+  const setTrendCustomFrom = (from: string) =>
+    setTrendCustomInput({
+      sourceKey: trendRangeKey,
+      from,
+      to: trendCustomTo,
+    });
+  const setTrendCustomTo = (to: string) =>
+    setTrendCustomInput({
+      sourceKey: trendRangeKey,
+      from: trendCustomFrom,
+      to,
+    });
+  const trendRange = useMemo(() => {
+    if (trendPreset === "custom") {
+      return {
+        from: trendCustomFrom,
+        to: trendCustomTo,
+      };
+    }
+    return {
+      from: toInputDate(
+        presetStart(trendPreset, trendAnchor, trendAllStart),
+      ),
+      to: toInputDate(trendAnchor),
+    };
+  }, [
+    trendAllStart,
+    trendAnchor,
+    trendCustomFrom,
+    trendCustomTo,
+    trendPreset,
+  ]);
+  const trendRangeStart = inputDate(trendRange.from);
+  const trendRangeEnd = inputDate(trendRange.to, true);
+  const invalidTrendRange = Boolean(
+    !trendRangeStart ||
+      !trendRangeEnd ||
+      trendRangeStart > trendRangeEnd,
+  );
+  const trendGranularity = trendRangeStart && trendRangeEnd
+    ? trendGranularityFor(
+        trendPreset,
+        trendRangeStart,
+        trendRangeEnd,
+      )
+    : "week";
+  const trendSeries = useMemo(
+    () =>
+      invalidTrendRange
+        ? calculateMediaTrendSeries(
+            [],
+            null,
+            null,
+            trendGranularity,
+          )
+        : calculateMediaTrendSeries(
+            viewModel.trendEvents,
+            trendRangeStart,
+            trendRangeEnd,
+            trendGranularity,
+          ),
+    [
+      invalidTrendRange,
+      trendGranularity,
+      trendRangeEnd,
+      trendRangeStart,
+      viewModel.trendEvents,
+    ],
   );
   const shootCoverage = focusWeek.shootTasks.length
     ? (focusWeek.linkedShootTasks.length / focusWeek.shootTasks.length) *
@@ -1217,10 +1455,12 @@ export function MediaCapacitySection({
           invalidRange={invalidTypeRange}
           onDateFromChange={setTypeDateFrom}
           onDateToChange={setTypeDateTo}
-          onResetRange={() => {
-            setTypeDateFrom(commonTypeRange.from);
-            setTypeDateTo(commonTypeRange.to);
-          }}
+          onResetRange={() =>
+            setTypeRangeInput({
+              sourceKey: typeRangeKey,
+              ...commonTypeRange,
+            })
+          }
           onSelectAll={() =>
             onOpenDetail({
               title: "Dữ liệu tạo baseline tổng hợp",
@@ -1279,16 +1519,26 @@ export function MediaCapacitySection({
         </div>
 
         <CapacityTrend
-          rows={viewModel.trendWeeks}
-          shootReference={shootReference}
-          outputReference={outputReference}
-          onSelect={(week, metric) =>
+          rows={trendSeries.rows}
+          shootReference={trendSeries.shootReference}
+          outputReference={trendSeries.outputReference}
+          preset={trendPreset}
+          dateFrom={trendRange.from}
+          dateTo={trendRange.to}
+          granularity={trendGranularity}
+          invalidRange={invalidTrendRange}
+          onPresetChange={setTrendPreset}
+          onDateFromChange={setTrendCustomFrom}
+          onDateToChange={setTrendCustomTo}
+          onSelect={(bucket, metric) =>
             openStandardTasks(
-              `${metric === "shoot" ? "Quay/Chụp" : "Bàn giao"} · ${week.label}`,
+              `${metric === "shoot" ? "Quay/Chụp" : "Bàn giao"} · ${bucket.label}`,
               metric === "shoot"
-                ? "Task Quay/Chụp phân tuần theo Ngày Bắt Đầu"
-                : "Task ấn phẩm phân tuần theo Ngày Kiểm Duyệt",
-              metric === "shoot" ? week.shootTasks : week.outputTasks,
+                ? `Task Quay/Chụp phân theo ${granularityLabel(trendGranularity)} bằng Ngày Bắt Đầu`
+                : `Task ấn phẩm phân theo ${granularityLabel(trendGranularity)} bằng Ngày Kiểm Duyệt`,
+              metric === "shoot"
+                ? bucket.shootTasks
+                : bucket.outputTasks,
             )
           }
         />

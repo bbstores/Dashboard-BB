@@ -10,9 +10,19 @@ import type {
   ReportDepartment,
   SavedReport,
 } from "../model/types";
+import {
+  inWindow,
+  isGraphicPublication,
+  isVideoPublication,
+  normalizedKey,
+} from "../model/taskUtils";
 import { evaluateOverall } from "../model/slaUtils";
-import { calculateDashboardStats } from "./calculateDashboardStats";
+import { calculateBacklogBreakdown } from "./calculateBacklog";
+import { calculateCosts } from "./calculateCosts";
+import { calculateLeaderboard } from "./calculateLeaderboard";
 import { calculatePublicationStats } from "./calculatePublicationStats";
+import { calculateSla } from "./calculateSla";
+import { calculateTaskSelection } from "./classifyTasks";
 
 export type ComparisonPeriod = "week" | "month";
 
@@ -122,8 +132,124 @@ function basePoint(report: SavedReport, window: DateWindow): ComparisonBase {
   };
 }
 
-function sumValues(values: Array<{ value: number }>) {
-  return values.reduce((sum, item) => sum + item.value, 0);
+const mediaContextCache = new WeakMap<
+  DashboardData,
+  Map<string, MediaComparisonContext>
+>();
+const businessStatsCache = new WeakMap<
+  DashboardData,
+  Map<string, ReturnType<typeof calculatePublicationStats>>
+>();
+const comparisonPointCache = new WeakMap<
+  DashboardData,
+  Map<string, MediaComparisonPoint | BusinessComparisonPoint>
+>();
+
+function reportCacheKey(report: SavedReport) {
+  return `${report.department}:${report.id}:${JSON.stringify(report.filters)}`;
+}
+
+function buildMediaComparisonContext(
+  data: DashboardData,
+  report: SavedReport,
+  window: DateWindow,
+) {
+  const selection = calculateTaskSelection(data.tasks, window);
+  const backlogCutoff =
+    inputDate(report.filters.dateTo, true) ?? window.to!;
+  const backlog = calculateBacklogBreakdown(data.tasks, backlogCutoff);
+  const sla = calculateSla(
+    data,
+    selection.selectedTasks,
+    window,
+    backlogCutoff,
+    window.to!,
+  );
+  const leaderboard = calculateLeaderboard(selection.classified);
+  const costs = calculateCosts(data.tasks, data.costs, window);
+  const selectedFeedback = data.feedback.filter((item) =>
+    inWindow(item.at, window),
+  );
+  const taskByCode = new Map(
+    data.tasks.map((task) => [normalizedKey(task.code), task]),
+  );
+  const overallEligible = selection.selectedTasks
+    .map((task) => ({
+      task,
+      evaluation: evaluateOverall(task, window.to!),
+    }))
+    .filter((row) => ["onTime", "late"].includes(row.evaluation.code));
+  const publicationTasks = report.filters.pieExcludeOutsource
+    .videoPublications ||
+    report.filters.pieExcludeOutsource.graphicPublications
+    ? selection.selectedTasks.filter((task) => !task.outsource)
+    : selection.selectedTasks;
+  const videoTasks = (
+    report.filters.pieExcludeOutsource.videoPublications
+      ? publicationTasks
+      : selection.selectedTasks
+  ).filter(isVideoPublication);
+  const graphicTasks = (
+    report.filters.pieExcludeOutsource.graphicPublications
+      ? publicationTasks
+      : selection.selectedTasks
+  ).filter(isGraphicPublication);
+  return {
+    ...selection,
+    backlogTasks: backlog.backlogTasks,
+    sla,
+    leaderboard,
+    costs,
+    selectedFeedback,
+    taskByCode,
+    overallEligible,
+    videoTasks,
+    graphicTasks,
+  };
+}
+
+export type MediaComparisonContext = ReturnType<
+  typeof buildMediaComparisonContext
+>;
+
+export function getMediaComparisonContext(
+  data: DashboardData,
+  report: SavedReport,
+  window: DateWindow,
+) {
+  let cache = mediaContextCache.get(data);
+  if (!cache) {
+    cache = new Map();
+    mediaContextCache.set(data, cache);
+  }
+  const key = reportCacheKey(report);
+  const cached = cache.get(key);
+  if (cached) return cached;
+  const context = buildMediaComparisonContext(data, report, window);
+  cache.set(key, context);
+  return context;
+}
+
+export function getBusinessComparisonStats(
+  data: DashboardData,
+  report: SavedReport,
+  window: DateWindow,
+) {
+  let cache = businessStatsCache.get(data);
+  if (!cache) {
+    cache = new Map();
+    businessStatsCache.set(data, cache);
+  }
+  const key = reportCacheKey(report);
+  const cached = cache.get(key);
+  if (cached) return cached;
+  const stats = calculatePublicationStats(
+    data.tasks,
+    data.publications,
+    window,
+  );
+  cache.set(key, stats);
+  return stats;
 }
 
 function mediaPoint(
@@ -131,31 +257,10 @@ function mediaPoint(
   report: SavedReport,
   window: DateWindow,
 ): MediaComparisonPoint {
-  const stats = calculateDashboardStats(data, {
-    dateWindow: window,
-    collectionMonth: report.filters.collectionMonth,
-    backlogDate: report.filters.dateTo,
-  });
-  const overall = stats.selectedTasks
-    .map((task) => evaluateOverall(task, window.to!))
-    .filter((evaluation) =>
-      ["onTime", "late"].includes(evaluation.code),
-    );
-  const overallOnTime = overall.filter(
-    (evaluation) => evaluation.code === "onTime",
+  const stats = getMediaComparisonContext(data, report, window);
+  const overallOnTime = stats.overallEligible.filter(
+    (row) => row.evaluation.code === "onTime",
   ).length;
-  const videoMetrics =
-    stats.pieMetrics.combined[
-      report.filters.pieExcludeOutsource.videoPublications
-        ? "withoutOutsource"
-        : "all"
-    ];
-  const graphicMetrics =
-    stats.pieMetrics.combined[
-      report.filters.pieExcludeOutsource.graphicPublications
-        ? "withoutOutsource"
-        : "all"
-    ];
   const assigneeMinutes = Object.fromEntries(
     stats.leaderboard.map((row) => [row.label, row.value]),
   );
@@ -163,8 +268,8 @@ function mediaPoint(
     (sum, value) => sum + value,
     0,
   );
-  const video = sumValues(videoMetrics.videoFormats);
-  const graphic = sumValues(graphicMetrics.graphicFormats);
+  const video = stats.videoTasks.length;
+  const graphic = stats.graphicTasks.length;
 
   return {
     ...basePoint(report, window),
@@ -172,15 +277,15 @@ function mediaPoint(
     started: stats.startedInWindow.length,
     inspectionCarry: stats.inspectionCarryIntoWindow.length,
     completionCarry: stats.completionCarryIntoWindow.length,
-    backlog: stats.backlogTotal,
+    backlog: stats.backlogTasks.length,
     backlogOverSevenDays: stats.sla.openAgingRows.filter(
       (row) => row.days > 7,
     ).length,
     totalMinutes,
     feedback: stats.selectedFeedback.length,
     handoffOnTimeRate: stats.sla.handoffOnTimeRate,
-    overallOnTimeRate: overall.length
-      ? (overallOnTime / overall.length) * 100
+    overallOnTimeRate: stats.overallEligible.length
+      ? (overallOnTime / stats.overallEligible.length) * 100
       : 0,
     overdue: stats.sla.overdueHandoffs.length,
     handoffLateP50: stats.sla.handoffLateP50,
@@ -201,11 +306,7 @@ function businessPoint(
   report: SavedReport,
   window: DateWindow,
 ): BusinessComparisonPoint {
-  const stats = calculatePublicationStats(
-    data.tasks,
-    data.publications,
-    window,
-  );
+  const stats = getBusinessComparisonStats(data, report, window);
   const base = basePoint(report, window);
 
   return {
@@ -248,9 +349,19 @@ export function calculateReportComparison(
     )
     .map((report) => {
       const window = reportWindow(report)!;
-      return department === "media"
+      let cache = comparisonPointCache.get(data);
+      if (!cache) {
+        cache = new Map();
+        comparisonPointCache.set(data, cache);
+      }
+      const key = `${period}:${reportCacheKey(report)}`;
+      const cached = cache.get(key);
+      if (cached) return cached;
+      const point = department === "media"
         ? mediaPoint(data, report, window)
         : businessPoint(data, report, window);
+      cache.set(key, point);
+      return point;
     })
     .sort((left, right) => left.from.getTime() - right.from.getTime());
 }

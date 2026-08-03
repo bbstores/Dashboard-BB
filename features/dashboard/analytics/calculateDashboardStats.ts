@@ -15,7 +15,10 @@ import { calculateBacklogBreakdown } from "./calculateBacklog";
 import { calculateCollections } from "./calculateCollections";
 import { calculateCosts } from "./calculateCosts";
 import { calculateLeaderboard } from "./calculateLeaderboard";
-import { calculateMediaCapacity } from "./calculateMediaCapacity";
+import {
+  calculateMediaCapacity,
+  type MediaCapacityStats,
+} from "./calculateMediaCapacity";
 import { calculatePieMetrics } from "./calculatePieMetrics";
 import { calculateSla } from "./calculateSla";
 import { calculateStaffStats } from "./calculateStaffStats";
@@ -34,6 +37,7 @@ export function calculateDashboardStats(
     collectionMonth,
     backlogDate,
   }: DashboardStatsFilters,
+  mediaCapacityOverride?: MediaCapacityStats,
 ) {
   const selection = calculateTaskSelection(data.tasks, dateWindow);
   const staff = calculateStaffStats(
@@ -67,7 +71,8 @@ export function calculateDashboardStats(
     ...staff,
     ...collections,
     costs: calculateCosts(data.tasks, data.costs, dateWindow),
-    mediaCapacity: calculateMediaCapacity(data, reportingDate),
+    mediaCapacity:
+      mediaCapacityOverride ?? calculateMediaCapacity(data, reportingDate),
     backlogTasks,
     backlogAttentionTasks,
     pieMetrics: calculatePieMetrics(pieTaskSets, reportingDate),

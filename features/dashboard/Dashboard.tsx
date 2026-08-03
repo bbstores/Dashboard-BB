@@ -265,7 +265,20 @@ export function Dashboard() {
           </>
         )}
         {dialogs.detail && (
-          <DetailDrawer detail={dialogs.detail} onClose={() => dialogs.setDetail(null)} />
+          <DetailDrawer
+            key={[
+              dialogs.detail.title,
+              dialogs.detail.subtitle,
+              dialogs.detail.tasks?.length,
+              dialogs.detail.feedback?.length,
+              dialogs.detail.publicationEvidence?.length,
+              dialogs.detail.costAllocations?.length,
+              dialogs.detail.costTaskSummaries?.length,
+              dialogs.detail.shootSessions?.length,
+            ].join(":")}
+            detail={dialogs.detail}
+            onClose={() => dialogs.setDetail(null)}
+          />
         )}
         {dialogs.percentileDetail && (
           <PercentileDialog

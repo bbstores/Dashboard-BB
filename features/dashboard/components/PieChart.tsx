@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { COLORS } from "../model/constants";
 import type { PieDatum, PieScope, DashboardHelp } from "../model/types";
 import { formatNumber, formatPercent } from "@/shared/formatting/format";
@@ -179,6 +180,7 @@ export function PieChart({
   onSelect?: (label: string) => void;
   totalLabel?: string;
 }) {
+  const [hoveredLabel, setHoveredLabel] = useState<string | null>(null);
   const total = data.reduce((sum, item) => sum + item.value, 0);
   const slices = data.reduce<{
     accumulated: number;
@@ -279,14 +281,23 @@ export function PieChart({
         </div>
         <div className="legend">
           {slices.map((slice) => {
-            const breakdown = hoverBreakdown?.(slice.label);
-            const chart = hoverChart?.(slice.label);
+            const isHovered = hoveredLabel === slice.label;
+            const breakdown = isHovered
+              ? hoverBreakdown?.(slice.label)
+              : undefined;
+            const chart = isHovered
+              ? hoverChart?.(slice.label)
+              : undefined;
             return (
               <div
                 role={onSelect ? "button" : undefined}
                 tabIndex={onSelect ? 0 : undefined}
                 className={`legendRow ${onSelect ? "interactive" : ""}`}
                 key={slice.label}
+                onMouseEnter={() => setHoveredLabel(slice.label)}
+                onMouseLeave={() => setHoveredLabel(null)}
+                onFocus={() => setHoveredLabel(slice.label)}
+                onBlur={() => setHoveredLabel(null)}
                 onClick={() => onSelect?.(slice.label)}
                 onKeyDown={(event) => {
                   if (

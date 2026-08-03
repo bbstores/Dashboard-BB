@@ -607,6 +607,33 @@
   border-radius: 20px;
   max-height: calc(100vh - 190px);
 }
+.detailPagination {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.detailPagination button {
+  background: #174f3d;
+  border: 1px solid #174f3d;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 0 13px;
+}
+.detailPagination button:disabled {
+  cursor: not-allowed;
+  opacity: .4;
+}
+.detailPagination span {
+  color: var(--muted);
+  font-size: 9px;
+}
+.detailPagination strong { color: var(--green); }
 .detailTable th {
   background: #174f3d;
   color: rgba(255, 255, 255, 0.72);
@@ -1178,6 +1205,17 @@
 }
 
 @media (max-width: 720px) {
+  .detailPagination {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .detailPagination span {
+    order: -1;
+    text-align: center;
+    width: 100%;
+  }
+
   .costSimulatorBills,
   .costSimulatorForm,
   .costSimulationAudit {

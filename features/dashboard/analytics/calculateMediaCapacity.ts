@@ -47,6 +47,34 @@ export type MediaCapacityWeek = {
   >;
 };
 
+export type MediaTrendGranularity = "day" | "week" | "month";
+
+export type MediaTrendEvent = {
+  metric: "shoot" | "output";
+  date: Date;
+  minutes: number;
+  task: Task;
+};
+
+export type MediaTrendBucket = {
+  key: string;
+  label: string;
+  start: Date;
+  end: Date;
+  isComplete: boolean;
+  shootTasks: Task[];
+  outputTasks: Task[];
+  shootMinutes: number;
+  outputMinutes: number;
+};
+
+export type MediaTrendSeries = {
+  rows: MediaTrendBucket[];
+  shootReference: CapacityReference;
+  outputReference: CapacityReference;
+  granularity: MediaTrendGranularity;
+};
+
 export type CapacityReference = {
   p25Minutes: number;
   p50Minutes: number;
@@ -128,6 +156,168 @@ function weekLabel(start: Date, end: Date) {
   return `${short(start)}–${short(end)}`;
 }
 
+function dayLabel(value: Date) {
+  return `${String(value.getDate()).padStart(2, "0")}/${String(
+    value.getMonth() + 1,
+  ).padStart(2, "0")}`;
+}
+
+function monthLabel(value: Date) {
+  return `${String(value.getMonth() + 1).padStart(2, "0")}/${value.getFullYear()}`;
+}
+
+function startOfMonth(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth(), 1);
+}
+
+function endOfMonth(value: Date) {
+  return endOfDay(
+    new Date(value.getFullYear(), value.getMonth() + 1, 0),
+  );
+}
+
+function trendReference(
+  rows: MediaTrendBucket[],
+  metric: "shootMinutes" | "outputMinutes",
+): CapacityReference {
+  const values = rows
+    .filter((row) => row.isComplete)
+    .map((row) => row[metric]);
+  if (!values.length) {
+    return {
+      p25Minutes: 0,
+      p50Minutes: 0,
+      p75Minutes: 0,
+      percentage: 0,
+      bandStatus: "unavailable",
+    };
+  }
+  return {
+    p25Minutes: percentile(values, 0.25),
+    p50Minutes: percentile(values, 0.5),
+    p75Minutes: percentile(values, 0.75),
+    percentage: 0,
+    bandStatus: "within",
+  };
+}
+
+export function calculateMediaTrendSeries(
+  events: MediaTrendEvent[],
+  from: Date | null,
+  to: Date | null,
+  granularity: MediaTrendGranularity,
+  today = new Date(),
+): MediaTrendSeries {
+  if (!from || !to || from > to) {
+    return {
+      rows: [],
+      shootReference: trendReference([], "shootMinutes"),
+      outputReference: trendReference([], "outputMinutes"),
+      granularity,
+    };
+  }
+  const rangeStart = startOfDay(from);
+  const rangeEnd = endOfDay(to);
+  const todayStart = startOfDay(today);
+  const bucketRanges: Array<{
+    naturalStart: Date;
+    naturalEnd: Date;
+  }> = [];
+
+  if (granularity === "day") {
+    for (
+      let cursor = rangeStart;
+      cursor <= rangeEnd;
+      cursor = addDays(cursor, 1)
+    ) {
+      bucketRanges.push({
+        naturalStart: startOfDay(cursor),
+        naturalEnd: endOfDay(cursor),
+      });
+    }
+  } else if (granularity === "week") {
+    for (
+      let cursor = startOfWeek(rangeStart);
+      cursor <= rangeEnd;
+      cursor = addDays(cursor, 7)
+    ) {
+      bucketRanges.push({
+        naturalStart: cursor,
+        naturalEnd: endOfWeek(cursor),
+      });
+    }
+  } else {
+    for (
+      let cursor = startOfMonth(rangeStart);
+      cursor <= rangeEnd;
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)
+    ) {
+      bucketRanges.push({
+        naturalStart: cursor,
+        naturalEnd: endOfMonth(cursor),
+      });
+    }
+  }
+
+  const rows = bucketRanges.flatMap(
+    ({ naturalStart, naturalEnd }): MediaTrendBucket[] => {
+      const start =
+        naturalStart < rangeStart ? rangeStart : naturalStart;
+      const end = naturalEnd > rangeEnd ? rangeEnd : naturalEnd;
+      const bucketEvents = events.filter(
+        (event) => event.date >= start && event.date <= end,
+      );
+      if (
+        granularity === "day" &&
+        start.getDay() === 0 &&
+        bucketEvents.length === 0
+      ) {
+        return [];
+      }
+      const shootEvents = bucketEvents.filter(
+        (event) => event.metric === "shoot",
+      );
+      const outputEvents = bucketEvents.filter(
+        (event) => event.metric === "output",
+      );
+      const label =
+        granularity === "day"
+          ? dayLabel(start)
+          : granularity === "week"
+            ? weekLabel(naturalStart, naturalEnd)
+            : monthLabel(naturalStart);
+      return [
+        {
+          key: `${granularity}-${dateKey(naturalStart)}`,
+          label,
+          start,
+          end,
+          isComplete:
+            start.getTime() === naturalStart.getTime() &&
+            end.getTime() === naturalEnd.getTime() &&
+            naturalEnd < todayStart,
+          shootTasks: shootEvents.map((event) => event.task),
+          outputTasks: outputEvents.map((event) => event.task),
+          shootMinutes: shootEvents.reduce(
+            (total, event) => total + event.minutes,
+            0,
+          ),
+          outputMinutes: outputEvents.reduce(
+            (total, event) => total + event.minutes,
+            0,
+          ),
+        },
+      ];
+    },
+  );
+  return {
+    rows,
+    shootReference: trendReference(rows, "shootMinutes"),
+    outputReference: trendReference(rows, "outputMinutes"),
+    granularity,
+  };
+}
+
 function isWorkingDay(value: Date) {
   return (
     value.getDay() !== 0 &&
@@ -202,16 +392,16 @@ function sumMappedMinutes(
 
 function calculateWeek(
   data: DashboardData,
+  shootSourceTasks: Task[],
+  outputSourceTasks: Task[],
   start: Date,
   cutoff: Date,
   normMap: Map<string, WorkNorm>,
   standardMinutes: Map<Task, number>,
 ): MediaCapacityWeek {
   const end = endOfWeek(start);
-  const eligibleTasks = data.tasks.filter((task) => !isExcluded(task));
-  const shootTasks = eligibleTasks.filter(
+  const shootTasks = shootSourceTasks.filter(
     (task) =>
-      isShootTask(task) &&
       eventInWeek(task.startDate, start, end, cutoff),
   );
   const linkedShootTasks = shootTasks.filter((task) =>
@@ -235,9 +425,8 @@ function calculateWeek(
   const uniqueProductCount = new Set(
     shootSessions.flatMap((session) => session.productCodes),
   ).size;
-  const outputTasks = eligibleTasks.filter(
+  const outputTasks = outputSourceTasks.filter(
     (task) =>
-      isFinalPublicationTask(task) &&
       eventInWeek(task.inspectionDate, start, end, cutoff),
   );
   const shoot = sumMappedMinutes(
@@ -657,6 +846,37 @@ export function calculateMediaCapacity(
     data.norms.map((norm) => [normalizedKey(norm.formatType), norm]),
   );
   const standardMinutes = new Map<Task, number>();
+  const eligibleTasks = data.tasks.filter((task) => !isExcluded(task));
+  const shootSourceTasks = eligibleTasks.filter(isShootTask);
+  const outputSourceTasks = eligibleTasks.filter(isFinalPublicationTask);
+  const trendEvents: MediaTrendEvent[] = [];
+  for (const task of shootSourceTasks) {
+    const minutes = normMinutesFor(task, normMap) ?? 0;
+    if (minutes > 0) standardMinutes.set(task, minutes);
+    if (task.startDate) {
+      trendEvents.push({
+        metric: "shoot",
+        date: task.startDate,
+        minutes,
+        task,
+      });
+    }
+  }
+  for (const task of outputSourceTasks) {
+    const minutes = normMinutesFor(task, normMap) ?? 0;
+    if (minutes > 0) standardMinutes.set(task, minutes);
+    if (task.inspectionDate) {
+      trendEvents.push({
+        metric: "output",
+        date: task.inspectionDate,
+        minutes,
+        task,
+      });
+    }
+  }
+  const trendDates = trendEvents
+    .map((event) => event.date)
+    .sort((left, right) => left.getTime() - right.getTime());
   const trendWeeks = Array.from(
     { length: TREND_WEEK_COUNT },
     (_, index) => {
@@ -670,6 +890,8 @@ export function calculateMediaCapacity(
           : endOfWeek(start);
       return calculateWeek(
         data,
+        shootSourceTasks,
+        outputSourceTasks,
         start,
         cutoff,
         normMap,
@@ -680,6 +902,8 @@ export function calculateMediaCapacity(
   const focusWeek = trendWeeks.at(-1) as MediaCapacityWeek;
   const focusFullWeek = calculateWeek(
     data,
+    shootSourceTasks,
+    outputSourceTasks,
     focusStart,
     focusEnd,
     normMap,
@@ -759,6 +983,8 @@ export function calculateMediaCapacity(
       );
       return calculateWeek(
         data,
+        shootSourceTasks,
+        outputSourceTasks,
         start,
         endOfWeek(start),
         normMap,
@@ -916,6 +1142,11 @@ export function calculateMediaCapacity(
   return {
     focusWeek,
     trendWeeks,
+    trendEvents,
+    trendDateRange: {
+      from: trendDates[0] ?? null,
+      to: trendDates.at(-1) ?? null,
+    },
     baselineWeeks,
     baselineWeekCount,
     elapsedWorkingDays,

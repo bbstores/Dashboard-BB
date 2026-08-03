@@ -629,6 +629,93 @@
 }
 .capacityLegend i.shoot { background: #9bcbbb; }
 .capacityLegend i.output { background: #d9ff72; }
+.capacityLegend i.partial {
+  background: transparent;
+  border: 2px dashed #fff;
+  height: 8px;
+  width: 8px;
+}
+.capacityTrendToolbar {
+  align-items: end;
+  border-bottom: 1px solid rgba(255, 255, 255, .12);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding-bottom: 14px;
+}
+.capacityTrendPresets {
+  align-items: center;
+  background: rgba(7, 38, 29, .32);
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 10px;
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+}
+.capacityTrendPresets button {
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: #afc1ba;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 900;
+  min-height: 29px;
+  padding: 0 10px;
+}
+.capacityTrendPresets button:hover,
+.capacityTrendPresets button.active {
+  background: #d9ff72;
+  color: #174f3d;
+}
+.capacityTrendCustomRange {
+  align-items: end;
+  display: flex;
+  gap: 7px;
+}
+.capacityTrendCustomRange label {
+  color: #aebfb8;
+  display: grid;
+  font-size: 7px;
+  font-weight: 850;
+  gap: 4px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.capacityTrendCustomRange input {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 8px;
+  color: #fff;
+  color-scheme: dark;
+  font: inherit;
+  font-size: 9px;
+  min-height: 32px;
+  padding: 0 8px;
+}
+.capacityTrendCustomRange > span {
+  color: #aebfb8;
+  font-size: 10px;
+  padding-bottom: 9px;
+}
+.capacityTrendRangeSummary {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: auto;
+}
+.capacityTrendRangeSummary span {
+  color: #b8c9c2;
+  font-size: 8px;
+}
+.capacityTrendRangeSummary strong {
+  color: #d9ff72;
+  font-size: 8px;
+  letter-spacing: .08em;
+}
 .capacityTrendScroller {
   margin-top: 16px;
   overflow-x: auto;
@@ -679,6 +766,10 @@
 }
 .capacityTrendPoint.shoot { fill: #9bcbbb; }
 .capacityTrendPoint.output { fill: #d9ff72; }
+.capacityTrendPoint.partial {
+  fill: #174f3d;
+  stroke-dasharray: 3 2;
+}
 .capacityPointValue {
   font-size: 8px;
   font-weight: 850;
@@ -689,6 +780,13 @@
 }
 .capacityPointValue.shoot { fill: #c6e2d9; }
 .capacityPointValue.output { fill: #eaffaa; }
+.capacityTrendEmpty {
+  color: #bdcec7;
+  font-size: 10px;
+  margin: 0;
+  padding: 48px 0 36px;
+  text-align: center;
+}
 .capacitySegmentTotal {
   align-items: baseline;
   display: flex;
@@ -847,6 +945,14 @@
   .capacityTypeHeaderTools {
     flex-direction: column;
   }
+  .capacityTrendToolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .capacityTrendRangeSummary {
+    align-items: flex-start;
+    margin-left: 0;
+  }
   .capacityMethodNote > span { flex-basis: auto; }
 }
 @media (max-width: 560px) {
@@ -861,6 +967,17 @@
     flex-direction: column-reverse;
   }
   .capacityLegend { justify-content: flex-start; }
+  .capacityTrendPresets {
+    overflow-x: auto;
+    width: 100%;
+  }
+  .capacityTrendPresets button { flex: 1 0 auto; }
+  .capacityTrendCustomRange {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .capacityTrendCustomRange > span { display: none; }
   .capacityReferenceCopy { gap: 7px; }
   .capacityReferenceCopy span { max-width: 90px; }
   .capacityTypeDateFilters {

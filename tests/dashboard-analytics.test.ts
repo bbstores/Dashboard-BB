@@ -5,6 +5,7 @@ import { calculateDashboardStats } from "../features/dashboard/analytics/calcula
 import { calculateCollections } from "../features/dashboard/analytics/calculateCollections";
 import {
   calculateMediaCapacity,
+  calculateMediaTrendSeries,
   calculateShootTypeBaselinePlan,
   calculateShootTypeBaselines,
 } from "../features/dashboard/analytics/calculateMediaCapacity";
@@ -333,6 +334,13 @@ test("compares only saved reports from the same department and period", () => {
     "week",
   );
   assert.deepEqual(points.map((point) => point.id), ["WEEK-MEDIA"]);
+  const cachedPoints = calculateReportComparison(
+    dashboardData,
+    reports,
+    "media",
+    "week",
+  );
+  assert.equal(cachedPoints[0], points[0]);
 });
 
 test("separates backlog rules from invalid Done chronology", () => {
@@ -1002,4 +1010,72 @@ test("locks Media baseline by month and forecasts an incomplete week", () => {
   assert.equal(plan.modelToObservedPercentage, 100);
   assert.equal(plan.rows[0].confidence, "stable");
   assert.equal(plan.fallbackTypeCount, 0);
+});
+
+test("groups Media trend by day and only keeps Sundays with data", () => {
+  const mondayTask = task("TREND-MON");
+  const sundayTask = task("TREND-SUN");
+  const common = [
+    {
+      metric: "shoot" as const,
+      date: new Date(2026, 6, 6, 9),
+      minutes: 60,
+      task: mondayTask,
+    },
+  ];
+  const withoutSunday = calculateMediaTrendSeries(
+    common,
+    new Date(2026, 6, 6),
+    new Date(2026, 6, 12, 23, 59),
+    "day",
+    new Date(2026, 6, 20),
+  );
+  assert.equal(withoutSunday.rows.length, 6);
+  assert.equal(withoutSunday.rows.at(-1)?.label, "11/07");
+
+  const withSunday = calculateMediaTrendSeries(
+    [
+      ...common,
+      {
+        metric: "output" as const,
+        date: new Date(2026, 6, 12, 10),
+        minutes: 30,
+        task: sundayTask,
+      },
+    ],
+    new Date(2026, 6, 6),
+    new Date(2026, 6, 12, 23, 59),
+    "day",
+    new Date(2026, 6, 20),
+  );
+  assert.equal(withSunday.rows.length, 7);
+  assert.equal(withSunday.rows.at(-1)?.label, "12/07");
+  assert.deepEqual(withSunday.rows.at(-1)?.outputTasks, [sundayTask]);
+});
+
+test("excludes partial Media trend buckets from its matching P50", () => {
+  const rows = calculateMediaTrendSeries(
+    [
+      {
+        metric: "shoot",
+        date: new Date(2026, 6, 6, 9),
+        minutes: 100,
+        task: task("FULL-WEEK"),
+      },
+      {
+        metric: "shoot",
+        date: new Date(2026, 6, 13, 9),
+        minutes: 900,
+        task: task("CLIPPED-WEEK"),
+      },
+    ],
+    new Date(2026, 6, 6),
+    new Date(2026, 6, 15, 23, 59),
+    "week",
+    new Date(2026, 6, 20),
+  );
+  assert.equal(rows.rows.length, 2);
+  assert.equal(rows.rows[0].isComplete, true);
+  assert.equal(rows.rows[1].isComplete, false);
+  assert.equal(rows.shootReference.p50Minutes, 100);
 });

@@ -1,5 +1,7 @@
 import { useMemo } from "react";
+import { endOfDay } from "@/shared/date/dateUtils";
 import { calculateDashboardStats } from "../analytics/calculateDashboardStats";
+import { calculateMediaCapacity } from "../analytics/calculateMediaCapacity";
 import type {
   DashboardData,
   DateWindow,
@@ -11,15 +13,30 @@ export function useDashboardStats(
   collectionMonth: string,
   backlogDate: string,
 ) {
+  const reportingDate = useMemo(
+    () => dateWindow.to ?? endOfDay(new Date()),
+    [dateWindow.to],
+  );
+  const mediaCapacity = useMemo(
+    () =>
+      data ? calculateMediaCapacity(data, reportingDate) : null,
+    [data, reportingDate],
+  );
   return useMemo(
     () =>
-      data
+      data && mediaCapacity
         ? calculateDashboardStats(data, {
             dateWindow,
             collectionMonth,
             backlogDate,
-          })
+          }, mediaCapacity)
         : null,
-    [data, dateWindow, collectionMonth, backlogDate],
+    [
+      backlogDate,
+      collectionMonth,
+      data,
+      dateWindow,
+      mediaCapacity,
+    ],
   );
 }
