@@ -1012,6 +1012,49 @@ test("locks Media baseline by month and forecasts an incomplete week", () => {
   assert.equal(plan.fallbackTypeCount, 0);
 });
 
+test("uses each shoot type P50 without a minimum sample threshold", () => {
+  const plan = calculateShootTypeBaselinePlan(
+    [
+      {
+        id: "COLLECTION",
+        date: new Date(2026, 6, 27, 9),
+        duration: "Một ngày",
+        sessionUnits: 2,
+        taskCount: 8,
+        productCount: 6,
+        productCodes: ["A", "B", "C", "D", "E", "F"],
+        taskCodes: [],
+        type: "Bộ Sưu Tập",
+        timeWindow: "8h30–17h30",
+        model: "",
+        status: "Đóng",
+      },
+      {
+        id: "REORDER",
+        date: new Date(2026, 6, 28, 9),
+        duration: "Một buổi",
+        sessionUnits: 1,
+        taskCount: 20,
+        productCount: 10,
+        productCodes: ["G", "H", "I", "J", "K", "L", "M", "N", "O", "P"],
+        taskCodes: [],
+        type: "Order Lại",
+        timeWindow: "8h30–12h",
+        model: "",
+        status: "Đóng",
+      },
+    ],
+    new Date(2026, 6, 27),
+    new Date(2026, 7, 2, 23, 59),
+  );
+
+  assert.equal(plan.weeklySessionP50, 3);
+  assert.ok(Math.abs(plan.weeklyTaskBaseline - 28) < 1e-9);
+  assert.ok(Math.abs(plan.weeklyProductBaseline - 16) < 1e-9);
+  assert.equal(plan.fallbackTypeCount, 0);
+  assert.ok(plan.rows.every((row) => !row.usesOverallFallback));
+});
+
 test("groups Media trend by day and only keeps Sundays with data", () => {
   const mondayTask = task("TREND-MON");
   const sundayTask = task("TREND-SUN");
