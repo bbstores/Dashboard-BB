@@ -1055,6 +1055,56 @@ test("uses each shoot type P50 without a minimum sample threshold", () => {
   assert.ok(plan.rows.every((row) => !row.usesOverallFallback));
 });
 
+test("weights a full-day shoot as two four-hour samples for P50", () => {
+  const baseSession = {
+    duration: "Một buổi",
+    sessionUnits: 1,
+    productCount: 0,
+    productCodes: [] as string[],
+    taskCodes: [] as string[],
+    type: "Bộ Sưu Tập",
+    timeWindow: "",
+    model: "",
+    status: "Đóng",
+  };
+  const rows = calculateShootTypeBaselines(
+    [
+      {
+        ...baseSession,
+        id: "TWO",
+        date: new Date(2026, 5, 30),
+        taskCount: 2,
+      },
+      {
+        ...baseSession,
+        id: "SIXTY-ONE",
+        date: new Date(2026, 6, 8),
+        taskCount: 61,
+      },
+      {
+        ...baseSession,
+        id: "ONE",
+        date: new Date(2026, 6, 20),
+        taskCount: 1,
+      },
+      {
+        ...baseSession,
+        id: "FULL-DAY",
+        date: new Date(2026, 7, 1),
+        duration: "Một ngày",
+        sessionUnits: 2,
+        taskCount: 56,
+      },
+    ],
+    new Date(2026, 5, 29),
+    new Date(2026, 7, 2, 23, 59),
+  );
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].sessionUnits, 5);
+  assert.equal(rows[0].taskPerSessionP50, 28);
+});
+
 test("groups Media trend by day and only keeps Sundays with data", () => {
   const mondayTask = task("TREND-MON");
   const sundayTask = task("TREND-SUN");

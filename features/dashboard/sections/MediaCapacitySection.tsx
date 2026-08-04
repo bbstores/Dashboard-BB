@@ -145,7 +145,7 @@ const capacityHelp: Record<
     objective:
       "Tách khác biệt giữa các loại ca nhưng vẫn có một mốc chung để đánh giá tuần đang vượt hay dưới năng lực thực nghiệm.",
     calculation:
-      "P50 chung được tính từ từng buổi gốc. Baseline theo cơ cấu = P50 buổi/tuần × tỷ trọng loại × năng suất loại. P50 tuần trực tiếp được tính độc lập từ tổng task từng tuần để đối chiếu độ lệch của mô hình.",
+      "P50 chung và P50 từng loại được tính theo đơn vị buổi 4 giờ: ca một ngày có trọng số 2 buổi, số task và mã của ca được chia cho 2 trước khi lấy P50. Baseline theo cơ cấu = P50 buổi/tuần × tỷ trọng loại × năng suất loại. P50 tuần trực tiếp được tính độc lập từ tổng task từng tuần để đối chiếu độ lệch của mô hình.",
     example:
       "Nếu P50 là 5 buổi/tuần, cơ cấu Bộ Sưu Tập chiếm 40% và đạt 8 task/buổi thì phần đóng góp dự kiến là 5 × 40% × 8 = 16 task.",
     note:

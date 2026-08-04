@@ -612,6 +612,38 @@ function shootTypeLabel(value: string) {
   return value.trim() || "Khác";
 }
 
+function weightedSessionPercentile(
+  sessions: ShootSession[],
+  valueForSession: (session: ShootSession) => number,
+  ratio: number,
+) {
+  const rows = sessions
+    .filter((session) => session.sessionUnits > 0)
+    .map((session) => ({
+      value: valueForSession(session),
+      weight: session.sessionUnits,
+    }))
+    .filter(
+      (row) =>
+        Number.isFinite(row.value) &&
+        Number.isFinite(row.weight) &&
+        row.weight > 0,
+    )
+    .sort((left, right) => left.value - right.value);
+  if (!rows.length) return 0;
+  const totalWeight = rows.reduce(
+    (total, row) => total + row.weight,
+    0,
+  );
+  const threshold = Math.max(0, Math.min(1, ratio)) * totalWeight;
+  let cumulativeWeight = 0;
+  for (const row of rows) {
+    cumulativeWeight += row.weight;
+    if (cumulativeWeight >= threshold) return row.value;
+  }
+  return rows.at(-1)?.value ?? 0;
+}
+
 export function calculateShootTypeBaselines(
   sessions: ShootSession[],
   from: Date | null = null,
@@ -639,16 +671,14 @@ export function calculateShootTypeBaselines(
       (total, session) => total + session.sessionUnits,
       0,
     ),
-    taskPerSessionP50: percentile(
-      sessions.map(
-        (session) => session.taskCount / session.sessionUnits,
-      ),
+    taskPerSessionP50: weightedSessionPercentile(
+      sessions,
+      (session) => session.taskCount / session.sessionUnits,
       0.5,
     ),
-    productPerSessionP50: percentile(
-      sessions.map(
-        (session) => session.productCount / session.sessionUnits,
-      ),
+    productPerSessionP50: weightedSessionPercentile(
+      sessions,
+      (session) => session.productCount / session.sessionUnits,
       0.5,
     ),
   })).sort((left, right) => right.sessionUnits - left.sessionUnits);
@@ -665,16 +695,14 @@ export function calculateShootTypeBaselinePlan(
     (total, row) => total + row.sessionUnits,
     0,
   );
-  const overallTaskPerSessionP50 = percentile(
-    validSessions.map(
-      (session) => session.taskCount / session.sessionUnits,
-    ),
+  const overallTaskPerSessionP50 = weightedSessionPercentile(
+    validSessions,
+    (session) => session.taskCount / session.sessionUnits,
     0.5,
   );
-  const overallProductPerSessionP50 = percentile(
-    validSessions.map(
-      (session) => session.productCount / session.sessionUnits,
-    ),
+  const overallProductPerSessionP50 = weightedSessionPercentile(
+    validSessions,
+    (session) => session.productCount / session.sessionUnits,
     0.5,
   );
   const validDates = validSessions
