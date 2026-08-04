@@ -751,29 +751,18 @@ export function calculateShootTypeBaselinePlan(
   );
   const planRows = rows.map(
     (row): ShootTypeBaselinePlanRow => {
-      const confidence =
-        row.sessionUnits >= 8
-          ? "stable"
-          : row.sessionUnits >= 4
-            ? "reference"
-            : "insufficient";
-      const usesOverallFallback = confidence !== "stable";
       const mixPercentage = totalSessionUnits
         ? (row.sessionUnits / totalSessionUnits) * 100
         : 0;
       return {
         ...row,
-        confidence,
+        confidence: "stable",
         mixPercentage,
         expectedWeeklySessions:
           weeklySessionP50 * (mixPercentage / 100),
-        planningTaskPerSession: usesOverallFallback
-          ? overallTaskPerSessionP50
-          : row.taskPerSessionP50,
-        planningProductPerSession: usesOverallFallback
-          ? overallProductPerSessionP50
-          : row.productPerSessionP50,
-        usesOverallFallback,
+        planningTaskPerSession: row.taskPerSessionP50,
+        planningProductPerSession: row.productPerSessionP50,
+        usesOverallFallback: false,
       };
     },
   );

@@ -149,7 +149,7 @@ const capacityHelp: Record<
     example:
       "Nếu P50 là 5 buổi/tuần, cơ cấu Bộ Sưu Tập chiếm 40% và đạt 8 task/buổi thì phần đóng góp dự kiến là 5 × 40% × 8 = 16 task.",
     note:
-      "Dưới 4 buổi: Chưa đủ mẫu; 4–7: Tham khảo; từ 8: Tương đối ổn định. Bộ lọc này chỉ tác động chart và không đổi baseline khóa tháng phía trên.",
+      "Tạm thời không áp dụng ngưỡng số buổi tối thiểu: mỗi loại ca dùng trực tiếp P50 của chính các buổi đang có trong khoảng lọc. Vì vậy loại chỉ có 1–2 buổi có thể dao động mạnh. Bộ lọc này chỉ tác động chart và không đổi baseline khóa tháng phía trên.",
   },
 };
 
@@ -517,10 +517,9 @@ function ShootTypeBaselineChart({
               </small>
             </button>
             <p>
-              Không lấy trung bình cộng các loại.{" "}
-              {plan.fallbackTypeCount > 0
-                ? `${plan.fallbackTypeCount}/${rows.length} loại chưa đủ 8 buổi nên dùng P50 chung khi tổng hợp.`
-                : "Tất cả loại đã có tối thiểu 8 buổi mẫu."}{" "}
+              Không lấy trung bình cộng các loại. Mỗi loại đang dùng trực
+              tiếp P50 từ các buổi thuộc khoảng lọc, chưa áp dụng ngưỡng
+              số buổi tối thiểu.{" "}
               Mô hình theo cơ cấu đang bằng{" "}
               <strong>
                 {formatRate(plan.modelToObservedPercentage)}
@@ -541,18 +540,6 @@ function ShootTypeBaselineChart({
                     {formatMetric(row.sessionUnits)} buổi mẫu ·{" "}
                     {formatRate(row.mixPercentage)} cơ cấu
                   </small>
-                  <i
-                    className={`capacityTypeConfidence ${row.confidence}`}
-                  >
-                    {row.confidence === "stable"
-                      ? "Tương đối ổn định"
-                      : row.confidence === "reference"
-                        ? "Tham khảo"
-                        : "Chưa đủ mẫu"}
-                  </i>
-                  {row.usesOverallFallback && (
-                    <em>Dùng P50 chung khi tổng hợp tuần</em>
-                  )}
                 </span>
                 <span className="capacityTypeBar">
                   <i
