@@ -39,6 +39,21 @@
   margin: 10px 0 0;
   max-width: 720px;
 }
+.capacityFlowHeaderTools {
+  align-items: flex-end;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 12px;
+}
+.capacityFlowRangeError {
+  background: rgba(246, 216, 210, .12);
+  border: 1px solid rgba(246, 216, 210, .35);
+  border-radius: 10px;
+  color: #ffd9d2 !important;
+  margin: 12px 0 0 !important;
+  max-width: none !important;
+  padding: 9px 11px;
+}
 .capacityLockSummary {
   background: rgba(255, 255, 255, .08);
   border: 1px solid rgba(255, 255, 255, .16);
@@ -456,6 +471,30 @@
 }
 .capacityWorkloadIntro h3 {
   font-size: 18px;
+}
+.capacityWorkloadSwitch {
+  background: rgba(7, 38, 29, .35);
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 11px;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 3px;
+  padding: 3px;
+}
+.capacityWorkloadSwitch button {
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: #b9cac3;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 900;
+  min-width: 54px;
+  padding: 8px 11px;
+}
+.capacityWorkloadSwitch button[aria-pressed="true"] {
+  background: #d9ff72;
+  color: #174f3d;
 }
 .capacityTopGrid,
 .capacityBottomGrid {
@@ -982,6 +1021,11 @@
   .capacityWorkloadIntro {
     align-items: stretch;
     flex-direction: column;
+  }
+  .capacityFlowHeaderTools {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
   }
   .capacityLockSummary { min-width: 0; }
   .capacityFlowGrid { grid-template-columns: 1fr; }

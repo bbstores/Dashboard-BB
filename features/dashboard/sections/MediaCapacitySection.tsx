@@ -11,13 +11,20 @@ import type {
   ShootTypeBaselinePlanRow,
 } from "../analytics/calculateMediaCapacity";
 import {
+  calculateMediaCapacity,
   calculateMediaTrendSeries,
   calculateShootTypeBaselinePlan,
 } from "../analytics/calculateMediaCapacity";
 import { HelpButton } from "../components/HelpButton";
-import type { DashboardHelp, DetailView, Task } from "../model/types";
+import type {
+  DashboardData,
+  DashboardHelp,
+  DetailView,
+  Task,
+} from "../model/types";
 
 type MediaCapacitySectionProps = {
+  data: DashboardData;
   viewModel: MediaCapacityStats;
   globalDateFrom: string;
   globalDateTo: string;
@@ -39,37 +46,37 @@ const capacityHelp: Record<
   demand: {
     title: "Nhu cầu task quay/chụp",
     purpose:
-      "Đếm lượng việc team Media được yêu cầu quay hoặc chụp trong tuần.",
+      "Đếm lượng việc team Media được yêu cầu quay hoặc chụp trong khoảng riêng đang chọn.",
     objective:
       "Cho biết đầu vào đang tạo ra bao nhiêu nhu cầu và bao nhiêu task chưa được gắn vào lịch quay.",
     calculation:
-      "Lấy task nội bộ có Công đoạn Quay hoặc Chụp, Ngày Bắt Đầu thuộc tuần; loại task không tên, Outsource và Pending/Cancel. Sau đó tách theo cột Ca Quay có giá trị hay còn trống.",
+      "Lấy task nội bộ có Công đoạn Quay hoặc Chụp, Ngày Bắt Đầu thuộc khoảng riêng; loại task không tên, Outsource và Pending/Cancel. Sau đó tách theo cột Ca Quay có giá trị hay còn trống.",
     example:
       "Tuần có 60 task Quay/Chụp, 52 task có Ca Quay và 8 task chưa gắn → độ phủ lịch quay 86,7%.",
     note:
-      "Đây là nhu cầu theo Tasklist, không phải số task thực tế đã quay. Với tuần đang chạy, số chính là dữ liệu đến hôm nay và dòng dự kiến hết tuần lấy toàn bộ task đã có lịch trong tuần.",
+      "Đây là nhu cầu theo Tasklist, không phải số task thực tế đã quay. Khoảng riêng mặc định đồng bộ bộ lọc tổng; nếu khoảng đang chạy, số chính là dữ liệu đến hôm nay và dòng dự kiến lấy đến cuối khoảng.",
   },
   sessions: {
     title: "Buổi quay và số mã thực tế",
     purpose:
       "Đo năng lực quay/chụp từ sheet 2.11 Lịch Quay bằng một đơn vị chung.",
     objective:
-      "Trả lời trong một tuần team thực hiện bao nhiêu buổi quay, bao nhiêu task và bao nhiêu mã sản phẩm.",
+      "Trả lời trong khoảng đang chọn team thực hiện bao nhiêu buổi quay, bao nhiêu task và bao nhiêu mã sản phẩm.",
     calculation:
       "Một buổi được quy đổi 4 giờ; Một ngày bằng 2 buổi. Số task lấy Tổng Số Task; số mã là hợp không trùng của Danh Sách Mã SP. Baseline tháng lấy P25/P50/P75 của 12 tuần hoàn chỉnh trước tháng báo cáo, yêu cầu tối thiểu 8 tuần có lịch quay và được khóa suốt tháng.",
     example:
       "5 buổi, 49 task và 16 mã; nếu P50 lần lượt là 5, 49 và 16 thì tuần đạt đúng nhịp trung vị lịch sử.",
     note:
-      "Tuần đang chạy: thực tế chỉ tính ca đến hôm nay; dự kiến hết tuần tính mọi ca đã xếp lịch đến cuối tuần. Ca chưa có Thời Lượng vẫn xuất hiện trong bảng dẫn chứng nhưng đóng góp 0 buổi.",
+      "Khoảng đang chạy: thực tế chỉ tính ca đến hôm nay; dự kiến tính mọi ca đã xếp lịch đến cuối khoảng. Ca chưa có Thời Lượng vẫn xuất hiện trong bảng dẫn chứng nhưng đóng góp 0 buổi.",
   },
   outputCount: {
     title: "Ấn phẩm bàn giao trong tuần",
     purpose:
-      "Đếm số Video và Graphic đã được người làm bàn giao ở mốc Ngày Kiểm Duyệt.",
+      "Đếm số Video và Graphic đã được người làm bàn giao ở mốc Ngày Kiểm Duyệt trong khoảng riêng.",
     objective:
       "Trả lời một tuần team trả ra bao nhiêu ấn phẩm và đang cao hay thấp hơn nhịp lịch sử.",
     calculation:
-      "Lấy task ấn phẩm cuối có Ngày Kiểm Duyệt thuộc tuần, loại Outsource và Pending/Cancel. Baseline tháng lấy 12 tuần hoàn chỉnh trước tháng báo cáo. Nếu tuần chưa kết thúc, dự báo = đầu ra thực tế / số ngày công đã qua × tổng ngày công của tuần.",
+      "Lấy task ấn phẩm cuối có Ngày Kiểm Duyệt thuộc khoảng riêng, loại Outsource và Pending/Cancel. Baseline tháng lấy 12 tuần hoàn chỉnh trước tháng kết thúc khoảng và quy đổi theo số ngày công của khoảng. Nếu khoảng chưa kết thúc, dự báo = đầu ra thực tế / số ngày công đã qua × tổng ngày công của khoảng.",
     example:
       "Tuần bàn giao 117 ấn phẩm và P50 lịch sử cũng là 117 → đạt 100% nhịp trung vị.",
     note:
@@ -82,11 +89,11 @@ const capacityHelp: Record<
     objective:
       "Bổ sung góc nhìn tải công việc; không dùng chỉ số này để suy ra số buổi quay.",
     calculation:
-      "Lấy task nội bộ có Công đoạn Quay/Chụp và Ngày Bắt Đầu thuộc tuần. Map Format Type sang phút quay/chụp của bảng định mức 1.7, sau đó so với P25–P75 trên mỗi ngày làm việc của 8 tuần trước.",
+      "Lấy task nội bộ có Công đoạn Quay/Chụp và Ngày Bắt Đầu thuộc khoảng riêng. Chế độ Giờ map Format Type sang định mức 1.7; chế độ Task đếm chính tập task đó. P25–P50–P75 được tính độc lập theo đơn vị đang chọn từ nhịp mỗi ngày làm việc của 8 tuần trước.",
     example:
       "Tuần có 4.800 phút chuẩn, vùng lịch sử là 4.200–5.100 phút → nằm trong vùng thông thường.",
     note:
-      "Số buổi quay thực tế được tính riêng từ sheet 2.11 Lịch Quay ở chart phía trên.",
+      "Switch chỉ đổi góc nhìn và mốc P50, không đổi tập task. Số buổi quay thực tế được tính riêng từ sheet 2.11 Lịch Quay ở chart phía trên.",
   },
   output: {
     title: "Tải bàn giao quy đổi",
@@ -95,11 +102,11 @@ const capacityHelp: Record<
     objective:
       "Cho biết đầu ra của team đang thấp, bình thường hay cao hơn nhịp lịch sử.",
     calculation:
-      "Lấy task Video–Edit hoặc Graphic–Graphic Design có Ngày Kiểm Duyệt trong tuần, loại Outsource và Pending/Cancel; cộng phút chuẩn 1.7 rồi so với P25–P75 của 8 tuần trước.",
+      "Lấy task Video–Edit hoặc Graphic–Graphic Design có Ngày Kiểm Duyệt trong khoảng riêng, loại Outsource và Pending/Cancel. Chế độ Giờ cộng định mức 1.7; chế độ Task đếm chính tập task đó. P25–P50–P75 đổi theo đơn vị đang chọn.",
     example:
       "Tuần bàn giao 6.000 phút chuẩn, P50 lịch sử là 5.400 phút → đạt 111,1% mức tham chiếu.",
     note:
-      "Ngày Kiểm Duyệt là mốc bàn giao của người thực hiện; không dùng Ngày Hoàn Thành vì còn phụ thuộc người đánh giá.",
+      "Switch chỉ đổi thứ tự Giờ/Task và chuẩn so sánh. Ngày Kiểm Duyệt vẫn là mốc bàn giao của người thực hiện; không dùng Ngày Hoàn Thành vì còn phụ thuộc người đánh giá.",
   },
   trend: {
     title: "Xu hướng công suất theo thời gian",
@@ -213,6 +220,37 @@ function addCalendarDays(value: Date, days: number) {
   const result = new Date(value);
   result.setDate(result.getDate() + days);
   return result;
+}
+
+function startOfCalendarWeek(value: Date) {
+  const result = new Date(
+    value.getFullYear(),
+    value.getMonth(),
+    value.getDate(),
+  );
+  result.setDate(result.getDate() - ((result.getDay() + 6) % 7));
+  return result;
+}
+
+function flowRangeFromGlobal(
+  globalDateFrom: string,
+  globalDateTo: string,
+) {
+  const parsedFrom = inputDate(globalDateFrom);
+  const parsedTo = inputDate(globalDateTo, true);
+  const today = new Date();
+  const anchor = parsedTo ?? parsedFrom ?? today;
+  const weekStart = startOfCalendarWeek(anchor);
+  const weekEnd = addCalendarDays(weekStart, 6);
+  const fallbackTo = parsedFrom
+    ? parsedFrom > today
+      ? parsedFrom
+      : today
+    : weekEnd;
+  return {
+    from: globalDateFrom || toInputDate(weekStart),
+    to: globalDateTo || toInputDate(fallbackTo),
+  };
 }
 
 function inclusiveDaySpan(from: Date, to: Date) {
@@ -581,6 +619,8 @@ function CapacityCard({
   taskCount,
   mappedCount,
   reference,
+  taskReference,
+  displayMode,
   onClick,
 }: {
   type: "shoot" | "output";
@@ -589,19 +629,37 @@ function CapacityCard({
   taskCount: number;
   mappedCount: number;
   reference: CapacityReference;
+  taskReference: QuantityReference;
+  displayMode: "hours" | "tasks";
   onClick: () => void;
 }) {
-  const status = statusCopy(reference);
+  const showHours = displayMode === "hours";
+  const activeActual = showHours ? actualMinutes : taskCount;
+  const activeP25 = showHours
+    ? reference.p25Minutes
+    : taskReference.p25;
+  const activeP50 = showHours
+    ? reference.p50Minutes
+    : taskReference.p50;
+  const activeP75 = showHours
+    ? reference.p75Minutes
+    : taskReference.p75;
+  const activePercentage = showHours
+    ? reference.percentage
+    : taskReference.percentage;
+  const status = statusCopy(showHours ? reference : taskReference);
   const max = Math.max(
-    actualMinutes,
-    reference.p75Minutes,
-    reference.p50Minutes,
+    activeActual,
+    activeP75,
+    activeP50,
     1,
   );
-  const percentage = Math.min(100, (actualMinutes / max) * 100);
-  const p25 = (reference.p25Minutes / max) * 100;
-  const p75 = (reference.p75Minutes / max) * 100;
-  const p50 = (reference.p50Minutes / max) * 100;
+  const percentage = Math.min(100, (activeActual / max) * 100);
+  const p25 = (activeP25 / max) * 100;
+  const p75 = (activeP75 / max) * 100;
+  const p50 = (activeP50 / max) * 100;
+  const formatActiveValue = (value: number) =>
+    showHours ? formatHours(value) : `${formatMetric(value)} task`;
 
   return (
     <article className={`capacityMetricCard ${type}`}>
@@ -620,17 +678,18 @@ function CapacityCard({
         onClick={onClick}
       >
         <div className="capacityMetricValue">
-          <strong>{formatHours(actualMinutes)}</strong>
+          <strong>{formatActiveValue(activeActual)}</strong>
           <span className={`capacityBandStatus ${status.className}`}>
             {status.label}
           </span>
         </div>
         <p>
-          {formatNumber(taskCount)} task · {formatNumber(mappedCount)} map
-          được định mức
+          {showHours
+            ? `${formatNumber(taskCount)} task · ${formatNumber(mappedCount)} map được định mức`
+            : `${formatHours(actualMinutes)} · ${formatNumber(mappedCount)}/${formatNumber(taskCount)} task map được định mức`}
         </p>
         <div className="capacityBullet" aria-hidden="true">
-          {reference.p75Minutes > 0 && (
+          {activeP75 > 0 && (
             <i
               className="capacityReferenceBand"
               style={{
@@ -640,30 +699,30 @@ function CapacityCard({
             />
           )}
           <b style={{ width: `${percentage}%` }} />
-          {reference.p50Minutes > 0 && (
+          {activeP50 > 0 && (
             <em style={{ left: `${p50}%` }} />
           )}
         </div>
         <div className="capacityReferenceCopy">
           <span>
-            P25 {formatHours(reference.p25Minutes)}
+            P25 {formatActiveValue(activeP25)}
           </span>
           <strong className="capacityP50Summary">
-            {reference.p50Minutes
+            {activeP50
               ? (
                   <>
                     <span>
-                      {formatRate(reference.percentage)} P50
+                      {formatRate(activePercentage)} P50
                     </span>
                     <small>
-                      P50 = {formatHours(reference.p50Minutes)}
+                      P50 = {formatActiveValue(activeP50)}
                     </small>
                   </>
                 )
               : "Chưa đủ dữ liệu"}
           </strong>
           <span>
-            P75 {formatHours(reference.p75Minutes)}
+            P75 {formatActiveValue(activeP75)}
           </span>
         </div>
       </button>
@@ -1057,11 +1116,55 @@ function CapacityTrend({
 }
 
 export function MediaCapacitySection({
+  data,
   viewModel,
   globalDateFrom,
   globalDateTo,
   onOpenDetail,
 }: MediaCapacitySectionProps) {
+  const [workloadDisplayMode, setWorkloadDisplayMode] = useState<
+    "hours" | "tasks"
+  >("hours");
+  const commonFlowRange = useMemo(
+    () => flowRangeFromGlobal(globalDateFrom, globalDateTo),
+    [globalDateFrom, globalDateTo],
+  );
+  const flowRangeKey = `${commonFlowRange.from}|${commonFlowRange.to}`;
+  const [flowRangeInput, setFlowRangeInput] = useState(() => ({
+    sourceKey: flowRangeKey,
+    ...commonFlowRange,
+  }));
+  const activeFlowRange =
+    flowRangeInput.sourceKey === flowRangeKey
+      ? flowRangeInput
+      : commonFlowRange;
+  const flowDateFrom = activeFlowRange.from;
+  const flowDateTo = activeFlowRange.to;
+  const flowRangeStart = inputDate(flowDateFrom);
+  const flowRangeEnd = inputDate(flowDateTo, true);
+  const invalidFlowRange = Boolean(
+    flowRangeStart &&
+      flowRangeEnd &&
+      flowRangeStart > flowRangeEnd,
+  );
+  const flowViewModel = useMemo(
+    () =>
+      !invalidFlowRange && flowRangeStart && flowRangeEnd
+        ? calculateMediaCapacity(
+            data,
+            flowRangeEnd,
+            new Date(),
+            { from: flowRangeStart, to: flowRangeEnd },
+          )
+        : viewModel,
+    [
+      data,
+      flowRangeEnd,
+      flowRangeStart,
+      invalidFlowRange,
+      viewModel,
+    ],
+  );
   const {
     focusWeek,
     focusFullWeek,
@@ -1072,8 +1175,10 @@ export function MediaCapacitySection({
     isCompleteWeek,
     shootReference,
     outputReference,
+    shootTaskReference,
+    outputTaskReference,
     standardMinutes,
-  } = viewModel;
+  } = flowViewModel;
   const baselineDateFrom = toInputDate(
     officialBaseline.weeks[0]?.start ?? null,
   );
@@ -1271,7 +1376,7 @@ export function MediaCapacitySection({
       <header className="dashboardGroupHeader capacityGroupHeader">
         <span>04</span>
         <div>
-          <p>CÔNG SUẤT MEDIA TUẦN</p>
+          <p>CÔNG SUẤT MEDIA</p>
           <h2>Khả năng quay/chụp &amp; đầu ra ấn phẩm</h2>
         </div>
       </header>
@@ -1279,30 +1384,82 @@ export function MediaCapacitySection({
         <div className="mediaCapacityHeader">
           <div>
             <span className="chartKicker">
-              TUẦN {focusWeek.label}
+              KHOẢNG {focusWeek.label}
             </span>
-            <h2>Baseline Media v1 · nhịp sản xuất tuần</h2>
+            <h2>Baseline Media v1 · nhịp sản xuất theo kỳ</h2>
             <p>
               Chuẩn P50 được khóa theo tháng từ 12 tuần hoàn chỉnh trước
-              đó. Tuần đang chạy hiển thị riêng thực tế đến hôm nay và
-              dự báo hết tuần để tránh kết luận sớm.
+              đó. Ba lớp bên dưới tính theo khoảng riêng đang chọn; nếu
+              khoảng còn đang chạy, hệ thống tách thực tế đến hôm nay và
+              dự báo đến cuối khoảng để tránh kết luận sớm.
             </p>
           </div>
-          <div className="capacityLockSummary">
-            <span>BASELINE {officialBaseline.versionLabel}</span>
-            <strong>P50 khóa theo tháng</strong>
-            <small>
-              {officialBaseline.windowLabel} ·{" "}
-              {formatNumber(officialBaseline.sessionWeekCount)} tuần lịch
-              quay · {formatNumber(officialBaseline.outputWeekCount)} tuần
-              đầu ra
-            </small>
+          <div className="capacityFlowHeaderTools">
+            <div className="capacityTypeDateFilters">
+              <label>
+                Từ ngày
+                <input
+                  type="date"
+                  value={flowDateFrom}
+                  max={flowDateTo || undefined}
+                  onChange={(event) =>
+                    setFlowRangeInput({
+                      sourceKey: flowRangeKey,
+                      from: event.target.value,
+                      to: flowDateTo,
+                    })
+                  }
+                />
+              </label>
+              <span>→</span>
+              <label>
+                Đến ngày
+                <input
+                  type="date"
+                  value={flowDateTo}
+                  min={flowDateFrom || undefined}
+                  onChange={(event) =>
+                    setFlowRangeInput({
+                      sourceKey: flowRangeKey,
+                      from: flowDateFrom,
+                      to: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() =>
+                  setFlowRangeInput({
+                    sourceKey: flowRangeKey,
+                    ...commonFlowRange,
+                  })
+                }
+              >
+                Theo bộ lọc tổng
+              </button>
+            </div>
+            <div className="capacityLockSummary">
+              <span>BASELINE {officialBaseline.versionLabel}</span>
+              <strong>P50 khóa theo tháng</strong>
+              <small>
+                {officialBaseline.windowLabel} ·{" "}
+                {formatNumber(officialBaseline.sessionWeekCount)} tuần lịch
+                quay · {formatNumber(officialBaseline.outputWeekCount)} tuần
+                đầu ra
+              </small>
+            </div>
           </div>
         </div>
+        {invalidFlowRange && (
+          <p className="capacityFlowRangeError">
+            Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.
+          </p>
+        )}
 
         <div className="capacityFlowIntro">
           <div>
-            <span className="chartKicker">MẪU SỐ CHUNG THEO TUẦN</span>
+            <span className="chartKicker">MẪU SỐ CHUNG THEO KỲ</span>
             <h3>Nhu cầu → Buổi quay → Ấn phẩm bàn giao</h3>
           </div>
           <p>
@@ -1464,11 +1621,33 @@ export function MediaCapacitySection({
         />
 
         <div className="capacityWorkloadIntro">
-          <span className="chartKicker">GÓC NHÌN TẢI QUY ĐỔI</span>
-          <h3>Phút chuẩn dùng để giải thích độ nặng của cơ cấu task</h3>
+          <div>
+            <span className="chartKicker">GÓC NHÌN TẢI QUY ĐỔI</span>
+            <h3>Giờ chuẩn và số task theo cùng một tập công việc</h3>
+          </div>
+          <div
+            className="capacityWorkloadSwitch"
+            role="group"
+            aria-label="Đơn vị hiển thị tải công việc"
+          >
+            <button
+              type="button"
+              aria-pressed={workloadDisplayMode === "hours"}
+              onClick={() => setWorkloadDisplayMode("hours")}
+            >
+              Giờ
+            </button>
+            <button
+              type="button"
+              aria-pressed={workloadDisplayMode === "tasks"}
+              onClick={() => setWorkloadDisplayMode("tasks")}
+            >
+              Task
+            </button>
+          </div>
           <p>
-            Chỉ số phụ này không được dùng để quy đổi ngược thành số
-            buổi quay.
+            Chọn đơn vị nào thì số lớn, trạng thái và P25–P50–P75 đều
+            dùng đơn vị đó; đơn vị còn lại nằm ở dòng phụ.
           </p>
         </div>
         <div className="capacityTopGrid">
@@ -1479,6 +1658,8 @@ export function MediaCapacitySection({
             taskCount={focusWeek.shootTasks.length}
             mappedCount={focusWeek.shootMapped}
             reference={shootReference}
+            taskReference={shootTaskReference}
+            displayMode={workloadDisplayMode}
             onClick={() =>
               openStandardTasks(
                 `Quay/Chụp ước tính · ${focusWeek.label}`,
@@ -1494,6 +1675,8 @@ export function MediaCapacitySection({
             taskCount={focusWeek.outputTasks.length}
             mappedCount={focusWeek.outputMapped}
             reference={outputReference}
+            taskReference={outputTaskReference}
+            displayMode={workloadDisplayMode}
             onClick={() =>
               openStandardTasks(
                 `Ấn phẩm bàn giao · ${focusWeek.label}`,

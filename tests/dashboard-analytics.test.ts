@@ -887,10 +887,26 @@ test("calculates weekly Media capacity from standard minutes and handoff dates",
   assert.equal(result.focusWeek.feedbackRows.length, 1);
   assert.equal(result.shootReference.p50Minutes, 60);
   assert.equal(result.outputReference.p50Minutes, 30);
+  assert.equal(result.shootTaskReference.p50, 0.5);
+  assert.equal(result.outputTaskReference.p50, 0.5);
   assert.equal(result.sessionReference.p50, 2);
   assert.equal(result.scheduledTaskReference.p50, 10);
   assert.equal(result.productReference.p50, 4);
   assert.equal(result.snapshot.weekKey, "2026-07-20");
+
+  const customRange = calculateMediaCapacity(
+    data,
+    new Date(2026, 6, 22, 23, 59),
+    new Date(2026, 6, 22, 14),
+    {
+      from: new Date(2026, 6, 13),
+      to: new Date(2026, 6, 22, 23, 59),
+    },
+  );
+  assert.equal(customRange.focusWeek.label, "13/07–22/07");
+  assert.equal(customRange.focusWeek.shootTasks.length, 2);
+  assert.equal(customRange.focusWeek.sessionUnits, 3);
+  assert.equal(customRange.focusWeek.outputTasks.length, 3);
 });
 
 test("locks Media baseline by month and forecasts an incomplete week", () => {

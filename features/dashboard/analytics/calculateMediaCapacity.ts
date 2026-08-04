@@ -429,8 +429,9 @@ function calculateWeek(
   cutoff: Date,
   normMap: Map<string, WorkNorm>,
   standardMinutes: Map<Task, number>,
+  periodEnd?: Date,
 ): MediaCapacityWeek {
-  const end = endOfWeek(start);
+  const end = periodEnd ?? endOfWeek(start);
   const shootTasks = shootSourceTasks.filter(
     (task) =>
       eventInWeek(task.startDate, start, end, cutoff),
@@ -574,6 +575,7 @@ function normalizedQuantityReference(
   actual: number,
   metric:
     | "sessionUnits"
+    | "shootTaskCount"
     | "scheduledTaskCount"
     | "uniqueProductCount"
     | "outputTaskCount"
@@ -587,7 +589,9 @@ function normalizedQuantityReference(
     .filter((row) => row.workingDays > 0)
     .map((row) => {
       const value =
-        metric === "outputTaskCount"
+        metric === "shootTaskCount"
+          ? row.shootTasks.length
+          : metric === "outputTaskCount"
           ? row.outputTasks.length
           : metric === "videoTaskCount"
             ? row.videoTasks.length
@@ -595,6 +599,30 @@ function normalizedQuantityReference(
               ? row.graphicTasks.length
               : row[metric];
       return (value / row.workingDays) * focusDays;
+    });
+  return quantityReference(values, actual);
+}
+
+function periodTaskReference(
+  rows: MediaCapacityWeek[],
+  focusDays: number,
+  actual: number,
+  metric: "shoot" | "output",
+) {
+  const values = rows
+    .filter((row) => {
+      const count =
+        metric === "shoot"
+          ? row.shootTasks.length
+          : row.outputTasks.length;
+      return row.workingDays > 0 && count > 0;
+    })
+    .map((row) => {
+      const count =
+        metric === "shoot"
+          ? row.shootTasks.length
+          : row.outputTasks.length;
+      return (count / row.workingDays) * focusDays;
     });
   return quantityReference(values, actual);
 }
@@ -880,9 +908,19 @@ export function calculateMediaCapacity(
   data: DashboardData,
   reportingDate: Date,
   today = new Date(),
+  focusRange?: { from: Date; to: Date },
 ) {
-  const focusStart = startOfWeek(reportingDate);
-  const focusEnd = endOfWeek(focusStart);
+  const reportingWeekStart = startOfWeek(reportingDate);
+  const reportingWeekEnd = endOfWeek(reportingWeekStart);
+  const hasValidFocusRange = Boolean(
+    focusRange && focusRange.from <= focusRange.to,
+  );
+  const focusStart = hasValidFocusRange
+    ? startOfDay(focusRange!.from)
+    : reportingWeekStart;
+  const focusEnd = hasValidFocusRange
+    ? endOfDay(focusRange!.to)
+    : reportingWeekEnd;
   const currentDay = endOfDay(today);
   const focusCutoff =
     focusEnd < currentDay
@@ -929,12 +967,16 @@ export function calculateMediaCapacity(
     { length: TREND_WEEK_COUNT },
     (_, index) => {
       const start = addDays(
-        focusStart,
+        reportingWeekStart,
         (index - TREND_WEEK_COUNT + 1) * 7,
       );
       const cutoff =
         index === TREND_WEEK_COUNT - 1
-          ? focusCutoff
+          ? reportingWeekEnd < currentDay
+            ? reportingWeekEnd
+            : reportingWeekStart > currentDay
+              ? addDays(reportingWeekStart, -1)
+              : currentDay
           : endOfWeek(start);
       return calculateWeek(
         data,
@@ -947,7 +989,16 @@ export function calculateMediaCapacity(
       );
     },
   );
-  const focusWeek = trendWeeks.at(-1) as MediaCapacityWeek;
+  const focusWeek = calculateWeek(
+    data,
+    shootSourceTasks,
+    outputSourceTasks,
+    focusStart,
+    focusCutoff,
+    normMap,
+    standardMinutes,
+    focusEnd,
+  );
   const focusFullWeek = calculateWeek(
     data,
     shootSourceTasks,
@@ -956,6 +1007,7 @@ export function calculateMediaCapacity(
     focusEnd,
     normMap,
     standardMinutes,
+    focusEnd,
   );
   const baselineWeeks = trendWeeks
     .slice(0, -1)
@@ -982,6 +1034,18 @@ export function calculateMediaCapacity(
     comparisonDays,
     focusWeek.outputMinutes,
     "outputMinutes",
+  );
+  const shootTaskReference = periodTaskReference(
+    baselineWeeks,
+    comparisonDays,
+    focusWeek.shootTasks.length,
+    "shoot",
+  );
+  const outputTaskReference = periodTaskReference(
+    baselineWeeks,
+    comparisonDays,
+    focusWeek.outputTasks.length,
+    "output",
   );
   const sessionBaselineWeeks = baselineWeeks.filter(
     (row) => row.shootSessions.length > 0 && row.sessionUnits > 0,
@@ -1201,6 +1265,8 @@ export function calculateMediaCapacity(
     comparisonDays,
     shootReference,
     outputReference,
+    shootTaskReference,
+    outputTaskReference,
     sessionReference,
     scheduledTaskReference,
     productReference,
