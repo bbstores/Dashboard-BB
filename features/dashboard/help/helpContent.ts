@@ -96,15 +96,15 @@ export function dashboardHelp(title: string): DashboardHelp {
       example: "Có 75 Tốt trên tổng 120 task → lát Tốt hiển thị 75 và 62,5%.",
     },
     "Tuân thủ ngày bàn giao": {
-      purpose: "Đánh giá task có được chuyển sang kiểm duyệt trong cùng ngày bắt đầu hay không.",
-      calculation: "Cohort ban đầu là tổng task thuộc bộ lọc chung đã khử trùng. Mẫu số của tỷ lệ chỉ gồm task đã bàn giao hợp lệ: có Ngày Bắt Đầu từ 15/06/2026, có Ngày Kiểm Duyệt và thứ tự ngày hợp lệ. Tử số là các task có Ngày Kiểm Duyệt cùng ngày Ngày Bắt Đầu, bất kể giờ.",
-      example: "Có 371 task trong cohort nhưng chỉ 286 task đã bàn giao hợp lệ; 145 task bàn giao cùng ngày → tỷ lệ đúng ngày = 145 / 286 ≈ 51%. 85 task còn lại vẫn được giữ trong các nhóm chưa bàn giao, chưa bắt đầu, không tính KPI hoặc sai dữ liệu.",
-      note: "Mẫu số không phải tổng task trong kỳ. Task chưa có Ngày Kiểm Duyệt, quá hạn chưa bàn giao, đang thực hiện, bắt đầu trước 15/06/2026 hoặc thiếu/sai dữ liệu không được đưa vào tỷ lệ đúng/trễ. Đây là tuân thủ milestone bàn giao, không phải thời gian người thực hiện thực sự làm task.",
+      purpose: "Đánh giá task có được chuyển sang kiểm duyệt trước hoặc đúng hạn bàn giao hay không.",
+      calculation: "Áp dụng từ 15/06/2026. Quay/Chụp có hạn 13:00 ngày thứ hai sau Ngày Bắt Đầu; nếu hạn rơi vào Chủ nhật thì chuyển sang thứ Hai. Công đoạn khác giữ hạn cuối Ngày Bắt Đầu. Mẫu số chỉ gồm task đã bàn giao đủ dữ liệu; tử số là task có Ngày Kiểm Duyệt không vượt quá hạn.",
+      example: "Task Chụp bắt đầu 01/03 có hạn bàn giao 13:00 ngày 03/03. Bàn giao lúc 13:00 là đúng hạn; 13:01 là trễ hạn.",
+      note: "Task chưa bàn giao không nằm trong mẫu số tỷ lệ đúng/trễ nhưng sẽ được phân loại quá hạn ngay khi mốc đánh giá vượt quá hạn bàn giao.",
     },
     "Tuân thủ hạn hoàn thành": {
       purpose: "Đánh giá toàn bộ task có hoàn thành trước hạn quy trình hay không.",
-      calculation: "Hạn hoàn thành là cuối ngày làm việc kế tiếp sau Ngày Bắt Đầu. Chủ nhật và ngày lễ được bỏ qua. Done/Kinh Doanh Done được so với Ngày Hoàn Thành.",
-      example: "Bắt đầu thứ Bảy → hạn là cuối thứ Hai nếu Chủ nhật không làm việc.",
+      calculation: "Quay/Chụp có hạn hoàn thành lúc 13:00, thêm một ngày sau hạn bàn giao; nếu hạn rơi vào Chủ nhật thì chuyển sang thứ Hai. Công đoạn khác giữ hạn cuối ngày làm việc kế tiếp sau Ngày Bắt Đầu. Done/Kinh Doanh Done được so với Ngày Hoàn Thành.",
+      example: "Task Quay bắt đầu 01/03 có hạn bàn giao 13:00 ngày 03/03 và hạn hoàn thành 13:00 ngày 04/03.",
       note: "Kết quả toàn quy trình còn chịu ảnh hưởng của người kiểm duyệt; không dùng riêng để quy trách nhiệm cho người thực hiện.",
     },
     "Trạng thái task tồn": {

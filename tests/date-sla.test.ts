@@ -7,8 +7,10 @@ import {
   percentile,
 } from "../shared/date/dateUtils";
 import {
+  completionDueDate,
   evaluateHandoff,
   evaluateOverall,
+  handoffDueDate,
   handoffLateMinutes,
   lateMinuteBucket,
 } from "../features/dashboard/model/slaUtils";
@@ -87,6 +89,63 @@ test("evaluates handoff and completion SLA edge cases", () => {
     completedDate: at(22, 9),
   });
   assert.equal(evaluateOverall(completedLate, at(22, 9)).code, "late");
+});
+
+test("uses 13:00 media deadlines two days after start and one day after handoff", () => {
+  const mediaTask = task({
+    stage: "Chụp",
+    startDate: at(20, 9),
+  });
+
+  assert.equal(handoffDueDate(mediaTask)?.getDate(), 22);
+  assert.equal(handoffDueDate(mediaTask)?.getHours(), 13);
+  assert.equal(completionDueDate(mediaTask)?.getDate(), 23);
+  assert.equal(completionDueDate(mediaTask)?.getHours(), 13);
+
+  assert.equal(
+    evaluateHandoff(
+      { ...mediaTask, inspectionDate: at(22, 13) },
+      at(22, 13),
+    ).code,
+    "onTime",
+  );
+  assert.equal(
+    evaluateHandoff(
+      { ...mediaTask, inspectionDate: at(22, 13, 1) },
+      at(22, 13, 1),
+    ).code,
+    "late",
+  );
+  assert.equal(evaluateHandoff(mediaTask, at(22, 13)).code, "ongoing");
+  assert.equal(evaluateHandoff(mediaTask, at(22, 13, 1)).code, "overdue");
+
+  assert.equal(
+    evaluateOverall(
+      { ...mediaTask, status: "Done", completedDate: at(23, 13) },
+      at(23, 13),
+    ).code,
+    "onTime",
+  );
+  assert.equal(
+    evaluateOverall(
+      { ...mediaTask, status: "Done", completedDate: at(23, 13, 1) },
+      at(23, 13, 1),
+    ).code,
+    "late",
+  );
+});
+
+test("moves a media deadline falling on Sunday to Monday", () => {
+  const friday = new Date(2026, 6, 17, 9);
+  const mediaTask = task({ stage: "Quay", startDate: friday });
+  const handoffDue = handoffDueDate(mediaTask)!;
+  const completionDue = completionDueDate(mediaTask)!;
+
+  assert.equal(handoffDue.getDay(), 1);
+  assert.equal(handoffDue.getDate(), 20);
+  assert.equal(handoffDue.getHours(), 13);
+  assert.equal(completionDue.getDate(), 21);
+  assert.equal(completionDue.getHours(), 13);
 });
 
 test("calculates handoff lateness in business minutes", () => {

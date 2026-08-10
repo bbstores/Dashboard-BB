@@ -82,7 +82,7 @@ export function OverviewSection({
           }
         />
         <PieChart
-          title="Tuân thủ ngày bàn giao"
+          title="Tuân thủ hạn bàn giao"
           data={metrics.handoff.handoff}
           compact
           scope={scopes.handoff}
@@ -115,7 +115,7 @@ export function OverviewSection({
           onSelect={(label) =>
             onOpenDetail({
               title: `Tuân thủ hoàn thành · ${label}`,
-              subtitle: `Hạn là cuối ngày làm việc kế tiếp · đánh giá tại ${formatDate(reportingDate)}`,
+              subtitle: `Hạn theo công đoạn · đánh giá tại ${formatDate(reportingDate)}`,
               tasks: metrics.overall.tasks.filter(
                 (task) =>
                   evaluateOverall(task, reportingDate).label === label,

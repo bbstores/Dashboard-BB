@@ -74,25 +74,25 @@ export function SlaSection({
           <div className="handoffSlaHeader">
             <div>
               <span className="chartKicker">TUÂN THỦ MỐC BÀN GIAO</span>
-              <h3>Bàn giao trong ngày &amp; mức độ trễ</h3>
+              <h3>Bàn giao đúng hạn &amp; mức độ trễ</h3>
               <p>
-                Cùng ngày luôn được tính đúng hạn. Khi sang ngày khác, phút
-                trễ chỉ tính từ 08:30 trong giờ làm việc.
+                Quay/Chụp có hạn 13:00 ngày thứ hai sau ngày bắt đầu; các
+                công đoạn khác giữ hạn trong ngày bắt đầu.
               </p>
             </div>
             <HelpButton help={dashboardHelp("Tuân thủ ngày bàn giao")} />
           </div>
           <div className="handoffKpis">
             <SlaMetricCard
-              kicker="TỶ LỆ ĐÚNG NGÀY"
+              kicker="TỶ LỆ ĐÚNG HẠN"
               title="Task đã bàn giao đủ dữ liệu"
               value={`${Math.round(sla.handoffOnTimeRate)}%`}
-              note={`${formatNumber(sla.onTimeHandoffs.length)} / ${formatNumber(sla.handedForKpi.length)} task bàn giao đúng ngày`}
+              note={`${formatNumber(sla.onTimeHandoffs.length)} / ${formatNumber(sla.handedForKpi.length)} task bàn giao đúng hạn`}
               help={dashboardHelp("Tuân thủ ngày bàn giao")}
               onClick={() =>
                 onOpenDetail({
-                  title: "Bàn giao đúng ngày",
-                  subtitle: "Ngày Kiểm Duyệt cùng ngày Ngày Bắt Đầu",
+                  title: "Bàn giao đúng hạn",
+                  subtitle: "Ngày Kiểm Duyệt không vượt quá hạn của công đoạn",
                   tasks: sla.onTimeHandoffs.map((row) => row.task),
                 })
               }
@@ -107,24 +107,24 @@ export function SlaSection({
                 onOpenDetail({
                   title: "Quá hạn chưa bàn giao",
                   subtitle:
-                    "Đã qua ngày bắt đầu nhưng chưa có Ngày Kiểm Duyệt",
+                    "Đã qua hạn bàn giao nhưng chưa có Ngày Kiểm Duyệt",
                   tasks: sla.overdueHandoffs.map((row) => row.task),
                 })
               }
             />
             <SlaMetricCard
               kicker="MỨC TRỄ ĐIỂN HÌNH"
-              title="P50 của task bàn giao trễ ngày"
+              title="P50 của task bàn giao trễ hạn"
               value={formatSlaMinutes(sla.handoffLateP50)}
-              note={`${formatNumber(sla.lateHandoffs.length)} task trễ ngày · chỉ tính giờ làm việc`}
+              note={`${formatNumber(sla.lateHandoffs.length)} task trễ hạn · chỉ tính giờ làm việc`}
               help={{
                 title: "P50 phút trễ bàn giao",
                 purpose:
-                  "Mức phút trễ điển hình của riêng các task đã bàn giao sang ngày khác.",
+                  "Mức phút trễ điển hình của riêng các task đã bàn giao sau hạn.",
                 objective:
                   "Phân biệt task chỉ trễ qua ngày nhưng bàn giao trước ca với task chiếm nhiều giờ làm việc của ngày kế tiếp.",
                 calculation:
-                  "Bắt đầu tính từ 08:30 của ngày làm việc kế tiếp; loại ngoài giờ, nghỉ trưa, Chủ nhật và ngày lễ. P50 là trung vị.",
+                  "Công đoạn thường tính từ 08:30 ngày làm việc kế tiếp. Quay/Chụp tính từ hạn 13:00; loại ngoài giờ, nghỉ trưa, Chủ nhật và ngày lễ. P50 là trung vị.",
                 example:
                   "Bàn giao 07:00 hôm sau → 0 phút làm việc. Bàn giao 09:30 → 60 phút.",
               }}
@@ -132,7 +132,7 @@ export function SlaSection({
                 onOpenPercentile({
                   title: "Mức trễ bàn giao",
                   subtitle:
-                    "Phân vị số phút trễ của các task bàn giao sang ngày khác, chỉ tính trong giờ làm việc.",
+                    "Phân vị số phút trễ của các task bàn giao sau hạn, chỉ tính trong giờ làm việc.",
                   metricLabel: "Số phút trễ",
                   observations: sla.lateHandoffs.map((row) => ({
                     task: row.task,
@@ -143,7 +143,7 @@ export function SlaSection({
               }
               onClick={() =>
                 onOpenDetail({
-                  title: "Task bàn giao trễ ngày",
+                  title: "Task bàn giao trễ hạn",
                   subtitle:
                     "Các task tạo nên P50 và phân bổ mức độ trễ",
                   tasks: sla.lateHandoffs.map((row) => row.task),
@@ -165,18 +165,18 @@ export function SlaSection({
             help={{
               title: "Mức độ trễ bàn giao",
               purpose:
-                "Phân nhóm các task bàn giao sang ngày khác theo số phút làm việc bị trễ.",
+                "Phân nhóm các task bàn giao sau hạn theo số phút làm việc bị trễ.",
               objective:
                 "Nhận diện trễ chỉ mang tính qua ngày và các trường hợp thực sự chiếm thời gian của ca kế tiếp.",
               calculation:
-                "Phút trễ tính từ 08:30 ngày làm việc kế tiếp, loại ngoài giờ, nghỉ trưa, Chủ nhật và ngày lễ.",
+                "Phút trễ tính từ hạn tương ứng của công đoạn, loại ngoài giờ, nghỉ trưa, Chủ nhật và ngày lễ.",
               example:
                 "Task kiểm duyệt 07:00 hôm sau thuộc nhóm 0 phút; 10:00 thuộc nhóm 61–120 phút.",
             }}
             onSelect={(label) =>
               onOpenDetail({
                 title: `Mức trễ · ${label}`,
-                subtitle: "Task bàn giao trễ ngày trong cùng khoảng phút",
+                subtitle: "Task bàn giao trễ hạn trong cùng khoảng phút",
                 tasks: sla.lateHandoffs
                   .filter(
                     (row) => lateMinuteBucket(row.minutes) === label,
