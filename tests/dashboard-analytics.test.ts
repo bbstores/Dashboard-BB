@@ -6,6 +6,7 @@ import { calculateCollections } from "../features/dashboard/analytics/calculateC
 import {
   calculateMediaCapacity,
   calculateMediaTrendSeries,
+  calculateShootStaffContributions,
   calculateShootTypeBaselinePlan,
   calculateShootTypeBaselines,
 } from "../features/dashboard/analytics/calculateMediaCapacity";
@@ -913,6 +914,62 @@ test("excludes Pending / Cancel tasks from every collection metric", () => {
   assert.equal(result.childCollections[0].minuteTotal, 60);
 });
 
+test("allocates shoot participation by time, tasks and products", () => {
+  const sessions = [
+    {
+      id: "FULL-DAY",
+      date: new Date(2026, 6, 20),
+      duration: "Một ngày",
+      sessionUnits: 2,
+      taskCount: 10,
+      productCount: 4,
+      productCodes: ["A", "B", "C", "D"],
+      taskCodes: [],
+      type: "Bộ Sưu Tập",
+      timeWindow: "",
+      model: "",
+      staffNames: ["An", "Bình"],
+      staffCount: 2,
+      status: "Đóng",
+    },
+    {
+      id: "HALF-DAY",
+      date: new Date(2026, 6, 21),
+      duration: "Một buổi",
+      sessionUnits: 1,
+      taskCount: 6,
+      productCount: 3,
+      productCodes: ["E", "F", "G"],
+      taskCodes: [],
+      type: "Order Lại",
+      timeWindow: "",
+      model: "",
+      staffNames: ["An", "Chi"],
+      staffCount: 2,
+      status: "Đóng",
+    },
+  ];
+  const result = calculateShootStaffContributions(sessions);
+  const an = result.rows.find((row) => row.staffName === "An");
+  const binh = result.rows.find((row) => row.staffName === "Bình");
+  const chi = result.rows.find((row) => row.staffName === "Chi");
+
+  assert.equal(result.sessionCount, 2);
+  assert.equal(result.namedSessionCount, 2);
+  assert.equal(result.coveragePercentage, 100);
+  assert.equal(an?.sessionCount, 2);
+  assert.equal(an?.timeValue, 1.5);
+  assert.equal(an?.taskValue, 8);
+  assert.equal(an?.productValue, 3.5);
+  assert.equal(an?.timePercentage, 50);
+  assert.ok(
+    Math.abs((binh?.timePercentage ?? 0) - 100 / 3) < 1e-9,
+  );
+  assert.ok(
+    Math.abs((chi?.timePercentage ?? 0) - 100 / 6) < 1e-9,
+  );
+});
+
 test("calculates weekly Media capacity from standard minutes and handoff dates", () => {
   const data: DashboardData = {
     fileName: "capacity.xlsx",
@@ -1030,7 +1087,7 @@ test("calculates weekly Media capacity from standard minutes and handoff dates",
   assert.equal(result.focusWeek.sessionUnits, 1);
   assert.equal(result.focusWeek.scheduledTaskCount, 6);
   assert.equal(result.focusWeek.uniqueProductCount, 3);
-  assert.equal(result.focusWeek.staffSessionUnits, 3);
+  assert.equal(result.focusWeek.uniqueStaffCount, 3);
   assert.equal(result.focusWeek.outputTasks.length, 2);
   assert.equal(result.focusWeek.outputOpeningBacklogTasks.length, 2);
   assert.equal(result.focusWeek.outputStartedTasks.length, 0);
@@ -1064,7 +1121,7 @@ test("calculates weekly Media capacity from standard minutes and handoff dates",
   assert.equal(customRange.focusWeek.label, "13/07–22/07");
   assert.equal(customRange.focusWeek.shootTasks.length, 2);
   assert.equal(customRange.focusWeek.sessionUnits, 3);
-  assert.equal(customRange.focusWeek.staffSessionUnits, 11);
+  assert.equal(customRange.focusWeek.uniqueStaffCount, 4);
   assert.equal(customRange.focusWeek.outputTasks.length, 3);
 });
 

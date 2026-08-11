@@ -40,6 +40,16 @@ const detailCollator = new Intl.Collator("vi", {
   sensitivity: "base",
 });
 const DETAIL_PAGE_SIZE = 100;
+const detailDecimalFormatter = new Intl.NumberFormat("vi-VN", {
+  maximumFractionDigits: 1,
+});
+
+function shootSessionStaffDenominator(session: ShootSession) {
+  const namedStaff = new Set(
+    (session.staffNames ?? []).map(normalizedKey).filter(Boolean),
+  ).size;
+  return Math.max(1, namedStaff, session.staffCount ?? 0);
+}
 
 function normalizeSearch(value: unknown) {
   return String(value ?? "")
@@ -88,7 +98,7 @@ function detailRecords(detail: DetailView): DetailRecord[] {
 
 function detailColumns(detail: DetailView): DetailColumn[] {
   if (detail.shootSessions) {
-    return [
+    const columns: DetailColumn[] = [
       {
         key: "id",
         label: "Mã ca quay",
@@ -166,6 +176,46 @@ function detailColumns(detail: DetailView): DetailColumn[] {
           record.kind === "shootSession" ? record.value.status : "",
       },
     ];
+    if (detail.shootContribution) {
+      columns.push(
+        {
+          key: "contributionPercentage",
+          label: "Tỷ trọng trong ca",
+          value: (record) =>
+            record.kind === "shootSession"
+              ? 100 / shootSessionStaffDenominator(record.value)
+              : 0,
+        },
+        {
+          key: "allocatedSessionUnits",
+          label: "Buổi quy đổi cá nhân",
+          value: (record) =>
+            record.kind === "shootSession"
+              ? record.value.sessionUnits /
+                shootSessionStaffDenominator(record.value)
+              : 0,
+        },
+        {
+          key: "allocatedTasks",
+          label: "Task quy đổi",
+          value: (record) =>
+            record.kind === "shootSession"
+              ? record.value.taskCount /
+                shootSessionStaffDenominator(record.value)
+              : 0,
+        },
+        {
+          key: "allocatedProducts",
+          label: "Mã quy đổi",
+          value: (record) =>
+            record.kind === "shootSession"
+              ? record.value.productCount /
+                shootSessionStaffDenominator(record.value)
+              : 0,
+        },
+      );
+    }
+    return columns;
   }
   if (detail.publicationEvidence) {
     return [
@@ -841,6 +891,14 @@ export function DetailDrawer({
                   <th>Số task</th>
                   <th>Mã sản phẩm</th>
                   <th>Nhân sự</th>
+                  {detail.shootContribution ? (
+                    <>
+                      <th>Tỷ trọng trong ca</th>
+                      <th>Buổi cá nhân</th>
+                      <th>Task quy đổi</th>
+                      <th>Mã quy đổi</th>
+                    </>
+                  ) : null}
                   <th>Định dạng</th>
                   <th>Trạng thái</th>
                 </tr>
@@ -887,6 +945,62 @@ export function DetailDrawer({
                         {row.staffNames?.join(", ") || "Chưa nhập nhân sự"}
                       </small>
                     </td>
+                    {detail.shootContribution ? (
+                      <>
+                        <td data-label="Tỷ trọng trong ca">
+                          <strong>
+                            {detailDecimalFormatter.format(
+                              100 / shootSessionStaffDenominator(row),
+                            )}%
+                          </strong>
+                        </td>
+                        <td
+                          data-label="Buổi cá nhân"
+                          className={
+                            detail.shootContribution.metric === "time"
+                              ? "detailContributionActive"
+                              : undefined
+                          }
+                        >
+                          <strong>
+                            {detailDecimalFormatter.format(
+                              row.sessionUnits /
+                                shootSessionStaffDenominator(row),
+                            )}
+                          </strong>
+                        </td>
+                        <td
+                          data-label="Task quy đổi"
+                          className={
+                            detail.shootContribution.metric === "tasks"
+                              ? "detailContributionActive"
+                              : undefined
+                          }
+                        >
+                          <strong>
+                            {detailDecimalFormatter.format(
+                              row.taskCount /
+                                shootSessionStaffDenominator(row),
+                            )}
+                          </strong>
+                        </td>
+                        <td
+                          data-label="Mã quy đổi"
+                          className={
+                            detail.shootContribution.metric === "products"
+                              ? "detailContributionActive"
+                              : undefined
+                          }
+                        >
+                          <strong>
+                            {detailDecimalFormatter.format(
+                              row.productCount /
+                                shootSessionStaffDenominator(row),
+                            )}
+                          </strong>
+                        </td>
+                      </>
+                    ) : null}
                     <td data-label="Định dạng">
                       {row.type || "Chưa xác định"}
                     </td>

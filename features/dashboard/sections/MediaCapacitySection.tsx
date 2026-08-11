@@ -7,12 +7,16 @@ import type {
   MediaTrendBucket,
   MediaTrendGranularity,
   QuantityReference,
+  ShootContributionMetric,
+  ShootStaffContributionRow,
+  ShootStaffContributionStats,
   ShootTypeBaselinePlan,
   ShootTypeBaselinePlanRow,
 } from "../analytics/calculateMediaCapacity";
 import {
   calculateMediaCapacity,
   calculateMediaTrendSeries,
+  calculateShootStaffContributions,
   calculateShootTypeBaselinePlan,
 } from "../analytics/calculateMediaCapacity";
 import { HelpButton } from "../components/HelpButton";
@@ -40,7 +44,8 @@ const capacityHelp: Record<
   | "trend"
   | "mix"
   | "quality"
-  | "shootTypes",
+  | "shootTypes"
+  | "staffContribution",
   DashboardHelp
 > = {
   demand: {
@@ -63,7 +68,7 @@ const capacityHelp: Record<
     objective:
       "Trả lời trong khoảng đang chọn team thực hiện bao nhiêu buổi quay, bao nhiêu task và bao nhiêu mã sản phẩm.",
     calculation:
-      "Một buổi được quy đổi 4 giờ; Một ngày bằng 2 buổi. Công nhân sự 4 giờ = số người tham gia × số buổi quy đổi. Số task lấy Tổng Số Task; số mã là hợp không trùng của Danh Sách Mã SP. Baseline tháng lấy P25/P50/P75 của 12 tuần hoàn chỉnh trước tháng báo cáo, yêu cầu tối thiểu 8 tuần có dữ liệu tương ứng và được khóa suốt tháng.",
+      "Một buổi được quy đổi 4 giờ; Một ngày bằng 2 buổi. Nhân sự là số tên không trùng lặp trong các ca của kỳ; một người tham gia nhiều ca vẫn chỉ tính một lần. Số task lấy Tổng Số Task; số mã là hợp không trùng của Danh Sách Mã SP. Baseline tháng lấy P25/P50/P75 của 12 tuần hoàn chỉnh trước tháng báo cáo, yêu cầu tối thiểu 8 tuần có dữ liệu tương ứng và được khóa suốt tháng.",
     example:
       "5 buổi, 49 task và 16 mã; nếu P50 lần lượt là 5, 49 và 16 thì tuần đạt đúng nhịp trung vị lịch sử.",
     note:
@@ -157,6 +162,19 @@ const capacityHelp: Record<
       "Nếu P50 là 5 buổi/tuần, cơ cấu Bộ Sưu Tập chiếm 40% và đạt 8 task/buổi thì phần đóng góp dự kiến là 5 × 40% × 8 = 16 task.",
     note:
       "Tạm thời không áp dụng ngưỡng số buổi tối thiểu: mỗi loại ca dùng trực tiếp P50 của chính các buổi đang có trong khoảng lọc. Vì vậy loại chỉ có 1–2 buổi có thể dao động mạnh. Bộ lọc này chỉ tác động chart và không đổi baseline khóa tháng phía trên.",
+  },
+  staffContribution: {
+    title: "Tỷ trọng tham gia ca quay",
+    purpose:
+      "Phân bổ sản lượng của từng ca cho các nhân sự có tên trong ca để nhìn mức tham gia của từng người trong khoảng đang chọn.",
+    objective:
+      "Cho biết ai xuất hiện nhiều và đang gánh tỷ trọng thời gian, task hoặc mã sản phẩm lớn hơn trong lịch quay.",
+    calculation:
+      "Trong mỗi ca, buổi 4 giờ, task và mã được chia đều cho số nhân sự của ca. Tỷ trọng kỳ = phần quy đổi của nhân sự / tổng phần có đủ tên nhân sự. Một người xuất hiện nhiều lần trong cùng ca chỉ tính một lần. Ca thiếu danh sách tên không được phân bổ và được phản ánh trong độ phủ dữ liệu.",
+    example:
+      "Ca một ngày bằng 2 buổi có 4 người: mỗi người nhận 0,5 buổi quy đổi và 25% tỷ trọng của ca. Nếu ca có 40 task thì mỗi người nhận 10 task quy đổi.",
+    note:
+      "Đây là tỷ trọng tham gia phân bổ đều, không phải đánh giá năng suất thực tế. Muốn đo đóng góp thực tế cần có task hoặc mã phụ trách riêng cho từng nhân sự.",
   },
 };
 
@@ -625,6 +643,177 @@ function ShootTypeBaselineChart({
       ) : (
         <p className="capacityTypeEmpty">
           Chưa có ca đủ dữ liệu trong cửa sổ baseline.
+        </p>
+      )}
+    </article>
+  );
+}
+
+const contributionMetricCopy: Record<
+  ShootContributionMetric,
+  {
+    label: string;
+    unit: string;
+    value: (row: ShootStaffContributionRow) => number;
+    percentage: (row: ShootStaffContributionRow) => number;
+  }
+> = {
+  time: {
+    label: "Thời gian",
+    unit: "buổi quy đổi",
+    value: (row) => row.timeValue,
+    percentage: (row) => row.timePercentage,
+  },
+  tasks: {
+    label: "Task",
+    unit: "task quy đổi",
+    value: (row) => row.taskValue,
+    percentage: (row) => row.taskPercentage,
+  },
+  products: {
+    label: "Mã",
+    unit: "mã quy đổi",
+    value: (row) => row.productValue,
+    percentage: (row) => row.productPercentage,
+  },
+};
+
+function StaffContributionChart({
+  stats,
+  metric,
+  dateFrom,
+  dateTo,
+  onMetricChange,
+  onSelect,
+}: {
+  stats: ShootStaffContributionStats;
+  metric: ShootContributionMetric;
+  dateFrom: Date | null;
+  dateTo: Date | null;
+  onMetricChange: (metric: ShootContributionMetric) => void;
+  onSelect: (row: ShootStaffContributionRow) => void;
+}) {
+  const metricCopy = contributionMetricCopy[metric];
+  const rows = [...stats.rows].sort(
+    (left, right) =>
+      metricCopy.percentage(right) - metricCopy.percentage(left) ||
+      left.staffName.localeCompare(right.staffName, "vi"),
+  );
+  const topRow = rows[0];
+  return (
+    <article className="capacityStaffContributionCard">
+      <div className="capacityCardHeader">
+        <div>
+          <span className="chartKicker">
+            PHÂN BỔ ĐỀU · THEO NHÂN SỰ
+          </span>
+          <h3>Tỷ trọng tham gia ca quay</h3>
+          <p>
+            {formatDate(dateFrom)}–{formatDate(dateTo)} · cùng khoảng với
+            baseline theo loại ca
+          </p>
+        </div>
+        <div className="capacityStaffContributionTools">
+          <div
+            className="capacityStaffContributionSwitch"
+            role="group"
+            aria-label="Chỉ số tỷ trọng tham gia ca quay"
+          >
+            {(Object.keys(
+              contributionMetricCopy,
+            ) as ShootContributionMetric[]).map((value) => (
+              <button
+                type="button"
+                key={value}
+                aria-pressed={metric === value}
+                onClick={() => onMetricChange(value)}
+              >
+                {contributionMetricCopy[value].label}
+              </button>
+            ))}
+          </div>
+          <HelpButton help={capacityHelp.staffContribution} />
+        </div>
+      </div>
+      <div className="capacityStaffContributionSummary">
+        <span>
+          <small>Nhân sự có tên</small>
+          <strong>{formatNumber(rows.length)}</strong>
+        </span>
+        <span>
+          <small>Ca phân bổ được</small>
+          <strong>
+            {formatNumber(stats.namedSessionCount)}/
+            {formatNumber(stats.sessionCount)}
+          </strong>
+        </span>
+        <span>
+          <small>Độ phủ dữ liệu</small>
+          <strong>{formatRate(stats.coveragePercentage)}</strong>
+        </span>
+        <span>
+          <small>Tỷ trọng cao nhất</small>
+          <strong>{topRow ? topRow.staffName : "—"}</strong>
+          <em>
+            {topRow
+              ? formatRate(metricCopy.percentage(topRow))
+              : "Chưa có dữ liệu"}
+          </em>
+        </span>
+      </div>
+      {rows.length ? (
+        <div className="capacityStaffContributionRows">
+          {rows.map((row, index) => {
+            const value = metricCopy.value(row);
+            const percentage = metricCopy.percentage(row);
+            return (
+              <button
+                type="button"
+                key={row.staffName}
+                onClick={() => onSelect(row)}
+                aria-label={
+                  row.staffName +
+                  ": " +
+                  formatRate(percentage) +
+                  " theo " +
+                  metricCopy.label
+                }
+              >
+                <span className="capacityStaffRank">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span className="capacityStaffIdentity">
+                  <strong>{row.staffName}</strong>
+                  <small>
+                    {formatNumber(row.sessionCount)} ca · tham gia{" "}
+                    {formatMetric(row.participatedSessionUnits)} buổi 4 giờ
+                  </small>
+                </span>
+                <span className="capacityStaffContributionBar">
+                  <i
+                    style={{
+                      width:
+                        Math.max(
+                          percentage ? 2 : 0,
+                          Math.min(100, percentage),
+                        ) + "%",
+                    }}
+                  />
+                </span>
+                <span className="capacityStaffContributionValue">
+                  <strong>{formatMetric(value)}</strong>
+                  <small>{metricCopy.unit}</small>
+                </span>
+                <strong className="capacityStaffContributionRate">
+                  {formatRate(percentage)}
+                </strong>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="capacityTypeEmpty">
+          Chưa có danh sách tên nhân sự trong các ca thuộc khoảng này.
         </p>
       )}
     </article>
@@ -1144,6 +1333,8 @@ export function MediaCapacitySection({
   const [workloadDisplayMode, setWorkloadDisplayMode] = useState<
     "hours" | "tasks"
   >("hours");
+  const [staffContributionMetric, setStaffContributionMetric] =
+    useState<ShootContributionMetric>("time");
   const commonFlowRange = useMemo(
     () => flowRangeFromGlobal(globalDateFrom, globalDateTo),
     [globalDateFrom, globalDateTo],
@@ -1272,6 +1463,10 @@ export function MediaCapacitySection({
   const typeBaselineSessionUnits = typeBaselinePlan.rows.reduce(
     (total, row) => total + row.sessionUnits,
     0,
+  );
+  const staffContributionStats = useMemo(
+    () => calculateShootStaffContributions(typeBaselineSessions),
+    [typeBaselineSessions],
   );
   const trendDataFrom = toInputDate(viewModel.trendDateRange.from);
   const trendDataTo = toInputDate(viewModel.trendDateRange.to);
@@ -1577,9 +1772,9 @@ export function MediaCapacitySection({
               {formatMetric(officialBaseline.productReference.p50)}
             </span>
             <span>
-              <b>{formatMetric(focusFullWeek.staffSessionUnits)}</b>
-              {focusFullWeek.staffSessionUnits
-                ? ` công nhân sự 4 giờ · P50 ${formatMetric(officialBaseline.staffSessionReference.p50)}`
+              <b>{formatNumber(focusFullWeek.uniqueStaffCount)}</b>
+              {focusFullWeek.uniqueStaffCount
+                ? ` nhân sự · P50 ${formatMetric(officialBaseline.uniqueStaffReference.p50)}`
                 : " chưa có dữ liệu nhân sự ca quay"}
             </span>
           </CapacityFlowCard>
@@ -1665,6 +1860,37 @@ export function MediaCapacitySection({
               shootSessions: row.sessions,
             })
           }
+        />
+
+        <StaffContributionChart
+          stats={staffContributionStats}
+          metric={staffContributionMetric}
+          dateFrom={typeRangeStart}
+          dateTo={typeRangeEnd}
+          onMetricChange={setStaffContributionMetric}
+          onSelect={(row) => {
+            const metricCopy =
+              contributionMetricCopy[staffContributionMetric];
+            onOpenDetail({
+              title: row.staffName + " · tỷ trọng tham gia ca quay",
+              subtitle:
+                formatDate(typeRangeStart) +
+                "–" +
+                formatDate(typeRangeEnd) +
+                " · " +
+                formatNumber(row.sessionCount) +
+                " ca · " +
+                formatRate(metricCopy.percentage(row)) +
+                " theo " +
+                metricCopy.label.toLocaleLowerCase("vi") +
+                " · phân bổ đều theo số nhân sự của từng ca",
+              shootSessions: row.sessions,
+              shootContribution: {
+                staffName: row.staffName,
+                metric: staffContributionMetric,
+              },
+            });
+          }}
         />
 
         <div className="capacityWorkloadIntro">

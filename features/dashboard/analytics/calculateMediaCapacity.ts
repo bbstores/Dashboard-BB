@@ -15,6 +15,7 @@ import type {
 import {
   assigneeNames,
   isFinalPublicationTask,
+  normalize,
   normalizedKey,
   normMinutesFor,
 } from "../model/taskUtils";
@@ -37,7 +38,7 @@ export type MediaCapacityWeek = {
   sessionUnits: number;
   scheduledTaskCount: number;
   uniqueProductCount: number;
-  staffSessionUnits: number;
+  uniqueStaffCount: number;
   outputTasks: Task[];
   outputOpeningBacklogTasks: Task[];
   outputStartedTasks: Task[];
@@ -146,6 +147,32 @@ export type ShootTypeBaselinePlan = {
   fallbackTypeCount: number;
 };
 
+export type ShootContributionMetric = "time" | "tasks" | "products";
+
+export type ShootStaffContributionRow = {
+  staffName: string;
+  sessions: ShootSession[];
+  sessionCount: number;
+  participatedSessionUnits: number;
+  timeValue: number;
+  taskValue: number;
+  productValue: number;
+  timePercentage: number;
+  taskPercentage: number;
+  productPercentage: number;
+};
+
+export type ShootStaffContributionStats = {
+  rows: ShootStaffContributionRow[];
+  sessionCount: number;
+  namedSessionCount: number;
+  coveragePercentage: number;
+  totalSessionUnits: number;
+  attributedSessionUnits: number;
+  attributedTaskCount: number;
+  attributedProductCount: number;
+};
+
 const BASELINE_WEEK_COUNT = 8;
 const OFFICIAL_BASELINE_WEEK_COUNT = 12;
 const MIN_OFFICIAL_BASELINE_WEEKS = 8;
@@ -156,6 +183,109 @@ export function shootSessionStaffCount(session: ShootSession) {
     return session.staffCount;
   }
   return new Set(session.staffNames ?? []).size;
+}
+
+export function uniqueShootStaffCount(sessions: ShootSession[]) {
+  const names = new Set<string>();
+  let unnamedStaffCount = 0;
+  for (const session of sessions) {
+    const sessionNames = new Set(
+      (session.staffNames ?? [])
+        .map(normalizedKey)
+        .filter(Boolean),
+    );
+    for (const name of sessionNames) names.add(name);
+    unnamedStaffCount = Math.max(
+      unnamedStaffCount,
+      Math.max(0, shootSessionStaffCount(session) - sessionNames.size),
+    );
+  }
+  return names.size + unnamedStaffCount;
+}
+
+export function calculateShootStaffContributions(
+  sessions: ShootSession[],
+): ShootStaffContributionStats {
+  const staffRows = new Map<
+    string,
+    Omit<
+      ShootStaffContributionRow,
+      "timePercentage" | "taskPercentage" | "productPercentage"
+    >
+  >();
+  let namedSessionCount = 0;
+  let attributedSessionUnits = 0;
+  let attributedTaskCount = 0;
+  let attributedProductCount = 0;
+
+  for (const session of sessions) {
+    const sessionStaff = new Map<string, string>();
+    for (const rawName of session.staffNames ?? []) {
+      const staffName = normalize(rawName);
+      const key = normalizedKey(staffName);
+      if (key && !sessionStaff.has(key)) {
+        sessionStaff.set(key, staffName);
+      }
+    }
+    if (!sessionStaff.size) continue;
+    namedSessionCount += 1;
+    attributedSessionUnits += session.sessionUnits;
+    attributedTaskCount += session.taskCount;
+    attributedProductCount += session.productCount;
+    const staffCount = Math.max(
+      sessionStaff.size,
+      shootSessionStaffCount(session),
+    );
+
+    for (const [key, staffName] of sessionStaff) {
+      const row = staffRows.get(key) ?? {
+        staffName,
+        sessions: [],
+        sessionCount: 0,
+        participatedSessionUnits: 0,
+        timeValue: 0,
+        taskValue: 0,
+        productValue: 0,
+      };
+      row.sessions.push(session);
+      row.sessionCount += 1;
+      row.participatedSessionUnits += session.sessionUnits;
+      row.timeValue += session.sessionUnits / staffCount;
+      row.taskValue += session.taskCount / staffCount;
+      row.productValue += session.productCount / staffCount;
+      staffRows.set(key, row);
+    }
+  }
+
+  const totalSessionUnits = sessions.reduce(
+    (total, session) => total + session.sessionUnits,
+    0,
+  );
+  return {
+    rows: Array.from(staffRows.values()).map((row) => ({
+      ...row,
+      timePercentage: attributedSessionUnits
+        ? (row.timeValue / attributedSessionUnits) * 100
+        : 0,
+      taskPercentage: attributedTaskCount
+        ? (row.taskValue / attributedTaskCount) * 100
+        : 0,
+      productPercentage: attributedProductCount
+        ? (row.productValue / attributedProductCount) * 100
+        : 0,
+    })),
+    sessionCount: sessions.length,
+    namedSessionCount,
+    coveragePercentage: totalSessionUnits
+      ? (attributedSessionUnits / totalSessionUnits) * 100
+      : sessions.length
+        ? (namedSessionCount / sessions.length) * 100
+        : 0,
+    totalSessionUnits,
+    attributedSessionUnits,
+    attributedTaskCount,
+    attributedProductCount,
+  };
 }
 
 function startOfWeek(value: Date) {
@@ -505,11 +635,7 @@ function calculateWeek(
   const uniqueProductCount = new Set(
     shootSessions.flatMap((session) => session.productCodes),
   ).size;
-  const staffSessionUnits = shootSessions.reduce(
-    (total, session) =>
-      total + shootSessionStaffCount(session) * session.sessionUnits,
-    0,
-  );
+  const uniqueStaffCount = uniqueShootStaffCount(shootSessions);
   const outputTasks = outputSourceTasks.filter(
     (task) =>
       eventInWeek(task.inspectionDate, start, end, cutoff),
@@ -592,7 +718,7 @@ function calculateWeek(
     sessionUnits,
     scheduledTaskCount,
     uniqueProductCount,
-    staffSessionUnits,
+    uniqueStaffCount,
     outputTasks,
     outputOpeningBacklogTasks,
     outputStartedTasks,
@@ -661,7 +787,7 @@ function normalizedQuantityReference(
   actual: number,
   metric:
     | "sessionUnits"
-    | "staffSessionUnits"
+    | "uniqueStaffCount"
     | "shootTaskCount"
     | "scheduledTaskCount"
     | "uniqueProductCount"
@@ -1255,7 +1381,7 @@ export function calculateMediaCapacity(
     (row) => row.sessionUnits > 0,
   );
   const officialStaffWeeks = officialSessionWeeks.filter(
-    (row) => row.staffSessionUnits > 0,
+    (row) => row.uniqueStaffCount > 0,
   );
   const officialOutputWeeks = officialBaselineWeeks.filter(
     (row) => row.outputTasks.length > 0,
@@ -1294,14 +1420,14 @@ export function calculateMediaCapacity(
     ),
     focusFullWeek.scheduledTaskCount,
   );
-  const officialStaffSessionReference = referenceForValue(
+  const officialUniqueStaffReference = referenceForValue(
     normalizedQuantityReference(
       officialStaffWeeks,
       focusWeek.workingDays,
-      focusFullWeek.staffSessionUnits,
-      "staffSessionUnits",
+      focusFullWeek.uniqueStaffCount,
+      "uniqueStaffCount",
     ),
-    focusFullWeek.staffSessionUnits,
+    focusFullWeek.uniqueStaffCount,
   );
   const officialProductReference = referenceForValue(
     normalizedQuantityReference(
@@ -1359,7 +1485,7 @@ export function calculateMediaCapacity(
     outputWeekCount: officialOutputWeeks.length,
     sessionReference: officialSessionReference,
     scheduledTaskReference: officialScheduledTaskReference,
-    staffSessionReference: officialStaffSessionReference,
+    uniqueStaffReference: officialUniqueStaffReference,
     productReference: officialProductReference,
     outputReference: officialOutputReference,
     videoReference: officialVideoReference,
@@ -1408,9 +1534,9 @@ export function calculateMediaCapacity(
     forecastSessionUnits: focusFullWeek.sessionUnits,
     forecastScheduledTaskCount: focusFullWeek.scheduledTaskCount,
     forecastUniqueProductCount: focusFullWeek.uniqueProductCount,
-    staffSessionUnits: focusFullWeek.staffSessionUnits,
-    staffSessionReferenceUnits:
-      officialBaseline.staffSessionReference.p50,
+    uniqueStaffCount: focusFullWeek.uniqueStaffCount,
+    uniqueStaffReferenceCount:
+      officialBaseline.uniqueStaffReference.p50,
     forecastOutputTaskCount: forecastOutputCount,
   };
 

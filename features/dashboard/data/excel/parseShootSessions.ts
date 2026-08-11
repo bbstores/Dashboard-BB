@@ -9,7 +9,7 @@ import {
 } from "./worksheetUtils";
 
 function splitValues(value: unknown) {
-  return normalize(value)
+  return String(value ?? "")
     .split(/\s*[|,;\n]\s*/)
     .map(normalize)
     .filter(Boolean);

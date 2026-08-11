@@ -204,6 +204,8 @@ test("Media shoot-type baseline uses an independent date range", () => {
         type: "Bộ Sưu Tập",
         timeWindow: "",
         model: "",
+        staffNames: ["An", "Bình"],
+        staffCount: 2,
         status: "Đóng",
       },
       {
@@ -218,6 +220,8 @@ test("Media shoot-type baseline uses an independent date range", () => {
         type: "Order Lại",
         timeWindow: "",
         model: "",
+        staffNames: ["An", "Chi"],
+        staffCount: 2,
         status: "Đóng",
       },
     ],
@@ -260,13 +264,36 @@ test("Media shoot-type baseline uses an independent date range", () => {
   assert.ok(shootWorkloadP50);
   assert.ok(shootWorkloadReference);
   assert.match(shootWorkloadValue.textContent ?? "", /giờ/);
-  const taskModeButton = screen.getByRole("button", { name: "Task" });
+  const taskModeButton = Array.from(
+    container.querySelectorAll(".capacityWorkloadSwitch button"),
+  ).find((button) => button.textContent === "Task");
+  assert.ok(taskModeButton);
   fireEvent.click(taskModeButton);
   assert.equal(taskModeButton.getAttribute("aria-pressed"), "true");
   assert.match(shootWorkloadValue.textContent ?? "", /task/);
   assert.match(shootWorkloadReference.textContent ?? "", /task/);
   fireEvent.click(screen.getByRole("button", { name: "Giờ" }));
   assert.match(shootWorkloadValue.textContent ?? "", /giờ/);
+
+  assert.ok(screen.getByText("Tỷ trọng tham gia ca quay"));
+  assert.ok(
+    screen.getByRole("button", {
+      name: "An: 50% theo Thời gian",
+    }),
+  );
+  const contributionSwitch = screen.getByRole("group", {
+    name: "Chỉ số tỷ trọng tham gia ca quay",
+  });
+  const contributionTaskButton = Array.from(
+    contributionSwitch.querySelectorAll("button"),
+  ).find((button) => button.textContent === "Task");
+  assert.ok(contributionTaskButton);
+  fireEvent.click(contributionTaskButton);
+  fireEvent.click(
+    screen.getByRole("button", { name: "An: 50% theo Task" }),
+  );
+  assert.equal(openedTrendDetail?.shootContribution?.staffName, "An");
+  assert.equal(openedTrendDetail?.shootContribution?.metric, "tasks");
 
   assert.ok(screen.getByText("20/7/2026–26/7/2026"));
   assert.ok(screen.getByRole("button", { name: /Bộ Sưu Tập/ }));
@@ -630,6 +657,10 @@ test("shooting-session evidence exposes units, task counts and product codes", (
             status: "Đóng",
           },
         ],
+        shootContribution: {
+          staffName: "An",
+          metric: "tasks",
+        },
       }}
       onClose={() => undefined}
     />,
@@ -640,6 +671,12 @@ test("shooting-session evidence exposes units, task counts and product codes", (
   assert.ok(screen.getByText("12"));
   assert.ok(screen.getByText("SP01, SP02, SP03"));
   assert.ok(screen.getByText("An, Bình, Chi"));
+  assert.ok(screen.getAllByText("Tỷ trọng trong ca").length >= 1);
+  assert.ok(screen.getByText("33,3%"));
+  assert.equal(
+    document.querySelectorAll(".detailContributionActive").length,
+    1,
+  );
   assert.match(
     document.querySelector(".detailCount")?.textContent ?? "",
     /1\s*ca quay/,

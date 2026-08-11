@@ -178,7 +178,11 @@ export type MediaCapacitySnapshot = {
   forecastSessionUnits?: number;
   forecastScheduledTaskCount?: number;
   forecastUniqueProductCount?: number;
+  uniqueStaffCount?: number;
+  uniqueStaffReferenceCount?: number;
+  /** @deprecated Saved reports created before unique staff counting. */
   staffSessionUnits?: number;
+  /** @deprecated Saved reports created before unique staff counting. */
   staffSessionReferenceUnits?: number;
   forecastOutputTaskCount?: number;
 };
@@ -215,6 +219,10 @@ export type DetailView = {
   costAllocations?: CostAllocation[];
   costTaskSummaries?: CostTaskSummary[];
   shootSessions?: ShootSession[];
+  shootContribution?: {
+    staffName: string;
+    metric: "time" | "tasks" | "products";
+  };
   taskMetric?: {
     label: string;
     value: (task: Task) => number;

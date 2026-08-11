@@ -193,6 +193,10 @@
   white-space: normal;
   word-break: break-word;
 }
+.detailTable td.detailContributionActive {
+  background: rgba(217, 255, 114, .16);
+  color: var(--green);
+}
 .taskIdentity,
 .detailTitleCell {
   min-width: 240px; max-width: 360px; white-space: normal; line-height: 1.4;

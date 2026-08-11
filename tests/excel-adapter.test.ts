@@ -258,7 +258,7 @@ test("parses shooting sessions into four-hour units", () => {
     [SHOOT_SESSION_COLUMNS.timeWindow]: "8h30–17h30",
     [SHOOT_SESSION_COLUMNS.date]: new Date(Date.UTC(2026, 6, 20)),
     [SHOOT_SESSION_COLUMNS.model]: "Mẫu A",
-    [SHOOT_SESSION_COLUMNS.staff]: "An | Bình | Chi",
+    [SHOOT_SESSION_COLUMNS.staff]: "An\nBình\nChi",
     [SHOOT_SESSION_COLUMNS.staffCount]: 3,
     [SHOOT_SESSION_COLUMNS.status]: "Đóng",
     [SHOOT_SESSION_COLUMNS.taskCodes]: "TSK001,TSK002",
