@@ -53,11 +53,11 @@ const capacityHelp: Record<
     objective:
       "Cho biết đầu vào đang tạo ra bao nhiêu nhu cầu và bao nhiêu task chưa được gắn vào lịch quay.",
     calculation:
-      "Tổng cần xử lý = task tồn đầu kỳ + task Quay/Chụp có Ngày Bắt Đầu trong kỳ. Task tồn đầu kỳ đã bắt đầu trước kỳ nhưng chưa có Ngày Kiểm Duyệt trước kỳ. Bàn giao trong kỳ dùng Ngày Kiểm Duyệt; tồn cuối kỳ là phần chưa bàn giao tại mốc kết thúc thực tế.",
+      "Tổng cần xử lý = task tồn đầu kỳ + task Quay/Chụp có Ngày Bắt Đầu trong kỳ. Task tồn đầu kỳ đã bắt đầu trước kỳ nhưng chưa có Ngày Kiểm Duyệt trước kỳ. Vùng thường P25–P75 và P50 dùng đúng cùng công thức này trên 12 tuần hoàn chỉnh trước tháng báo cáo.",
     example:
       "Tuần có 60 task Quay/Chụp, 52 task có Ca Quay và 8 task chưa gắn → độ phủ lịch quay 86,7%.",
     note:
-      "Đây là nhu cầu theo Tasklist, không phải số task thực tế đã quay. Khoảng riêng mặc định đồng bộ bộ lọc tổng; nếu khoảng đang chạy, số chính là dữ liệu đến hôm nay và dòng dự kiến lấy đến cuối khoảng.",
+      "Đây là nhu cầu theo Tasklist, không phải số task thực tế đã quay. Nhãn dưới/trong/vượt vùng so sánh tổng cần xử lý hiện tại với vùng P25–P75 của lịch sử, không dùng baseline chỉ tính task mới.",
   },
   sessions: {
     title: "Buổi quay và số mã thực tế",
@@ -945,124 +945,6 @@ function StaffParticipationChart({
   );
 }
 
-function CapacityCard({
-  type,
-  title,
-  actualMinutes,
-  taskCount,
-  mappedCount,
-  reference,
-  taskReference,
-  displayMode,
-  onClick,
-}: {
-  type: "shoot" | "output";
-  title: string;
-  actualMinutes: number;
-  taskCount: number;
-  mappedCount: number;
-  reference: CapacityReference;
-  taskReference: QuantityReference;
-  displayMode: "hours" | "tasks";
-  onClick: () => void;
-}) {
-  const showHours = displayMode === "hours";
-  const activeActual = showHours ? actualMinutes : taskCount;
-  const activeP25 = showHours
-    ? reference.p25Minutes
-    : taskReference.p25;
-  const activeP50 = showHours
-    ? reference.p50Minutes
-    : taskReference.p50;
-  const activeP75 = showHours
-    ? reference.p75Minutes
-    : taskReference.p75;
-  const activePercentage = showHours
-    ? reference.percentage
-    : taskReference.percentage;
-  const status = statusCopy(showHours ? reference : taskReference);
-  const max = Math.max(
-    activeActual,
-    activeP75,
-    activeP50,
-    1,
-  );
-  const percentage = Math.min(100, (activeActual / max) * 100);
-  const p25 = (activeP25 / max) * 100;
-  const p75 = (activeP75 / max) * 100;
-  const p50 = (activeP50 / max) * 100;
-  const formatActiveValue = (value: number) =>
-    showHours ? formatHours(value) : `${formatMetric(value)} task`;
-
-  return (
-    <article className={`capacityMetricCard ${type}`}>
-      <div className="capacityCardHeader">
-        <div>
-          <span className="chartKicker">
-            {type === "shoot" ? "QUAY / CHỤP" : "ĐẦU RA"}
-          </span>
-          <h3>{title}</h3>
-        </div>
-        <HelpButton help={capacityHelp[type]} />
-      </div>
-      <button
-        type="button"
-        className="capacityMetricBody"
-        onClick={onClick}
-      >
-        <div className="capacityMetricValue">
-          <strong>{formatActiveValue(activeActual)}</strong>
-          <span className={`capacityBandStatus ${status.className}`}>
-            {status.label}
-          </span>
-        </div>
-        <p>
-          {showHours
-            ? `${formatNumber(taskCount)} task · ${formatNumber(mappedCount)} map được định mức`
-            : `${formatHours(actualMinutes)} · ${formatNumber(mappedCount)}/${formatNumber(taskCount)} task map được định mức`}
-        </p>
-        <div className="capacityBullet" aria-hidden="true">
-          {activeP75 > 0 && (
-            <i
-              className="capacityReferenceBand"
-              style={{
-                left: `${p25}%`,
-                width: `${Math.max(0, p75 - p25)}%`,
-              }}
-            />
-          )}
-          <b style={{ width: `${percentage}%` }} />
-          {activeP50 > 0 && (
-            <em style={{ left: `${p50}%` }} />
-          )}
-        </div>
-        <div className="capacityReferenceCopy">
-          <span>
-            P25 {formatActiveValue(activeP25)}
-          </span>
-          <strong className="capacityP50Summary">
-            {activeP50
-              ? (
-                  <>
-                    <span>
-                      {formatRate(activePercentage)} P50
-                    </span>
-                    <small>
-                      P50 = {formatActiveValue(activeP50)}
-                    </small>
-                  </>
-                )
-              : "Chưa đủ dữ liệu"}
-          </strong>
-          <span>
-            P75 {formatActiveValue(activeP75)}
-          </span>
-        </div>
-      </button>
-    </article>
-  );
-}
-
 function linePath(points: Array<{ x: number; y: number }>) {
   return points
     .map((point, index) =>
@@ -1455,9 +1337,6 @@ export function MediaCapacitySection({
   globalDateTo,
   onOpenDetail,
 }: MediaCapacitySectionProps) {
-  const [workloadDisplayMode, setWorkloadDisplayMode] = useState<
-    "hours" | "tasks"
-  >("tasks");
   const commonFlowRange = useMemo(
     () => flowRangeFromGlobal(globalDateFrom, globalDateTo),
     [globalDateFrom, globalDateTo],
@@ -1504,8 +1383,6 @@ export function MediaCapacitySection({
     officialBaseline,
     forecastOutputCount,
     isCompleteWeek,
-    shootReference,
-    shootTaskReference,
     standardMinutes,
   } = flowViewModel;
   const baselineDateFrom = toInputDate(
@@ -1810,6 +1687,7 @@ export function MediaCapacitySection({
             title="Tổng task cần xử lý"
             primaryValue={shootWorkPool}
             primaryUnit="task"
+            reference={officialBaseline.demandReference}
             forecastValue={
               focusWeek.shootOpeningBacklogTasks.length +
               focusFullWeek.shootTasks.length
@@ -1946,52 +1824,6 @@ export function MediaCapacitySection({
               {formatHours(focusWeek.outputMinutes)} tải chuẩn
             </span>
           </CapacityFlowCard>
-        </div>
-
-        <div className="capacityWorkloadIntro compact">
-          <div>
-            <span className="chartKicker">VỊ TRÍ SO VỚI VÙNG THƯỜNG</span>
-            <h3>Tải quay/chụp đang dưới, trong hay vượt vùng?</h3>
-          </div>
-          <div
-            className="capacityWorkloadSwitch"
-            role="group"
-            aria-label="Đơn vị hiển thị tải công việc"
-          >
-            <button
-              type="button"
-              aria-pressed={workloadDisplayMode === "hours"}
-              onClick={() => setWorkloadDisplayMode("hours")}
-            >
-              Giờ
-            </button>
-            <button
-              type="button"
-              aria-pressed={workloadDisplayMode === "tasks"}
-              onClick={() => setWorkloadDisplayMode("tasks")}
-            >
-              Task
-            </button>
-          </div>
-        </div>
-        <div className="capacityTopGrid single">
-          <CapacityCard
-            type="shoot"
-            title="Tải quay/chụp quy đổi"
-            actualMinutes={focusWeek.shootMinutes}
-            taskCount={focusWeek.shootTasks.length}
-            mappedCount={focusWeek.shootMapped}
-            reference={shootReference}
-            taskReference={shootTaskReference}
-            displayMode={workloadDisplayMode}
-            onClick={() =>
-              openStandardTasks(
-                `Quay/Chụp ước tính · ${focusWeek.label}`,
-                "Task Quay/Chụp dùng Ngày Bắt Đầu làm mốc tạm thời",
-                focusWeek.shootTasks,
-              )
-            }
-          />
         </div>
 
         <ShootTypeBaselineChart

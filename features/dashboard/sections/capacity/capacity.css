@@ -640,7 +640,6 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .capacityTopGrid { margin-top: 24px; }
-.capacityTopGrid.single { grid-template-columns: minmax(0, 1fr); }
 .capacityBottomGrid { margin-top: 16px; }
 .capacityMetricCard,
 .capacityTrendCard,

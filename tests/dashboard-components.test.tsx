@@ -280,29 +280,12 @@ test("Media shoot-type baseline uses an independent date range", () => {
     </HelpProvider>,
   );
 
-  const shootWorkloadValue = container.querySelector(
-    ".capacityMetricCard.shoot .capacityMetricValue strong",
-  );
-  const shootWorkloadP50 = container.querySelector(
-    ".capacityMetricCard.shoot .capacityP50Summary",
-  );
-  const shootWorkloadReference = container.querySelector(
-    ".capacityMetricCard.shoot .capacityReferenceCopy",
-  );
-  assert.ok(shootWorkloadValue);
-  assert.ok(shootWorkloadP50);
-  assert.ok(shootWorkloadReference);
-  assert.match(shootWorkloadValue.textContent ?? "", /task/);
-  const taskModeButton = Array.from(
-    container.querySelectorAll(".capacityWorkloadSwitch button"),
-  ).find((button) => button.textContent === "Task");
-  assert.ok(taskModeButton);
-  assert.equal(taskModeButton.getAttribute("aria-pressed"), "true");
-  fireEvent.click(screen.getByRole("button", { name: "Giờ" }));
-  assert.match(shootWorkloadValue.textContent ?? "", /giờ/);
-  fireEvent.click(taskModeButton);
-  assert.match(shootWorkloadValue.textContent ?? "", /task/);
-  assert.match(shootWorkloadReference.textContent ?? "", /task/);
+  const demandCard = container.querySelector(".capacityFlowCard.demand");
+  assert.ok(demandCard);
+  assert.ok(demandCard.querySelector(".capacityBandStatus"));
+  assert.ok(demandCard.querySelector(".capacityFlowP50"));
+  assert.ok(demandCard.querySelector(".capacityQuantityBand"));
+  assert.equal(container.querySelector(".capacityMetricCard"), null);
 
   assert.ok(screen.getByText("Thời gian tham gia theo từng ca quay"));
   assert.ok(screen.getByText("Ca quay · 1/1"));

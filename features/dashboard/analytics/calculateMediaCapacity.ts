@@ -854,6 +854,7 @@ function normalizedQuantityReference(
   metric:
     | "sessionUnits"
     | "uniqueStaffCount"
+    | "shootWorkPoolCount"
     | "shootTaskCount"
     | "scheduledTaskCount"
     | "uniqueProductCount"
@@ -868,7 +869,9 @@ function normalizedQuantityReference(
     .filter((row) => row.workingDays > 0)
     .map((row) => {
       const value =
-        metric === "shootTaskCount"
+        metric === "shootWorkPoolCount"
+          ? row.shootOpeningBacklogTasks.length + row.shootTasks.length
+          : metric === "shootTaskCount"
           ? row.shootTasks.length
           : metric === "outputTaskCount"
           ? row.outputTasks.length
@@ -1477,6 +1480,15 @@ export function calculateMediaCapacity(
     ),
     focusFullWeek.sessionUnits,
   );
+  const officialDemandReference = referenceForValue(
+    normalizedQuantityReference(
+      officialBaselineWeeks,
+      focusWeek.workingDays,
+      focusWeek.shootOpeningBacklogTasks.length + focusWeek.shootTasks.length,
+      "shootWorkPoolCount",
+    ),
+    focusWeek.shootOpeningBacklogTasks.length + focusWeek.shootTasks.length,
+  );
   const officialScheduledTaskReference = referenceForValue(
     normalizedQuantityReference(
       officialSessionWeeks,
@@ -1549,6 +1561,7 @@ export function calculateMediaCapacity(
     weeks: officialBaselineWeeks,
     sessionWeekCount: officialSessionWeeks.length,
     outputWeekCount: officialOutputWeeks.length,
+    demandReference: officialDemandReference,
     sessionReference: officialSessionReference,
     scheduledTaskReference: officialScheduledTaskReference,
     uniqueStaffReference: officialUniqueStaffReference,
