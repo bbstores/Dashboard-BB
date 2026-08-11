@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   calculatePublicationDailyRows,
   calculatePublicationStats,
+  publicationBelongsToPlatform,
   type ClassifiedPublication,
   type PublicationDailyRow,
   type PublicationPlatformRow,
@@ -17,7 +18,6 @@ import type {
   PostingNorm,
   Task,
 } from "../model/types";
-import { normalize } from "../model/taskUtils";
 import {
   formatDate,
   formatNumber,
@@ -118,7 +118,7 @@ function PostingNormPanel({
             objective:
               "Nhận biết kênh đạt, gần đạt hoặc đang thiếu nhịp đăng trong khoảng ngày được chọn.",
             calculation:
-              "Định mức Ngày = Số Bài Đăng × số ngày lịch. Định mức Tuần = Số Bài Đăng × số ngày lịch / 7. Thành tích dùng các dòng có Đã Đăng = 1 và Nền Tảng khớp tên kênh. Kênh không có Số Bài Đăng được hiển thị là Theo ấn phẩm và không tham gia tỷ lệ tổng.",
+              "Định mức Ngày = Số Bài Đăng × số ngày lịch. Định mức Tuần = Số Bài Đăng × số ngày lịch / 7. Thành tích dùng các dòng có Đã Đăng = 1 và Nền Tảng khớp tên kênh. Riêng Shopee gồm Nền Tảng = Shopee hoặc Nền Tảng TikTok có cột Shopee = 1. Kênh không có Số Bài Đăng được hiển thị là Theo ấn phẩm và không tham gia tỷ lệ tổng.",
             example:
               "Facebook BBStore có định mức 12 bài/ngày; khoảng 7 ngày có mục tiêu 84 bài. Nếu đã đăng 76 bài thì đạt 90,5%.",
             note:
@@ -628,8 +628,8 @@ export function PostingSection({
     () =>
       selectedDailyPlatforms.length
         ? stats.classifiedPosts.filter((item) =>
-            selectedDailyPlatforms.includes(
-              normalize(item.post.platform) || "Chưa xác định",
+            selectedDailyPlatforms.some((platform) =>
+              publicationBelongsToPlatform(item.post, platform),
             ),
           )
         : stats.classifiedPosts,
@@ -659,9 +659,7 @@ export function PostingSection({
     source?: PublicationSource,
   ) => {
     const platformPosts = stats.classifiedPosts.filter(
-      (item) =>
-        (normalize(item.post.platform) || "Chưa xác định") ===
-        platform,
+      (item) => publicationBelongsToPlatform(item.post, platform),
     );
     openPublicationEvidence(
       source
@@ -669,7 +667,9 @@ export function PostingSection({
         : `${platform} · Tất cả bài đăng`,
       source
         ? "Các dòng bài đăng thuộc đúng nền tảng và nhóm nội dung đã chọn"
-        : "Toàn bộ dòng bài đăng thuộc nền tảng đã chọn",
+        : platform === "Shopee"
+          ? "Gồm bài có Nền Tảng = Shopee và bài TikTok được tích cột Shopee"
+          : "Toàn bộ dòng bài đăng thuộc nền tảng đã chọn",
       source
         ? platformPosts.filter((item) => item.source === source)
         : platformPosts,

@@ -80,6 +80,7 @@ export const PUBLICATION_COLUMNS = {
   id: "ID Task",
   scheduledAt: "Ngày Đăng",
   platform: "Nền Tảng",
+  shopee: "Shopee",
   posted: "Đã Đăng",
   postType: "Loại Bài Đăng",
   title: "Tên Bài Đăng",
@@ -109,7 +110,7 @@ export const TASK_REQUIRED_HEADERS = Object.values(TASK_COLUMNS).filter(
 export const FEEDBACK_REQUIRED_HEADERS = Object.values(FEEDBACK_COLUMNS);
 export const PUBLICATION_REQUIRED_HEADERS = Object.values(
   PUBLICATION_COLUMNS,
-);
+).filter((header) => header !== PUBLICATION_COLUMNS.shopee);
 export const POSTING_NORM_REQUIRED_HEADERS = Object.values(
   POSTING_NORM_COLUMNS,
 );

@@ -59,6 +59,7 @@ export type PublicationPost = {
   id: string;
   scheduledAt: Date | null;
   platform: string;
+  shopeeSelected?: boolean;
   posted: boolean;
   postType: string;
   title: string;

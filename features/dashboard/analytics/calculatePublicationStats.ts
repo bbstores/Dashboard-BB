@@ -77,6 +77,22 @@ export type PublicationNormPerformance = {
   }>;
 };
 
+export function publicationBelongsToPlatform(
+  post: PublicationPost,
+  platform: string,
+) {
+  const postPlatform = normalizedKey(post.platform);
+  const targetPlatform = normalizedKey(platform);
+  if (targetPlatform === "shopee") {
+    return (
+      postPlatform === "shopee" ||
+      (postPlatform.includes("tiktok") &&
+        Boolean(post.shopeeSelected))
+    );
+  }
+  return postPlatform === targetPlatform;
+}
+
 export const OLD_ASSET_CUTOFF = new Date(2026, 6, 1);
 
 function publicationNormRange(
@@ -131,9 +147,9 @@ export function calculatePostingNormPerformance(
   }
   const normKeys = new Set(norms.map((norm) => normalizedKey(norm.platform)));
   const rows = norms.map((norm): PublicationNormRow => {
-    const platformPosts = postsByPlatform.get(
-      normalizedKey(norm.platform),
-    ) ?? [];
+    const platformPosts = posts.filter((post) =>
+      publicationBelongsToPlatform(post, norm.platform),
+    );
     const expected =
       norm.target === null || range.days <= 0
         ? null
@@ -332,18 +348,28 @@ export function calculatePublicationStats(
 
   const platformMap = new Map<string, PublicationPlatformRow>();
   for (const item of classifiedPosts) {
-    const label = normalize(item.post.platform) || "Chưa xác định";
-    const row = platformMap.get(label) ?? {
-      label,
-      total: 0,
-      reup: 0,
-      video: 0,
-      graphic: 0,
-      unknown: 0,
-    };
-    row.total += 1;
-    row[item.source] += 1;
-    platformMap.set(label, row);
+    const baseLabel =
+      normalize(item.post.platform) || "Chưa xác định";
+    const labels = [
+      baseLabel,
+      ...(publicationBelongsToPlatform(item.post, "Shopee") &&
+      normalizedKey(baseLabel) !== "shopee"
+        ? ["Shopee"]
+        : []),
+    ];
+    for (const label of labels) {
+      const row = platformMap.get(label) ?? {
+        label,
+        total: 0,
+        reup: 0,
+        video: 0,
+        graphic: 0,
+        unknown: 0,
+      };
+      row.total += 1;
+      row[item.source] += 1;
+      platformMap.set(label, row);
+    }
   }
 
   const eligibleTasks = tasks.filter(

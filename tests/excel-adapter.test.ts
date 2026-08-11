@@ -7,6 +7,7 @@ import {
   excelDateTime,
 } from "../features/dashboard/data/excel/excelDate";
 import { parseFeedback } from "../features/dashboard/data/excel/parseFeedback";
+import { parsePublications } from "../features/dashboard/data/excel/parsePublications";
 import { parsePostingNorms } from "../features/dashboard/data/excel/parsePostingNorms";
 import { parseShootSessions } from "../features/dashboard/data/excel/parseShootSessions";
 import { parseTasks } from "../features/dashboard/data/excel/parseTasks";
@@ -282,6 +283,34 @@ test("parses shooting sessions into four-hour units", () => {
   assert.equal(session.staffCount, 3);
   assert.deepEqual(session.staffNames, ["An", "Bình", "Chi"]);
   assert.equal(session.date?.getDate(), 20);
+});
+
+test("parses the optional Shopee checkbox on publication rows", () => {
+  const workbook = new ExcelJS.Workbook();
+  const headers = [
+    ...PUBLICATION_REQUIRED_HEADERS,
+    PUBLICATION_COLUMNS.shopee,
+  ];
+  const sheet = addSheet(
+    workbook,
+    DASHBOARD_SHEETS.publications,
+    headers,
+  );
+  const values: Record<string, string | number> = {
+    [PUBLICATION_COLUMNS.id]: "POST-SHOPEE-001",
+    [PUBLICATION_COLUMNS.scheduledAt]: "11/08/2026",
+    [PUBLICATION_COLUMNS.platform]: "Tiktok BB Store",
+    [PUBLICATION_COLUMNS.shopee]: "1",
+    [PUBLICATION_COLUMNS.posted]: "1",
+    [PUBLICATION_COLUMNS.postType]: "Video",
+    [PUBLICATION_COLUMNS.title]: "Video có đăng Shopee",
+    [PUBLICATION_COLUMNS.bookTaskCode]: "TSK-001",
+  };
+  sheet.addRow(headers.map((header) => values[header] ?? ""));
+
+  const [publication] = parsePublications(sheet);
+  assert.equal(publication.platform, "Tiktok BB Store");
+  assert.equal(publication.shopeeSelected, true);
 });
 
 test("parses daily, weekly and flexible posting norms", () => {

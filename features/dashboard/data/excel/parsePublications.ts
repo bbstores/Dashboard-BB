@@ -33,6 +33,10 @@ export function parsePublications(
       platform: normalize(
         valueAt(row, headers, PUBLICATION_COLUMNS.platform),
       ),
+      shopeeSelected:
+        normalize(
+          valueAt(row, headers, PUBLICATION_COLUMNS.shopee),
+        ) === "1",
       posted:
         normalize(
           valueAt(row, headers, PUBLICATION_COLUMNS.posted),

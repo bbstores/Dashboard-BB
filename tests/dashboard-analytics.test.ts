@@ -9,7 +9,10 @@ import {
   calculateShootTypeBaselinePlan,
   calculateShootTypeBaselines,
 } from "../features/dashboard/analytics/calculateMediaCapacity";
-import { calculatePublicationStats } from "../features/dashboard/analytics/calculatePublicationStats";
+import {
+  calculatePublicationStats,
+  publicationBelongsToPlatform,
+} from "../features/dashboard/analytics/calculatePublicationStats";
 import {
   calculateReportComparison,
   comparisonPeriod,
@@ -718,6 +721,86 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
       { day: 11, total: 1, posted: 1 },
     ],
   );
+});
+
+test("attributes Shopee to direct posts and selected TikTok posts", () => {
+  const posts: PublicationPost[] = [
+    {
+      id: "SHOPEE-DIRECT",
+      scheduledAt: date(10),
+      platform: "Shopee",
+      posted: true,
+      postType: "Ảnh Post",
+      title: "Đăng trực tiếp Shopee",
+    },
+    {
+      id: "TIKTOK-SHOPEE-POSTED",
+      scheduledAt: date(10),
+      platform: "Tiktok BB Store",
+      shopeeSelected: true,
+      posted: true,
+      postType: "Video",
+      title: "TikTok đồng thời đăng Shopee",
+    },
+    {
+      id: "TIKTOK-SHOPEE-SCHEDULED",
+      scheduledAt: date(10),
+      platform: "Tiktok BB Store",
+      shopeeSelected: true,
+      posted: false,
+      postType: "Video",
+      title: "TikTok có lịch Shopee",
+    },
+    {
+      id: "TIKTOK-ONLY",
+      scheduledAt: date(10),
+      platform: "Tiktok BB Store",
+      shopeeSelected: false,
+      posted: true,
+      postType: "Video",
+      title: "Chỉ đăng TikTok",
+    },
+    {
+      id: "FACEBOOK-CHECKED",
+      scheduledAt: date(10),
+      platform: "Facebook BBStore",
+      shopeeSelected: true,
+      posted: true,
+      postType: "Ảnh Post",
+      title: "Không tính vì không phải TikTok",
+    },
+  ];
+  const oneDayWindow: DateWindow = {
+    from: date(10, 0),
+    to: date(10, 23),
+    hasFilter: true,
+  };
+  const stats = calculatePublicationStats(
+    [],
+    posts,
+    oneDayWindow,
+    [
+      {
+        platform: "Shopee",
+        target: 6,
+        unit: "Ngày",
+        note: "Sáu bài mỗi ngày",
+      },
+    ],
+  );
+  const shopeeNorm = stats.normPerformance.rows[0];
+  const shopeePlatform = stats.platformRows.find(
+    (row) => row.label === "Shopee",
+  );
+
+  assert.equal(publicationBelongsToPlatform(posts[0], "Shopee"), true);
+  assert.equal(publicationBelongsToPlatform(posts[1], "Shopee"), true);
+  assert.equal(publicationBelongsToPlatform(posts[3], "Shopee"), false);
+  assert.equal(publicationBelongsToPlatform(posts[4], "Shopee"), false);
+  assert.equal(shopeeNorm.scheduled, 3);
+  assert.equal(shopeeNorm.posted, 2);
+  assert.equal(shopeePlatform?.total, 3);
+  assert.equal(stats.total, 5);
 });
 
 test("partitions every unscheduled asset into one exclusive age group", () => {
