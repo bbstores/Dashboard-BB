@@ -63,7 +63,7 @@ const capacityHelp: Record<
     objective:
       "Trả lời trong khoảng đang chọn team thực hiện bao nhiêu buổi quay, bao nhiêu task và bao nhiêu mã sản phẩm.",
     calculation:
-      "Một buổi được quy đổi 4 giờ; Một ngày bằng 2 buổi. Số task lấy Tổng Số Task; số mã là hợp không trùng của Danh Sách Mã SP. Baseline tháng lấy P25/P50/P75 của 12 tuần hoàn chỉnh trước tháng báo cáo, yêu cầu tối thiểu 8 tuần có lịch quay và được khóa suốt tháng.",
+      "Một buổi được quy đổi 4 giờ; Một ngày bằng 2 buổi. Công nhân sự 4 giờ = số người tham gia × số buổi quy đổi. Số task lấy Tổng Số Task; số mã là hợp không trùng của Danh Sách Mã SP. Baseline tháng lấy P25/P50/P75 của 12 tuần hoàn chỉnh trước tháng báo cáo, yêu cầu tối thiểu 8 tuần có dữ liệu tương ứng và được khóa suốt tháng.",
     example:
       "5 buổi, 49 task và 16 mã; nếu P50 lần lượt là 5, 49 và 16 thì tuần đạt đúng nhịp trung vị lịch sử.",
     note:
@@ -152,7 +152,7 @@ const capacityHelp: Record<
     objective:
       "Tách khác biệt giữa các loại ca nhưng vẫn có một mốc chung để đánh giá tuần đang vượt hay dưới năng lực thực nghiệm.",
     calculation:
-      "P50 chung và P50 từng loại được tính theo đơn vị buổi 4 giờ: ca một ngày có trọng số 2 buổi, số task và mã của ca được chia cho 2 trước khi lấy P50. Baseline theo cơ cấu = P50 buổi/tuần × tỷ trọng loại × năng suất loại. P50 tuần trực tiếp được tính độc lập từ tổng task từng tuần để đối chiếu độ lệch của mô hình.",
+      "P50 chung và P50 từng loại được tính theo đơn vị buổi 4 giờ: ca một ngày có trọng số 2 buổi, số task và mã của ca được chia cho 2 trước khi lấy P50. Năng suất đầu người chia tiếp cho số nhân sự tham gia ca. Ca thiếu nhân sự vẫn tính sản lượng ca nhưng bị loại khỏi P50 task/người và mã/người. Baseline theo cơ cấu = P50 buổi/tuần × tỷ trọng loại × năng suất loại.",
     example:
       "Nếu P50 là 5 buổi/tuần, cơ cấu Bộ Sưu Tập chiếm 40% và đạt 8 task/buổi thì phần đóng góp dự kiến là 5 × 40% × 8 = 16 task.",
     note:
@@ -509,6 +509,10 @@ function ShootTypeBaselineChart({
           <strong>{formatNumber(plan.weekCount)}</strong>{" "}
           {plan.usesPartialRange ? "khoảng tham khảo" : "tuần hoàn chỉnh"}
         </span>
+        <span>
+          <strong>{formatRate(plan.staffCoveragePercentage)}</strong>{" "}
+          số buổi đã có dữ liệu nhân sự
+        </span>
       </div>
       {invalidRange ? (
         <p className="capacityTypeEmpty">
@@ -523,7 +527,10 @@ function ShootTypeBaselineChart({
                 {formatMetric(plan.overallTaskPerSessionP50)} task
               </strong>
               <small>
-                {formatMetric(plan.overallProductPerSessionP50)} mã / buổi
+                {formatMetric(plan.overallProductPerSessionP50)} mã/buổi ·{" "}
+                {plan.overallStaffPerSessionP50
+                  ? `${formatMetric(plan.overallStaffPerSessionP50)} NS/buổi · ${formatMetric(plan.overallTaskPerStaffSessionP50)} task/người`
+                  : "chưa có dữ liệu nhân sự"}
               </small>
             </button>
             <button
@@ -598,6 +605,18 @@ function ShootTypeBaselineChart({
                     {formatMetric(row.productPerSessionP50)}
                   </strong>
                   <small>mã / buổi P50</small>
+                </span>
+                <span className="capacityTypeMetric staff">
+                  <strong>
+                    {row.staffPerSessionP50
+                      ? formatMetric(row.taskPerStaffSessionP50)
+                      : "—"}
+                  </strong>
+                  <small>
+                    {row.staffPerSessionP50
+                      ? `task/người · ${formatMetric(row.staffPerSessionP50)} NS/buổi · ${formatMetric(row.productPerStaffSessionP50)} mã/người`
+                      : "chưa nhập nhân sự"}
+                  </small>
                 </span>
               </button>
             ))}
@@ -1539,8 +1558,10 @@ export function MediaCapacitySection({
               {formatMetric(officialBaseline.productReference.p50)}
             </span>
             <span>
-              <b>{formatNumber(focusWeek.shootSessions.length)}</b>
-              ca trong sheet 2.11
+              <b>{formatMetric(focusFullWeek.staffSessionUnits)}</b>
+              {focusFullWeek.staffSessionUnits
+                ? ` công nhân sự 4 giờ · P50 ${formatMetric(officialBaseline.staffSessionReference.p50)}`
+                : " chưa có dữ liệu nhân sự ca quay"}
             </span>
           </CapacityFlowCard>
 
@@ -1607,14 +1628,14 @@ export function MediaCapacitySection({
           onSelectAll={() =>
             onOpenDetail({
               title: "Dữ liệu tạo baseline tổng hợp",
-              subtitle: `${formatDate(typeRangeStart)}–${formatDate(typeRangeEnd)} · P50 chung ${formatMetric(typeBaselinePlan.overallTaskPerSessionP50)} task/buổi · baseline tuần ${formatMetric(typeBaselinePlan.weeklyTaskBaseline)} task`,
+              subtitle: `${formatDate(typeRangeStart)}–${formatDate(typeRangeEnd)} · P50 chung ${formatMetric(typeBaselinePlan.overallTaskPerSessionP50)} task/buổi · ${formatMetric(typeBaselinePlan.overallTaskPerStaffSessionP50)} task/người/buổi · baseline tuần ${formatMetric(typeBaselinePlan.weeklyTaskBaseline)} task`,
               shootSessions: typeBaselinePlan.sessions,
             })
           }
           onSelect={(row) =>
             onOpenDetail({
               title: `${row.type} · baseline linh động`,
-              subtitle: `${formatDate(typeRangeStart)}–${formatDate(typeRangeEnd)} · ${formatMetric(row.sessionUnits)} buổi mẫu · P50 ${formatMetric(row.taskPerSessionP50)} task/buổi · ${formatMetric(row.productPerSessionP50)} mã/buổi`,
+              subtitle: `${formatDate(typeRangeStart)}–${formatDate(typeRangeEnd)} · ${formatMetric(row.sessionUnits)} buổi mẫu · P50 ${formatMetric(row.taskPerSessionP50)} task/buổi · ${formatMetric(row.productPerSessionP50)} mã/buổi · ${formatMetric(row.taskPerStaffSessionP50)} task/người/buổi`,
               shootSessions: row.sessions,
             })
           }

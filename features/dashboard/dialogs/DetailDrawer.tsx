@@ -142,6 +142,18 @@ function detailColumns(detail: DetailView): DetailColumn[] {
             : "",
       },
       {
+        key: "staffCount",
+        label: "Số nhân sự",
+        value: (record) =>
+          record.kind === "shootSession"
+            ? (record.value.staffCount ?? record.value.staffNames?.length ?? 0)
+            : 0,
+        search: (record) =>
+          record.kind === "shootSession"
+            ? (record.value.staffNames ?? []).join(" ")
+            : "",
+      },
+      {
         key: "type",
         label: "Định dạng",
         value: (record) =>
@@ -828,6 +840,7 @@ export function DetailDrawer({
                   <th>Buổi 4 giờ</th>
                   <th>Số task</th>
                   <th>Mã sản phẩm</th>
+                  <th>Nhân sự</th>
                   <th>Định dạng</th>
                   <th>Trạng thái</th>
                 </tr>
@@ -861,6 +874,17 @@ export function DetailDrawer({
                       <br />
                       <small>
                         {row.productCodes.join(", ") || "Không có mã"}
+                      </small>
+                    </td>
+                    <td data-label="Nhân sự" className="detailTitleCell">
+                      <strong>
+                        {formatNumber(
+                          row.staffCount ?? row.staffNames?.length ?? 0,
+                        )} người
+                      </strong>
+                      <br />
+                      <small>
+                        {row.staffNames?.join(", ") || "Chưa nhập nhân sự"}
                       </small>
                     </td>
                     <td data-label="Định dạng">

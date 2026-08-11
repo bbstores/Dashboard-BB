@@ -33,6 +33,19 @@ export type LeaderboardRow = {
   waitingTasks: Task[];
 };
 
+export type AssigneeStageDatum = {
+  label: string;
+  value: number;
+  minutes: number;
+  tasks: Task[];
+};
+
+export type AssigneeStageProfile = {
+  assignee: string;
+  totalTasks: number;
+  stages: AssigneeStageDatum[];
+};
+
 type StaffRow = {
   name: string;
   total: number;

@@ -238,7 +238,11 @@ test("parses shooting sessions into four-hour units", () => {
   const sheet = addSheet(
     workbook,
     DASHBOARD_SHEETS.shoots,
-    SHOOT_SESSION_REQUIRED_HEADERS,
+    [
+      ...SHOOT_SESSION_REQUIRED_HEADERS,
+      SHOOT_SESSION_COLUMNS.staff,
+      SHOOT_SESSION_COLUMNS.staffCount,
+    ],
   );
   const values: Record<string, string | number | Date> = {
     [SHOOT_SESSION_COLUMNS.id]: "CA-001",
@@ -250,11 +254,17 @@ test("parses shooting sessions into four-hour units", () => {
     [SHOOT_SESSION_COLUMNS.timeWindow]: "8h30–17h30",
     [SHOOT_SESSION_COLUMNS.date]: new Date(Date.UTC(2026, 6, 20)),
     [SHOOT_SESSION_COLUMNS.model]: "Mẫu A",
+    [SHOOT_SESSION_COLUMNS.staff]: "An | Bình | Chi",
+    [SHOOT_SESSION_COLUMNS.staffCount]: 3,
     [SHOOT_SESSION_COLUMNS.status]: "Đóng",
     [SHOOT_SESSION_COLUMNS.taskCodes]: "TSK001,TSK002",
   };
   sheet.addRow(
-    SHOOT_SESSION_REQUIRED_HEADERS.map(
+    [
+      ...SHOOT_SESSION_REQUIRED_HEADERS,
+      SHOOT_SESSION_COLUMNS.staff,
+      SHOOT_SESSION_COLUMNS.staffCount,
+    ].map(
       (header) => values[header] ?? "",
     ),
   );
@@ -266,6 +276,8 @@ test("parses shooting sessions into four-hour units", () => {
   assert.equal(session.productCount, 2);
   assert.deepEqual(session.productCodes, ["SP01", "SP02", "SP01"]);
   assert.deepEqual(session.taskCodes, ["TSK001", "TSK002"]);
+  assert.equal(session.staffCount, 3);
+  assert.deepEqual(session.staffNames, ["An", "Bình", "Chi"]);
   assert.equal(session.date?.getDate(), 20);
 });
 

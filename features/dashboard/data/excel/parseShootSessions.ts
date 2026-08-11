@@ -10,9 +10,21 @@ import {
 
 function splitValues(value: unknown) {
   return normalize(value)
-    .split(/\s*[|,]\s*/)
+    .split(/\s*[|,;\n]\s*/)
     .map(normalize)
     .filter(Boolean);
+}
+
+function valueAtAny(
+  row: import("exceljs").Row,
+  headers: ReturnType<typeof headersFor>,
+  names: string[],
+) {
+  for (const name of names) {
+    const value = valueAt(row, headers, name);
+    if (normalize(value)) return value;
+  }
+  return "";
 }
 
 function sessionUnits(duration: string) {
@@ -49,6 +61,25 @@ export function parseShootSessions(
     const declaredTaskCount = numberValue(
       valueAt(row, headers, SHOOT_SESSION_COLUMNS.taskCount),
     );
+    const staffNames = Array.from(
+      new Set(
+        splitValues(
+          valueAtAny(row, headers, [
+            SHOOT_SESSION_COLUMNS.staff,
+            "Nhân sự tham gia",
+            "Thành viên tham gia",
+            "Team Quay",
+          ]),
+        ),
+      ),
+    );
+    const declaredStaffCount = numberValue(
+      valueAtAny(row, headers, [
+        SHOOT_SESSION_COLUMNS.staffCount,
+        "Số Lượng Nhân Sự",
+        "Số nhân sự",
+      ]),
+    );
 
     rows.push({
       id,
@@ -70,6 +101,8 @@ export function parseShootSessions(
       model: normalize(
         valueAt(row, headers, SHOOT_SESSION_COLUMNS.model),
       ),
+      staffNames,
+      staffCount: declaredStaffCount || staffNames.length,
       status: normalize(
         valueAt(row, headers, SHOOT_SESSION_COLUMNS.status),
       ),

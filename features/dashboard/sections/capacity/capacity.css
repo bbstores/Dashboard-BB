@@ -390,7 +390,7 @@
   cursor: pointer;
   display: grid;
   gap: 13px;
-  grid-template-columns: minmax(110px, 1.1fr) minmax(120px, 2fr) 92px 92px;
+  grid-template-columns: minmax(110px, 1.1fr) minmax(120px, 2fr) 92px 92px 130px;
   padding: 12px 14px;
   text-align: left;
 }
@@ -1040,7 +1040,7 @@
   .capacityTopGrid,
   .capacityBottomGrid { grid-template-columns: 1fr; }
   .capacityTypeRows > button {
-    grid-template-columns: minmax(100px, 1fr) minmax(110px, 1.5fr) 80px 80px;
+    grid-template-columns: minmax(100px, 1fr) minmax(110px, 1.5fr) 76px 76px 110px;
   }
   .capacityTypeBaselineCard .capacityCardHeader,
   .capacityTypeHeaderTools {
@@ -1105,7 +1105,7 @@
     grid-column: auto;
   }
   .capacityTypeRows > button {
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto auto auto;
   }
   .capacityTypeBar {
     grid-column: 1 / -1;

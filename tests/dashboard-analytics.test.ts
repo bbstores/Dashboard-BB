@@ -121,6 +121,47 @@ const dashboardData: DashboardData = {
   ],
 };
 
+test("builds each assignee radar from task stages in the selected period", () => {
+  const data: DashboardData = {
+    fileName: "radar-fixture.xlsx",
+    feedback: [],
+    norms: [],
+    publications: [],
+    tasks: [
+      task("EDIT-1", { assignee: "An, Bình", stage: "Edit" }),
+      task("EDIT-2", { assignee: "An", stage: "Edit", expectedMinutes: 30 }),
+      task("CONTENT-1", { assignee: "An", stage: "Viết content" }),
+      task("GRAPHIC-OUTSIDE", {
+        assignee: "An",
+        stage: "Graphic Design",
+        startDate: date(2),
+      }),
+    ],
+  };
+
+  const stats = calculateDashboardStats(data, {
+    dateWindow,
+    collectionMonth: "",
+    backlogDate: "2026-07-20",
+  });
+  const an = stats.assigneeStageProfiles.find(
+    (profile) => profile.assignee === "An",
+  );
+  const binh = stats.assigneeStageProfiles.find(
+    (profile) => profile.assignee === "Bình",
+  );
+
+  assert.equal(an?.totalTasks, 3);
+  assert.deepEqual(
+    an?.stages.map((stage) => [stage.label, stage.value, stage.minutes]),
+    [
+      ["Edit", 2, 90],
+      ["Viết content", 1, 60],
+    ],
+  );
+  assert.equal(binh?.totalTasks, 1);
+});
+
 test("calculates dashboard cohorts, people, collections and backlog", () => {
   const stats = calculateDashboardStats(dashboardData, {
     dateWindow,
@@ -808,6 +849,8 @@ test("calculates weekly Media capacity from standard minutes and handoff dates",
         type: "Bộ Sưu Tập",
         timeWindow: "8h30–17h30",
         model: "",
+        staffNames: ["An", "Bình", "Chi", "Dũng"],
+        staffCount: 4,
         status: "Đóng",
       },
       {
@@ -822,6 +865,8 @@ test("calculates weekly Media capacity from standard minutes and handoff dates",
         type: "Bộ Sưu Tập",
         timeWindow: "8h30–12h",
         model: "",
+        staffNames: ["An", "Bình", "Chi"],
+        staffCount: 3,
         status: "Mở",
       },
     ],
@@ -878,6 +923,7 @@ test("calculates weekly Media capacity from standard minutes and handoff dates",
   assert.equal(result.focusWeek.sessionUnits, 1);
   assert.equal(result.focusWeek.scheduledTaskCount, 6);
   assert.equal(result.focusWeek.uniqueProductCount, 3);
+  assert.equal(result.focusWeek.staffSessionUnits, 3);
   assert.equal(result.focusWeek.outputTasks.length, 2);
   assert.equal(result.focusWeek.outputMinutes, 150);
   assert.equal(result.focusWeek.videoTasks.length, 1);
@@ -906,6 +952,7 @@ test("calculates weekly Media capacity from standard minutes and handoff dates",
   assert.equal(customRange.focusWeek.label, "13/07–22/07");
   assert.equal(customRange.focusWeek.shootTasks.length, 2);
   assert.equal(customRange.focusWeek.sessionUnits, 3);
+  assert.equal(customRange.focusWeek.staffSessionUnits, 11);
   assert.equal(customRange.focusWeek.outputTasks.length, 3);
 });
 
@@ -1043,6 +1090,7 @@ test("uses each shoot type P50 without a minimum sample threshold", () => {
         type: "Bộ Sưu Tập",
         timeWindow: "8h30–17h30",
         model: "",
+        staffCount: 2,
         status: "Đóng",
       },
       {
@@ -1057,6 +1105,7 @@ test("uses each shoot type P50 without a minimum sample threshold", () => {
         type: "Order Lại",
         timeWindow: "8h30–12h",
         model: "",
+        staffCount: 4,
         status: "Đóng",
       },
     ],
@@ -1068,6 +1117,11 @@ test("uses each shoot type P50 without a minimum sample threshold", () => {
   assert.ok(Math.abs(plan.weeklyTaskBaseline - 28) < 1e-9);
   assert.ok(Math.abs(plan.weeklyProductBaseline - 16) < 1e-9);
   assert.equal(plan.fallbackTypeCount, 0);
+  assert.equal(plan.staffCoveragePercentage, 100);
+  assert.equal(plan.overallStaffPerSessionP50, 2);
+  assert.equal(plan.overallTaskPerStaffSessionP50, 2);
+  assert.equal(plan.rows[0].taskPerStaffSessionP50, 2);
+  assert.equal(plan.rows[1].taskPerStaffSessionP50, 5);
   assert.ok(plan.rows.every((row) => !row.usesOverallFallback));
 });
 

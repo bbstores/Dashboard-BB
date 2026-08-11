@@ -38,12 +38,7 @@ export function Dashboard() {
   const workbook = useWorkbookData(filters.resetWorkbookFilters);
   const dialogs = useDashboardDialogs();
   const reports = useSavedReports();
-  const analytics = useDashboardStats(
-    workbook.data,
-    filters.dateWindow,
-    filters.collectionMonth,
-    filters.backlogDate,
-  );
+  const analytics = useDashboardStats(workbook.data, filters.dateWindow, filters.collectionMonth, filters.backlogDate);
   const dailyTaskChart = useDailyTaskChart(
     workbook.data,
     filters.dailyAssignee,
@@ -186,12 +181,11 @@ export function Dashboard() {
                       selectedFeedback: analytics.selectedFeedback,
                       taskByCode: analytics.taskByCode,
                       dailyTaskChart,
+                      assigneeStageProfiles: analytics.assigneeStageProfiles,
                     }}
                     leaderboardUnit={filters.leaderboardUnit}
                     dailyAssignee={filters.dailyAssignee}
-                    onLeaderboardUnitChange={
-                      filters.setLeaderboardUnit
-                    }
+                    onLeaderboardUnitChange={filters.setLeaderboardUnit}
                     onDailyAssigneeChange={filters.setDailyAssignee}
                     onOpenDetail={dialogs.setDetail}
                   />

@@ -455,6 +455,164 @@
   height: 10px;
   width: 10px;
 }
+
+.radarHeader {
+  align-items: flex-start;
+}
+.radarControls,
+.radarControls label {
+  align-items: center;
+  display: flex;
+}
+.radarControls {
+  gap: 12px;
+}
+.radarControls label {
+  gap: 9px;
+}
+.radarControls label > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.radarControls select {
+  background: #fbfaf5;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  min-width: 210px;
+  padding: 9px 34px 9px 14px;
+}
+.radarLayout {
+  align-items: stretch;
+  display: grid;
+  gap: 30px;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+}
+.radarScroller {
+  min-width: 0;
+  overflow-x: auto;
+}
+.radarSvg {
+  display: block;
+  height: 420px;
+  min-width: 680px;
+  width: 100%;
+}
+.radarGrid {
+  fill: rgba(217, 255, 114, .035);
+  stroke: rgba(23, 79, 61, .16);
+  stroke-width: 1;
+}
+.radarAxis {
+  stroke: rgba(23, 79, 61, .18);
+  stroke-width: 1;
+}
+.radarArea {
+  fill: rgba(217, 255, 114, .44);
+  stroke: #174f3d;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+.radarPoint {
+  fill: #d9ff72;
+  stroke: #174f3d;
+  stroke-width: 3;
+}
+.radarPoint.interactive {
+  cursor: pointer;
+}
+.radarPoint.interactive:hover,
+.radarPoint.interactive:focus-visible {
+  fill: #f3b562;
+  outline: none;
+  r: 7px;
+}
+.radarAxisLabel {
+  fill: var(--ink);
+  font-size: 11px;
+  font-weight: 750;
+}
+.radarAxisValue {
+  fill: var(--green);
+  font-size: 9px;
+  font-weight: 850;
+}
+.radarSummary {
+  background: #eef1e9;
+  border: 1px solid rgba(23, 79, 61, .1);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+}
+.radarSummaryTotal {
+  border-bottom: 1px solid rgba(23, 79, 61, .12);
+  display: grid;
+  gap: 4px;
+  padding: 2px 2px 16px;
+}
+.radarSummaryTotal span,
+.radarSummaryTotal small {
+  color: var(--muted);
+  font-size: 9px;
+}
+.radarSummaryTotal span {
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.radarSummaryTotal strong {
+  color: var(--green);
+  font-size: 38px;
+  letter-spacing: -.055em;
+  line-height: 1;
+  margin-top: 5px;
+}
+.radarStageList {
+  display: grid;
+  gap: 3px;
+  margin-top: 10px;
+}
+.radarStageList button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: inherit;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto 42px;
+  padding: 8px;
+  text-align: left;
+}
+.radarStageList button:not(:disabled):hover {
+  background: #fbfaf5;
+  cursor: pointer;
+}
+.radarStageList button:disabled {
+  opacity: 1;
+}
+.radarStageList span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 700;
+}
+.radarStageList strong {
+  color: var(--green);
+  font-size: 11px;
+}
+.radarStageList small {
+  color: var(--muted);
+  font-size: 9px;
+  text-align: right;
+}
 .horizontalRow {
   position: relative;
 }
@@ -686,6 +844,22 @@
   opacity: 1;
 }
 @media (max-width: 760px) {
+  .radarHeader,
+  .radarControls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .radarControls label {
+    justify-content: space-between;
+  }
+  .radarControls select {
+    min-width: 0;
+    width: min(100%, 240px);
+  }
+  .radarLayout {
+    grid-template-columns: 1fr;
+  }
+
   .dailyTaskHeader,
 .dailyTaskControls {
     align-items: stretch;

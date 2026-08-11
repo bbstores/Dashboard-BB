@@ -625,6 +625,8 @@ test("shooting-session evidence exposes units, task counts and product codes", (
             type: "Bộ Sưu Tập",
             timeWindow: "8h30–17h30",
             model: "Mẫu A",
+            staffNames: ["An", "Bình", "Chi"],
+            staffCount: 3,
             status: "Đóng",
           },
         ],
@@ -637,6 +639,7 @@ test("shooting-session evidence exposes units, task counts and product codes", (
   assert.ok(screen.getByText("Một ngày"));
   assert.ok(screen.getByText("12"));
   assert.ok(screen.getByText("SP01, SP02, SP03"));
+  assert.ok(screen.getByText("An, Bình, Chi"));
   assert.match(
     document.querySelector(".detailCount")?.textContent ?? "",
     /1\s*ca quay/,

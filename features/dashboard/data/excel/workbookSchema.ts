@@ -63,6 +63,8 @@ export const SHOOT_SESSION_COLUMNS = {
   timeWindow: "Khung Giờ",
   date: "Ngày Quay",
   model: "Mẫu",
+  staff: "Nhân Sự",
+  staffCount: "Tổng Số Nhân Sự",
   status: "Status",
   taskCodes: "2.6 Tasklist",
 } as const;
@@ -103,4 +105,8 @@ export const PUBLICATION_REQUIRED_HEADERS = Object.values(
 export const NORM_REQUIRED_HEADERS = Object.values(NORM_COLUMNS);
 export const SHOOT_SESSION_REQUIRED_HEADERS = Object.values(
   SHOOT_SESSION_COLUMNS,
+).filter(
+  (header) =>
+    header !== SHOOT_SESSION_COLUMNS.staff &&
+    header !== SHOOT_SESSION_COLUMNS.staffCount,
 );

@@ -7,6 +7,7 @@ import {
 import type { DashboardStats } from "../analytics/calculateDashboardStats";
 import type { calculateDailyTaskChart } from "../analytics/calculateDailyTaskChart";
 import { DailyTaskChart } from "../components/DailyTaskChart";
+import { AssigneeStageRadar } from "../components/AssigneeStageRadar";
 import { HorizontalBars } from "../components/HorizontalBars";
 import { StaffColumns } from "../components/StaffColumns";
 import { assigneeNames } from "../model/taskUtils";
@@ -21,6 +22,7 @@ type PeopleViewModel = {
   selectedFeedback: DashboardStats["selectedFeedback"];
   taskByCode: DashboardStats["taskByCode"];
   dailyTaskChart: ReturnType<typeof calculateDailyTaskChart>;
+  assigneeStageProfiles: DashboardStats["assigneeStageProfiles"];
 };
 
 export type PeopleSectionProps = {
@@ -103,6 +105,17 @@ export function PeopleSection({
             tasks: taskMap[metric],
           });
         }}
+      />
+
+      <AssigneeStageRadar
+        profiles={viewModel.assigneeStageProfiles}
+        onSelect={(assignee, stage) =>
+          onOpenDetail({
+            title: `${stage.label} · ${assignee}`,
+            subtitle: `${stage.value} task thuộc công đoạn đã chọn`,
+            tasks: stage.tasks,
+          })
+        }
       />
 
       <DailyTaskChart

@@ -12,6 +12,7 @@ import type {
   PieScope,
 } from "../model/types";
 import { calculateBacklogBreakdown } from "./calculateBacklog";
+import { calculateAssigneeStageProfiles } from "./calculateAssigneeStageProfiles";
 import { calculateCollections } from "./calculateCollections";
 import { calculateCosts } from "./calculateCosts";
 import { calculateLeaderboard } from "./calculateLeaderboard";
@@ -84,6 +85,9 @@ export function calculateDashboardStats(
       reportingDate,
     ),
     leaderboard: calculateLeaderboard(selection.classified),
+    assigneeStageProfiles: calculateAssigneeStageProfiles(
+      selection.classified,
+    ),
     missingStartOnly: data.tasks.filter(
       (task) =>
         Boolean(task.title.trim()) &&

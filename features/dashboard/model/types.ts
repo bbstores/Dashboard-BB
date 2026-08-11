@@ -36,6 +36,8 @@ export type ShootSession = {
   type: string;
   timeWindow: string;
   model: string;
+  staffNames?: string[];
+  staffCount?: number;
   status: string;
 };
 
@@ -167,6 +169,8 @@ export type MediaCapacitySnapshot = {
   forecastSessionUnits?: number;
   forecastScheduledTaskCount?: number;
   forecastUniqueProductCount?: number;
+  staffSessionUnits?: number;
+  staffSessionReferenceUnits?: number;
   forecastOutputTaskCount?: number;
 };
 
