@@ -12,6 +12,7 @@ import {
   calculateShootTypeBaselines,
 } from "../features/dashboard/analytics/calculateMediaCapacity";
 import {
+  calculatePostingNormDailyTarget,
   calculatePublicationStats,
   publicationBelongsToPlatform,
 } from "../features/dashboard/analytics/calculatePublicationStats";
@@ -53,6 +54,39 @@ function task(code: string, overrides: Partial<Task> = {}): Task {
     ...overrides,
   };
 }
+
+test("converts posting norms to a daily target for selected platforms", () => {
+  const norms = [
+    {
+      platform: "Facebook",
+      target: 4,
+      unit: "Ngày",
+      note: "",
+    },
+    {
+      platform: "TikTok",
+      target: 7,
+      unit: "Tuần",
+      note: "",
+    },
+    {
+      platform: "Shopee",
+      target: null,
+      unit: "Ngày",
+      note: "Theo ấn phẩm",
+    },
+  ];
+
+  assert.equal(calculatePostingNormDailyTarget(norms), 5);
+  assert.equal(
+    calculatePostingNormDailyTarget(norms, ["TikTok"]),
+    1,
+  );
+  assert.equal(
+    calculatePostingNormDailyTarget(norms, ["Shopee"]),
+    0,
+  );
+});
 
 const dateWindow: DateWindow = {
   from: new Date(2026, 6, 10, 0, 0, 0, 0),

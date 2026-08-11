@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   calculatePublicationDailyRows,
   calculatePublicationStats,
+  calculatePostingNormDailyTarget,
   publicationBelongsToPlatform,
   type ClassifiedPublication,
   type PublicationDailyRow,
@@ -328,12 +329,14 @@ function smoothPath(points: Array<{ x: number; y: number }>) {
 
 function PostingDailyLineChart({
   rows,
+  dailyNormTarget,
   platforms,
   selectedPlatforms,
   onSelectedPlatformsChange,
   onSelect,
 }: {
   rows: PublicationDailyRow[];
+  dailyNormTarget: number;
   platforms: string[];
   selectedPlatforms: string[];
   onSelectedPlatformsChange: (platforms: string[]) => void;
@@ -356,6 +359,7 @@ function PostingDailyLineChart({
   const plotHeight = height - top - bottom;
   const max = Math.max(
     1,
+    dailyNormTarget,
     ...rows.flatMap((row) => [row.total, row.posted]),
   );
   const pointFor = (value: number, index: number) => ({
@@ -371,6 +375,9 @@ function PostingDailyLineChart({
   );
   const postedPoints = rows.map((row, index) =>
     pointFor(row.posted, index),
+  );
+  const normPoints = rows.map((_, index) =>
+    pointFor(dailyNormTarget, index),
   );
   const totalCount = rows.reduce(
     (sum, row) => sum + row.total,
@@ -439,6 +446,10 @@ function PostingDailyLineChart({
           <div className="postingLegend">
             <span><i className="total line" />Tổng bài</span>
             <span><i className="posted line" />Đã đăng</span>
+            <span>
+              <i className="norm line" />
+              Định mức {formatNormValue(dailyNormTarget)}/ngày
+            </span>
           </div>
         </div>
       </div>
@@ -449,7 +460,7 @@ function PostingDailyLineChart({
             viewBox={`0 0 ${width} ${height}`}
             style={{ minWidth: `${width}px` }}
             role="img"
-            aria-label="Đường xu hướng tổng bài và số bài đã đăng theo ngày"
+            aria-label="Đường xu hướng tổng bài, số bài đã đăng và định mức theo ngày"
           >
             {[0, 0.5, 1].map((ratio) => {
               const y = top + plotHeight - ratio * plotHeight;
@@ -507,9 +518,15 @@ function PostingDailyLineChart({
                 }
               }}
             />
+            <path
+              className="postingTrend norm"
+              d={smoothPath(normPoints)}
+              aria-label={`Đường Định mức: ${formatNormValue(dailyNormTarget)} bài/ngày`}
+            />
             {rows.map((row, index) => {
               const totalPoint = totalPoints[index];
               const postedPoint = postedPoints[index];
+              const normPoint = normPoints[index];
               return (
                 <g key={row.date.toISOString()}>
                   <circle
@@ -566,6 +583,13 @@ function PostingDailyLineChart({
                   >
                     {row.posted}
                   </text>
+                  <circle
+                    className="postingTrendPoint norm"
+                    cx={normPoint.x}
+                    cy={normPoint.y}
+                    r="3"
+                    aria-label={`Định mức ngày ${formatDate(row.date)}: ${formatNormValue(dailyNormTarget)} bài`}
+                  />
                   {(index % labelStep === 0 ||
                     index === rows.length - 1) && (
                     <text
@@ -582,6 +606,7 @@ function PostingDailyLineChart({
                     {String(row.date.getDate()).padStart(2, "0")}/
                     {String(row.date.getMonth() + 1).padStart(2, "0")}
                     {" · "}Tổng {row.total} · Đã đăng {row.posted}
+                    {" · "}Định mức {formatNormValue(dailyNormTarget)}
                   </title>
                 </g>
               );
@@ -598,13 +623,13 @@ function PostingDailyLineChart({
 export function PostingSection({
   tasks,
   publications,
-  postingNorms,
+  postingNorms = [],
   dateWindow,
   onOpenDetail,
 }: {
   tasks: Task[];
   publications: PublicationPost[];
-  postingNorms: PostingNorm[];
+  postingNorms?: PostingNorm[];
   dateWindow: DateWindow;
   onOpenDetail: (detail: DetailView) => void;
 }) {
@@ -621,8 +646,14 @@ export function PostingSection({
   const [selectedDailyPlatforms, setSelectedDailyPlatforms] =
     useState<string[]>([]);
   const dailyPlatformOptions = useMemo(
-    () => stats.platformRows.map((row) => row.label),
-    [stats.platformRows],
+    () =>
+      Array.from(
+        new Set([
+          ...stats.platformRows.map((row) => row.label),
+          ...postingNorms.map((norm) => norm.platform),
+        ]),
+      ),
+    [postingNorms, stats.platformRows],
   );
   const dailyClassifiedPosts = useMemo(
     () =>
@@ -642,6 +673,14 @@ export function PostingSection({
         dateWindow,
       ),
     [dailyClassifiedPosts, dateWindow],
+  );
+  const dailyNormTarget = useMemo(
+    () =>
+      calculatePostingNormDailyTarget(
+        postingNorms,
+        selectedDailyPlatforms,
+      ),
+    [postingNorms, selectedDailyPlatforms],
   );
   const openPublicationEvidence = (
     title: string,
@@ -948,6 +987,7 @@ export function PostingSection({
 
       <PostingDailyLineChart
         rows={filteredDailyRows}
+        dailyNormTarget={dailyNormTarget}
         platforms={dailyPlatformOptions}
         selectedPlatforms={selectedDailyPlatforms}
         onSelectedPlatformsChange={setSelectedDailyPlatforms}

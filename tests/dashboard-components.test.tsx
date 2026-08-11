@@ -1201,6 +1201,13 @@ test("posting section shows source mix and counts multi-platform posts independe
     ["POST-1", "POST-3"],
   );
 
+  assert.equal(
+    container
+      .querySelector(".postingTrend.norm")
+      ?.getAttribute("aria-label"),
+    "Đường Định mức: 1 bài/ngày",
+  );
+
   fireEvent.click(
     screen.getByRole("checkbox", { name: "Facebook" }),
   );

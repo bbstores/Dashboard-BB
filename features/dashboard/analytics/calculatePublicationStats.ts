@@ -307,6 +307,29 @@ export function calculatePublicationDailyRows(
   return rows;
 }
 
+export function calculatePostingNormDailyTarget(
+  norms: PostingNorm[],
+  selectedPlatforms: string[] = [],
+) {
+  const selectedKeys = new Set(
+    selectedPlatforms.map((platform) => normalizedKey(platform)),
+  );
+  return norms.reduce((sum, norm) => {
+    if (norm.target === null) return sum;
+    if (
+      selectedKeys.size &&
+      !selectedKeys.has(normalizedKey(norm.platform))
+    ) {
+      return sum;
+    }
+    return (
+      sum +
+      norm.target /
+        (normalizedKey(norm.unit).includes("tuần") ? 7 : 1)
+    );
+  }, 0);
+}
+
 export function calculatePublicationStats(
   tasks: Task[],
   publications: PublicationPost[],

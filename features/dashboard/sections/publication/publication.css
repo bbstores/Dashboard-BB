@@ -419,6 +419,9 @@
 .postingLegend i.posted.line {
   background: #8fbf45;
 }
+.postingLegend i.norm.line {
+  background: #e8a94f;
+}
 .postingPlatformScroller {
   margin-top: 24px;
   overflow-x: auto;
@@ -616,6 +619,11 @@
   stroke: #8fbf45;
   stroke-width: 2.5;
 }
+.postingTrend.norm {
+  stroke: #e8a94f;
+  stroke-dasharray: 7 6;
+  stroke-width: 2.5;
+}
 .postingTrend.interactive {
   cursor: pointer;
 }
@@ -635,6 +643,11 @@
 .postingTrendPoint.posted {
   fill: #d9ff72;
   stroke: #8fbf45;
+  stroke-width: 2;
+}
+.postingTrendPoint.norm {
+  fill: #fbfaf5;
+  stroke: #e8a94f;
   stroke-width: 2;
 }
 .postingTrendPoint.interactive {
