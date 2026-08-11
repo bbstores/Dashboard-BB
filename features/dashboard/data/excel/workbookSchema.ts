@@ -1,6 +1,7 @@
 export const DASHBOARD_SHEETS = {
   tasks: "2.6 Tasklist",
   publications: "2.7 Đăng Bài",
+  postingNorms: "Định Mức Đăng Bài",
   feedback: "2.9 Lịch sử phản hồi Task",
   norms: "1.7 Định Mức",
   costs: "2.8 Đề xuất chi phí",
@@ -85,6 +86,13 @@ export const PUBLICATION_COLUMNS = {
   bookTaskCode: "Book Task",
 } as const;
 
+export const POSTING_NORM_COLUMNS = {
+  platform: "Kênh",
+  target: "Số Bài Đăng",
+  unit: "Đơn Vị",
+  note: "Chú Thích",
+} as const;
+
 export const NORM_COLUMNS = {
   formatType: "Tên Định Dạng",
   recordMinutes: "Thời gian Record (Phút)",
@@ -101,6 +109,9 @@ export const TASK_REQUIRED_HEADERS = Object.values(TASK_COLUMNS).filter(
 export const FEEDBACK_REQUIRED_HEADERS = Object.values(FEEDBACK_COLUMNS);
 export const PUBLICATION_REQUIRED_HEADERS = Object.values(
   PUBLICATION_COLUMNS,
+);
+export const POSTING_NORM_REQUIRED_HEADERS = Object.values(
+  POSTING_NORM_COLUMNS,
 );
 export const NORM_REQUIRED_HEADERS = Object.values(NORM_COLUMNS);
 export const SHOOT_SESSION_REQUIRED_HEADERS = Object.values(

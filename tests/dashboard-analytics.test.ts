@@ -583,6 +583,20 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
     publicationTasks,
     publications,
     dateWindow,
+    [
+      {
+        platform: "Facebook",
+        target: 1,
+        unit: "Ngày",
+        note: "Mỗi ngày một bài",
+      },
+      {
+        platform: "TikTok",
+        target: 7,
+        unit: "Tuần",
+        note: "Bảy bài mỗi tuần",
+      },
+    ],
   );
   assert.equal(stats.total, 3);
   assert.equal(stats.posted, 2);
@@ -590,6 +604,13 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
   assert.equal(stats.video, 2);
   assert.equal(stats.graphic, 0);
   assert.equal(stats.uniqueMediaTasks, 2);
+  assert.equal(stats.normPerformance.days, 11);
+  assert.equal(stats.normPerformance.expectedTotal, 22);
+  assert.equal(stats.normPerformance.postedTotal, 2);
+  assert.equal(stats.normPerformance.rows[0].expected, 11);
+  assert.equal(stats.normPerformance.rows[0].scheduled, 2);
+  assert.equal(stats.normPerformance.rows[0].posted, 1);
+  assert.equal(stats.normPerformance.unmappedPlatforms.length, 0);
   assert.deepEqual(stats.postMix, [
     { label: "Bài reup", value: 1 },
     { label: "Media · Video", value: 2 },
@@ -917,6 +938,9 @@ test("calculates weekly Media capacity from standard minutes and handoff dates",
   assert.equal(result.focusWeek.label, "20/07–26/07");
   assert.equal(result.elapsedWorkingDays, 3);
   assert.equal(result.focusWeek.shootTasks.length, 1);
+  assert.equal(result.focusWeek.shootOpeningBacklogTasks.length, 1);
+  assert.equal(result.focusWeek.shootHandedTasks.length, 0);
+  assert.equal(result.focusWeek.shootClosingBacklogTasks.length, 2);
   assert.equal(result.focusWeek.shootMinutes, 120);
   assert.equal(result.focusWeek.linkedShootTasks.length, 1);
   assert.equal(result.focusWeek.unlinkedShootTasks.length, 0);
@@ -925,6 +949,11 @@ test("calculates weekly Media capacity from standard minutes and handoff dates",
   assert.equal(result.focusWeek.uniqueProductCount, 3);
   assert.equal(result.focusWeek.staffSessionUnits, 3);
   assert.equal(result.focusWeek.outputTasks.length, 2);
+  assert.equal(result.focusWeek.outputOpeningBacklogTasks.length, 2);
+  assert.equal(result.focusWeek.outputStartedTasks.length, 0);
+  assert.equal(result.focusWeek.outputHandedCarryTasks.length, 2);
+  assert.equal(result.focusWeek.outputHandedNewTasks.length, 0);
+  assert.equal(result.focusWeek.outputClosingBacklogTasks.length, 0);
   assert.equal(result.focusWeek.outputMinutes, 150);
   assert.equal(result.focusWeek.videoTasks.length, 1);
   assert.equal(result.focusWeek.graphicTasks.length, 1);

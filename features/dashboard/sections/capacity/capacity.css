@@ -119,25 +119,6 @@
 .capacityFlowCard.outputs {
   border-color: rgba(217, 255, 114, .58);
 }
-.capacityFlowCard:not(:last-child)::after {
-  align-items: center;
-  background: #d9ff72;
-  border: 4px solid #174f3d;
-  border-radius: 50%;
-  color: #174f3d;
-  content: "→";
-  display: flex;
-  font-size: 13px;
-  font-weight: 900;
-  height: 27px;
-  justify-content: center;
-  position: absolute;
-  right: -21px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 27px;
-  z-index: 2;
-}
 .capacityFlowBody {
   background: transparent;
   border: 0;
@@ -229,6 +210,21 @@
 .capacityFlowBreakdown b {
   color: #fff;
   font-size: 14px;
+}
+.capacityFlowBreakdown .flowAdded b {
+  color: #d9ff72;
+}
+.capacityFlowBreakdown .flowRemoved b {
+  color: #f3b562;
+}
+.capacityFlowBreakdown .flowClosing {
+  background: rgba(255, 255, 255, .08);
+  border-radius: 8px;
+  margin: 1px -7px;
+  padding: 8px 7px;
+}
+.capacityFlowBreakdown .flowClosing b {
+  color: #fff;
 }
 .capacityEvidenceHint {
   color: #d9ff72;
@@ -1029,14 +1025,6 @@
   }
   .capacityLockSummary { min-width: 0; }
   .capacityFlowGrid { grid-template-columns: 1fr; }
-  .capacityFlowCard:not(:last-child)::after {
-    bottom: -21px;
-    content: "↓";
-    left: 50%;
-    right: auto;
-    top: auto;
-    transform: translateX(-50%);
-  }
   .capacityTopGrid,
   .capacityBottomGrid { grid-template-columns: 1fr; }
   .capacityTypeRows > button {

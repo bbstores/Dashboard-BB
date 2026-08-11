@@ -2,6 +2,7 @@ import type { DashboardData } from "../../model/types";
 import { parseFeedback } from "./parseFeedback";
 import { parseNorms } from "./parseNorms";
 import { parsePublications } from "./parsePublications";
+import { parsePostingNorms } from "./parsePostingNorms";
 import { parseTasks } from "./parseTasks";
 import { parseCosts } from "./parseCosts";
 import { parseShootSessions } from "./parseShootSessions";
@@ -18,6 +19,7 @@ export async function readDashboardWorkbook(
     taskSheet,
     feedbackSheet,
     publicationSheet,
+    postingNormSheet,
     normSheet,
     costSheet,
     collectionSheet,
@@ -34,6 +36,9 @@ export async function readDashboardWorkbook(
     norms: normSheet ? parseNorms(normSheet) : [],
     publications: publicationSheet
       ? parsePublications(publicationSheet)
+      : [],
+    postingNorms: postingNormSheet
+      ? parsePostingNorms(postingNormSheet)
       : [],
     shootSessions: shootSessionSheet
       ? parseShootSessions(shootSessionSheet)

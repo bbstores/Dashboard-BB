@@ -257,6 +257,7 @@ export function Dashboard() {
                 <PostingSection
                   tasks={workbook.data.tasks}
                   publications={workbook.data.publications}
+                  postingNorms={workbook.data.postingNorms ?? []}
                   dateWindow={filters.dateWindow}
                   onOpenDetail={dialogs.setDetail}
                 />

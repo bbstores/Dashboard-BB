@@ -864,6 +864,20 @@ test("posting section shows source mix and counts multi-platform posts independe
         noSocialTask,
       ]}
       publications={publications}
+      postingNorms={[
+        {
+          platform: "Facebook",
+          target: 1,
+          unit: "Ngày",
+          note: "Mỗi ngày một bài",
+        },
+        {
+          platform: "TikTok",
+          target: null,
+          unit: "Ngày",
+          note: "Theo ấn phẩm mới",
+        },
+      ]}
       dateWindow={{
         from: new Date(2026, 6, 10),
         to: new Date(2026, 6, 11, 23, 59, 59, 999),
@@ -881,6 +895,9 @@ test("posting section shows source mix and counts multi-platform posts independe
   assert.ok(screen.getAllByText("Facebook").length >= 1);
   assert.ok(screen.getAllByText("TikTok").length >= 1);
   assert.ok(screen.getByText("Bài đăng theo nền tảng"));
+  assert.ok(screen.getByText("Mức độ hoàn thành theo từng kênh"));
+  assert.ok(screen.getByText("Mỗi ngày một bài"));
+  assert.ok(screen.getByText("Theo ấn phẩm mới"));
   assert.ok(
     screen.getByText(
       "Dữ liệu cần kiểm tra · Không Đăng Social",

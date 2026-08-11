@@ -2,6 +2,7 @@ import {
   DASHBOARD_SHEETS,
   FEEDBACK_REQUIRED_HEADERS,
   NORM_REQUIRED_HEADERS,
+  POSTING_NORM_REQUIRED_HEADERS,
   PUBLICATION_REQUIRED_HEADERS,
   TASK_REQUIRED_HEADERS,
 } from "./workbookSchema";
@@ -11,6 +12,7 @@ export type DashboardWorksheets = {
   taskSheet: import("exceljs").Worksheet;
   feedbackSheet: import("exceljs").Worksheet;
   publicationSheet?: import("exceljs").Worksheet;
+  postingNormSheet?: import("exceljs").Worksheet;
   normSheet?: import("exceljs").Worksheet;
   costSheet?: import("exceljs").Worksheet;
   collectionSheet?: import("exceljs").Worksheet;
@@ -59,6 +61,9 @@ export function validateDashboardWorkbook(
   const publicationSheet = workbook.getWorksheet(
     DASHBOARD_SHEETS.publications,
   );
+  const postingNormSheet = workbook.getWorksheet(
+    DASHBOARD_SHEETS.postingNorms,
+  );
   const normSheet = workbook.getWorksheet(DASHBOARD_SHEETS.norms);
   const costSheet = workbook.getWorksheet(DASHBOARD_SHEETS.costs);
   const collectionSheet = workbook.getWorksheet(
@@ -75,6 +80,12 @@ export function validateDashboardWorkbook(
       PUBLICATION_REQUIRED_HEADERS,
     );
   }
+  if (postingNormSheet) {
+    validateRequiredHeaders(
+      postingNormSheet,
+      POSTING_NORM_REQUIRED_HEADERS,
+    );
+  }
   if (normSheet) {
     validateRequiredHeaders(normSheet, NORM_REQUIRED_HEADERS);
   }
@@ -82,6 +93,7 @@ export function validateDashboardWorkbook(
     taskSheet,
     feedbackSheet,
     publicationSheet,
+    postingNormSheet,
     normSheet,
     costSheet,
     collectionSheet,

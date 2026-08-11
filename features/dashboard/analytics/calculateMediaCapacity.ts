@@ -26,6 +26,11 @@ export type MediaCapacityWeek = {
   end: Date;
   workingDays: number;
   shootTasks: Task[];
+  shootOpeningBacklogTasks: Task[];
+  shootHandedTasks: Task[];
+  shootHandedCarryTasks: Task[];
+  shootHandedNewTasks: Task[];
+  shootClosingBacklogTasks: Task[];
   linkedShootTasks: Task[];
   unlinkedShootTasks: Task[];
   shootSessions: ShootSession[];
@@ -34,6 +39,11 @@ export type MediaCapacityWeek = {
   uniqueProductCount: number;
   staffSessionUnits: number;
   outputTasks: Task[];
+  outputOpeningBacklogTasks: Task[];
+  outputStartedTasks: Task[];
+  outputHandedCarryTasks: Task[];
+  outputHandedNewTasks: Task[];
+  outputClosingBacklogTasks: Task[];
   shootMinutes: number;
   outputMinutes: number;
   shootMapped: number;
@@ -452,6 +462,28 @@ function calculateWeek(
     (task) =>
       eventInWeek(task.startDate, start, end, cutoff),
   );
+  const shootOpeningBacklogTasks = shootSourceTasks.filter(
+    (task) =>
+      ((task.startDate && task.startDate < start) ||
+        (!task.startDate &&
+          eventInWeek(task.inspectionDate, start, end, cutoff))) &&
+      (!task.inspectionDate || task.inspectionDate >= start),
+  );
+  const shootHandedTasks = shootSourceTasks.filter((task) =>
+    eventInWeek(task.inspectionDate, start, end, cutoff),
+  );
+  const shootHandedCarryTasks = shootHandedTasks.filter(
+    (task) => !task.startDate || task.startDate < start,
+  );
+  const shootHandedNewTasks = shootHandedTasks.filter(
+    (task) => task.startDate && task.startDate >= start,
+  );
+  const shootClosingBacklogTasks = [
+    ...shootOpeningBacklogTasks,
+    ...shootTasks,
+  ].filter(
+    (task) => !task.inspectionDate || task.inspectionDate > cutoff,
+  );
   const linkedShootTasks = shootTasks.filter((task) =>
     Boolean(normalizedKey(task.shootSession)),
   );
@@ -481,6 +513,28 @@ function calculateWeek(
   const outputTasks = outputSourceTasks.filter(
     (task) =>
       eventInWeek(task.inspectionDate, start, end, cutoff),
+  );
+  const outputOpeningBacklogTasks = outputSourceTasks.filter(
+    (task) =>
+      ((task.startDate && task.startDate < start) ||
+        (!task.startDate &&
+          eventInWeek(task.inspectionDate, start, end, cutoff))) &&
+      (!task.inspectionDate || task.inspectionDate >= start),
+  );
+  const outputStartedTasks = outputSourceTasks.filter((task) =>
+    eventInWeek(task.startDate, start, end, cutoff),
+  );
+  const outputHandedCarryTasks = outputTasks.filter(
+    (task) => !task.startDate || task.startDate < start,
+  );
+  const outputHandedNewTasks = outputTasks.filter(
+    (task) => task.startDate && task.startDate >= start,
+  );
+  const outputClosingBacklogTasks = [
+    ...outputOpeningBacklogTasks,
+    ...outputStartedTasks,
+  ].filter(
+    (task) => !task.inspectionDate || task.inspectionDate > cutoff,
   );
   const shoot = sumMappedMinutes(
     shootTasks,
@@ -527,6 +581,11 @@ function calculateWeek(
     end,
     workingDays: workingDaysBetween(start, end),
     shootTasks,
+    shootOpeningBacklogTasks,
+    shootHandedTasks,
+    shootHandedCarryTasks,
+    shootHandedNewTasks,
+    shootClosingBacklogTasks,
     linkedShootTasks,
     unlinkedShootTasks,
     shootSessions,
@@ -535,6 +594,11 @@ function calculateWeek(
     uniqueProductCount,
     staffSessionUnits,
     outputTasks,
+    outputOpeningBacklogTasks,
+    outputStartedTasks,
+    outputHandedCarryTasks,
+    outputHandedNewTasks,
+    outputClosingBacklogTasks,
     shootMinutes: shoot.minutes,
     outputMinutes: output.minutes,
     shootMapped: shoot.mapped,

@@ -65,6 +65,13 @@ export type PublicationPost = {
   bookTaskCode?: string;
 };
 
+export type PostingNorm = {
+  platform: string;
+  target: number | null;
+  unit: string;
+  note: string;
+};
+
 export type CostProposal = {
   id: string;
   approvalLink: string;
@@ -94,6 +101,7 @@ export type DashboardData = {
   feedback: Feedback[];
   norms: WorkNorm[];
   publications: PublicationPost[];
+  postingNorms?: PostingNorm[];
   shootSessions?: ShootSession[];
   costs?: CostData;
   fileName: string;

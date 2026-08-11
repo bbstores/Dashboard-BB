@@ -5,13 +5,16 @@ import {
   type ClassifiedPublication,
   type PublicationDailyRow,
   type PublicationPlatformRow,
+  type PublicationNormPerformance,
   type PublicationSource,
 } from "../analytics/calculatePublicationStats";
 import { PieChart } from "../components/PieChart";
+import { HelpButton } from "../components/HelpButton";
 import type {
   DateWindow,
   DetailView,
   PublicationPost,
+  PostingNorm,
   Task,
 } from "../model/types";
 import { normalize } from "../model/taskUtils";
@@ -79,6 +82,129 @@ function PostingKpi({
     <div className={`postingKpiCard ${variant}`.trim()}>
       {content}
     </div>
+  );
+}
+
+function formatNormValue(value: number) {
+  return new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+function PostingNormPanel({
+  performance,
+  onSelect,
+}: {
+  performance: PublicationNormPerformance;
+  onSelect: (platform: string) => void;
+}) {
+  return (
+    <article className="postingNormPanel">
+      <div className="postingSubchartTitle">
+        <div>
+          <span className="chartKicker">ĐỊNH MỨC ĐĂNG BÀI</span>
+          <h3>Mức độ hoàn thành theo từng kênh</h3>
+          <p className="postingChartNote">
+            {performance.from && performance.to
+              ? `${formatDate(performance.from)}–${formatDate(performance.to)} · ${formatNumber(performance.days)} ngày lịch`
+              : "Chọn khoảng ngày để quy đổi định mức."}
+          </p>
+        </div>
+        <HelpButton
+          help={{
+            title: "Định mức đăng bài",
+            purpose:
+              "So sánh số bài đã đăng với bảng Định Mức Đăng Bài theo từng nền tảng.",
+            objective:
+              "Nhận biết kênh đạt, gần đạt hoặc đang thiếu nhịp đăng trong khoảng ngày được chọn.",
+            calculation:
+              "Định mức Ngày = Số Bài Đăng × số ngày lịch. Định mức Tuần = Số Bài Đăng × số ngày lịch / 7. Thành tích dùng các dòng có Đã Đăng = 1 và Nền Tảng khớp tên kênh. Kênh không có Số Bài Đăng được hiển thị là Theo ấn phẩm và không tham gia tỷ lệ tổng.",
+            example:
+              "Facebook BBStore có định mức 12 bài/ngày; khoảng 7 ngày có mục tiêu 84 bài. Nếu đã đăng 76 bài thì đạt 90,5%.",
+            note:
+              "Cột Chú Thích chỉ dùng giải thích nghiệp vụ; con số trong cột Số Bài Đăng là nguồn tính chính.",
+          }}
+        />
+      </div>
+
+      {performance.rows.length ? (
+        <>
+          <div className="postingNormSummary">
+            <span>
+              <small>Mục tiêu cố định</small>
+              <strong>{formatNormValue(performance.expectedTotal)}</strong>
+              <em>{performance.fixedChannelCount} kênh</em>
+            </span>
+            <span>
+              <small>Đã đăng</small>
+              <strong>{formatNumber(performance.postedTotal)}</strong>
+              <em>{formatNumber(performance.scheduledTotal)} bài có lịch</em>
+            </span>
+            <span className={performance.attainment >= 100 ? "met" : "below"}>
+              <small>Mức hoàn thành</small>
+              <strong>{formatPercent(performance.postedTotal, performance.expectedTotal)}</strong>
+              <em>{performance.flexibleChannelCount} kênh theo ấn phẩm</em>
+            </span>
+            <span className={performance.unmappedPlatforms.length ? "warning" : "met"}>
+              <small>Kênh chưa có định mức</small>
+              <strong>{formatNumber(performance.unmappedPlatforms.length)}</strong>
+              <em>có phát sinh bài đăng</em>
+            </span>
+          </div>
+          <div className="postingNormTable" role="table" aria-label="Mức độ hoàn thành định mức đăng bài">
+            <div className="postingNormTableHeader" role="row">
+              <span>Kênh</span>
+              <span>Định mức</span>
+              <span>Mục tiêu kỳ</span>
+              <span>Có lịch</span>
+              <span>Đã đăng</span>
+              <span>Hoàn thành</span>
+            </div>
+            {performance.rows.map((row) => (
+              <button
+                type="button"
+                className={`postingNormRow ${row.status}`}
+                onClick={() => onSelect(row.platform)}
+                key={row.platform}
+              >
+                <span className="postingNormPlatform">
+                  <strong>{row.platform}</strong>
+                  <small title={row.note}>{row.note || "Không có chú thích"}</small>
+                </span>
+                <span>
+                  {row.target === null
+                    ? "Theo ấn phẩm"
+                    : `${formatNormValue(row.target)}/${row.unit.toLocaleLowerCase("vi")}`}
+                </span>
+                <strong>
+                  {row.expected === null
+                    ? "—"
+                    : formatNormValue(row.expected)}
+                </strong>
+                <strong>{formatNumber(row.scheduled)}</strong>
+                <strong>{formatNumber(row.posted)}</strong>
+                <span className="postingNormProgress">
+                  {row.attainment === null ? (
+                    <em>Linh hoạt</em>
+                  ) : (
+                    <>
+                      <i>
+                        <b style={{ width: `${Math.min(100, row.attainment)}%` }} />
+                      </i>
+                      <em>{formatPercent(row.posted, row.expected ?? 0)}</em>
+                    </>
+                  )}
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="emptyText">
+          Workbook chưa có dữ liệu trong sheet Định Mức Đăng Bài.
+        </p>
+      )}
+    </article>
   );
 }
 
@@ -472,17 +598,25 @@ function PostingDailyLineChart({
 export function PostingSection({
   tasks,
   publications,
+  postingNorms,
   dateWindow,
   onOpenDetail,
 }: {
   tasks: Task[];
   publications: PublicationPost[];
+  postingNorms: PostingNorm[];
   dateWindow: DateWindow;
   onOpenDetail: (detail: DetailView) => void;
 }) {
   const stats = useMemo(
-    () => calculatePublicationStats(tasks, publications, dateWindow),
-    [tasks, publications, dateWindow],
+    () =>
+      calculatePublicationStats(
+        tasks,
+        publications,
+        dateWindow,
+        postingNorms,
+      ),
+    [tasks, publications, dateWindow, postingNorms],
   );
   const [selectedDailyPlatforms, setSelectedDailyPlatforms] =
     useState<string[]>([]);
@@ -667,6 +801,11 @@ export function PostingSection({
           }
         />
       </div>
+
+      <PostingNormPanel
+        performance={stats.normPerformance}
+        onSelect={openPlatformEvidence}
+      />
 
       <div className="postingOverviewGrid">
         <PieChart

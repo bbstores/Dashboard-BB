@@ -44,13 +44,13 @@ const capacityHelp: Record<
   DashboardHelp
 > = {
   demand: {
-    title: "Nhu cầu task quay/chụp",
+    title: "Luồng task quay/chụp",
     purpose:
       "Đếm lượng việc team Media được yêu cầu quay hoặc chụp trong khoảng riêng đang chọn.",
     objective:
       "Cho biết đầu vào đang tạo ra bao nhiêu nhu cầu và bao nhiêu task chưa được gắn vào lịch quay.",
     calculation:
-      "Lấy task nội bộ có Công đoạn Quay hoặc Chụp, Ngày Bắt Đầu thuộc khoảng riêng; loại task không tên, Outsource và Pending/Cancel. Sau đó tách theo cột Ca Quay có giá trị hay còn trống.",
+      "Tổng cần xử lý = task tồn đầu kỳ + task Quay/Chụp có Ngày Bắt Đầu trong kỳ. Task tồn đầu kỳ đã bắt đầu trước kỳ nhưng chưa có Ngày Kiểm Duyệt trước kỳ. Bàn giao trong kỳ dùng Ngày Kiểm Duyệt; tồn cuối kỳ là phần chưa bàn giao tại mốc kết thúc thực tế.",
     example:
       "Tuần có 60 task Quay/Chụp, 52 task có Ca Quay và 8 task chưa gắn → độ phủ lịch quay 86,7%.",
     note:
@@ -76,7 +76,7 @@ const capacityHelp: Record<
     objective:
       "Trả lời một tuần team trả ra bao nhiêu ấn phẩm và đang cao hay thấp hơn nhịp lịch sử.",
     calculation:
-      "Lấy task ấn phẩm cuối có Ngày Kiểm Duyệt thuộc khoảng riêng, loại Outsource và Pending/Cancel. Baseline tháng lấy 12 tuần hoàn chỉnh trước tháng kết thúc khoảng và quy đổi theo số ngày công của khoảng. Nếu khoảng chưa kết thúc, dự báo = đầu ra thực tế / số ngày công đã qua × tổng ngày công của khoảng.",
+      "Tổng cần xử lý = task Edit/Graphic tồn đầu kỳ + task bắt đầu trong kỳ. Ấn phẩm bàn giao dùng Ngày Kiểm Duyệt và được tách thành xử lý task tồn hoặc task mới. Tồn cuối kỳ là phần trong tổng cần xử lý chưa được kiểm duyệt tại mốc kết thúc thực tế. Baseline đầu ra vẫn lấy 12 tuần hoàn chỉnh trước tháng báo cáo.",
     example:
       "Tuần bàn giao 117 ấn phẩm và P50 lịch sử cũng là 117 → đạt 100% nhịp trung vị.",
     note:
@@ -1189,8 +1189,6 @@ export function MediaCapacitySection({
     focusFullWeek,
     officialBaseline,
     forecastOutputCount,
-    forecastVideoCount,
-    forecastGraphicCount,
     isCompleteWeek,
     shootReference,
     outputReference,
@@ -1377,6 +1375,12 @@ export function MediaCapacitySection({
     ? (focusWeek.linkedShootTasks.length / focusWeek.shootTasks.length) *
       100
     : 0;
+  const shootWorkPool =
+    focusWeek.shootOpeningBacklogTasks.length +
+    focusWeek.shootTasks.length;
+  const outputWorkPool =
+    focusWeek.outputOpeningBacklogTasks.length +
+    focusWeek.outputStartedTasks.length;
   const openStandardTasks = (
     title: string,
     subtitle: string,
@@ -1479,42 +1483,57 @@ export function MediaCapacitySection({
         <div className="capacityFlowIntro">
           <div>
             <span className="chartKicker">MẪU SỐ CHUNG THEO KỲ</span>
-            <h3>Nhu cầu → Buổi quay → Ấn phẩm bàn giao</h3>
+            <h3>Luồng công việc &amp; nguồn lực trong kỳ</h3>
           </div>
           <p>
-            Ba lớp dùng ba mốc riêng để không đánh đồng task được giao,
-            ca quay thực tế và đầu ra đã bàn giao.
+            Hai đầu theo dõi tồn đầu kỳ, phát sinh, bàn giao và tồn cuối
+            kỳ. Card giữa thể hiện nguồn lực quay thực tế, không phải bước
+            chuyển đổi trực tiếp.
           </p>
         </div>
         <div className="capacityFlowGrid">
           <CapacityFlowCard
             type="demand"
-            kicker="01 · NHU CẦU"
-            title="Task cần quay/chụp"
-            primaryValue={focusWeek.shootTasks.length}
+            kicker="01 · HÀNG CHỜ QUAY"
+            title="Tổng task cần xử lý"
+            primaryValue={shootWorkPool}
             primaryUnit="task"
-            forecastValue={focusFullWeek.shootTasks.length}
+            forecastValue={
+              focusWeek.shootOpeningBacklogTasks.length +
+              focusFullWeek.shootTasks.length
+            }
             completeWeek={isCompleteWeek}
             help={capacityHelp.demand}
             onClick={() =>
               openStandardTasks(
-                `Nhu cầu Quay/Chụp · ${focusWeek.label}`,
-                "Task Quay/Chụp phân tuần theo Ngày Bắt Đầu; dùng cột Ca Quay để lọc task đã/chưa xếp lịch",
-                focusWeek.shootTasks,
+                `Tổng task Quay/Chụp cần xử lý · ${focusWeek.label}`,
+                "Tồn đầu kỳ cộng task có Ngày Bắt Đầu trong kỳ",
+                [
+                  ...focusWeek.shootOpeningBacklogTasks,
+                  ...focusWeek.shootTasks,
+                ],
               )
             }
           >
-            <span>
-              <b>{formatNumber(focusWeek.linkedShootTasks.length)}</b>
-              đã có Ca Quay
+            <span className="flowOpening">
+              <b>{formatNumber(focusWeek.shootOpeningBacklogTasks.length)}</b>
+              tồn đầu kỳ
             </span>
-            <span>
-              <b>{formatNumber(focusWeek.unlinkedShootTasks.length)}</b>
-              chưa có Ca Quay
+            <span className="flowAdded">
+              <b>+{formatNumber(focusWeek.shootTasks.length)}</b>
+              task mới trong kỳ
+            </span>
+            <span className="flowRemoved">
+              <b>−{formatNumber(focusWeek.shootHandedTasks.length)}</b>
+              đã bàn giao · {formatNumber(focusWeek.shootHandedCarryTasks.length)} tồn + {formatNumber(focusWeek.shootHandedNewTasks.length)} mới
+            </span>
+            <span className="flowClosing">
+              <b>{formatNumber(focusWeek.shootClosingBacklogTasks.length)}</b>
+              còn tồn tại cuối kỳ
             </span>
             <span>
               <b>{formatRate(shootCoverage)}</b>
-              độ phủ lịch quay
+              task mới đã có Ca Quay
             </span>
           </CapacityFlowCard>
 
@@ -1570,7 +1589,7 @@ export function MediaCapacitySection({
             kicker="03 · ĐẦU RA"
             title="Ấn phẩm đã bàn giao"
             primaryValue={focusWeek.outputTasks.length}
-            primaryUnit="ấn phẩm"
+            primaryUnit={`trên ${formatNumber(outputWorkPool)} cần xử lý`}
             reference={officialBaseline.outputReference}
             forecastValue={forecastOutputCount}
             completeWeek={isCompleteWeek}
@@ -1593,19 +1612,26 @@ export function MediaCapacitySection({
               )
             }
           >
-            <span>
-              <b>{formatNumber(focusWeek.videoTasks.length)}</b>
-              Video · dự báo {formatMetric(forecastVideoCount)} · P50{" "}
-              {formatMetric(officialBaseline.videoReference.p50)}
+            <span className="flowOpening">
+              <b>{formatNumber(focusWeek.outputOpeningBacklogTasks.length)}</b>
+              tồn đầu kỳ
+            </span>
+            <span className="flowAdded">
+              <b>+{formatNumber(focusWeek.outputStartedTasks.length)}</b>
+              task ấn phẩm mới trong kỳ
+            </span>
+            <span className="flowRemoved">
+              <b>−{formatNumber(focusWeek.outputTasks.length)}</b>
+              đã bàn giao · {formatNumber(focusWeek.outputHandedCarryTasks.length)} tồn + {formatNumber(focusWeek.outputHandedNewTasks.length)} mới
+            </span>
+            <span className="flowClosing">
+              <b>{formatNumber(focusWeek.outputClosingBacklogTasks.length)}</b>
+              còn tồn tại cuối kỳ
             </span>
             <span>
-              <b>{formatNumber(focusWeek.graphicTasks.length)}</b>
-              Graphic · dự báo {formatMetric(forecastGraphicCount)} · P50{" "}
-              {formatMetric(officialBaseline.graphicReference.p50)}
-            </span>
-            <span>
-              <b>{formatHours(focusWeek.outputMinutes)}</b>
-              tải chuẩn 1.7
+              <b>{formatNumber(focusWeek.videoTasks.length)}</b> Video ·{" "}
+              <b>{formatNumber(focusWeek.graphicTasks.length)}</b> Graphic ·{" "}
+              {formatHours(focusWeek.outputMinutes)} tải chuẩn
             </span>
           </CapacityFlowCard>
         </div>

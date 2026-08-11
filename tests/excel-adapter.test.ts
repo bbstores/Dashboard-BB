@@ -7,6 +7,7 @@ import {
   excelDateTime,
 } from "../features/dashboard/data/excel/excelDate";
 import { parseFeedback } from "../features/dashboard/data/excel/parseFeedback";
+import { parsePostingNorms } from "../features/dashboard/data/excel/parsePostingNorms";
 import { parseShootSessions } from "../features/dashboard/data/excel/parseShootSessions";
 import { parseTasks } from "../features/dashboard/data/excel/parseTasks";
 import { readDashboardWorkbook } from "../features/dashboard/data/excel/readWorkbook";
@@ -18,6 +19,8 @@ import {
   NORM_REQUIRED_HEADERS,
   PUBLICATION_COLUMNS,
   PUBLICATION_REQUIRED_HEADERS,
+  POSTING_NORM_COLUMNS,
+  POSTING_NORM_REQUIRED_HEADERS,
   SHOOT_SESSION_COLUMNS,
   SHOOT_SESSION_REQUIRED_HEADERS,
   TASK_COLUMNS,
@@ -279,6 +282,51 @@ test("parses shooting sessions into four-hour units", () => {
   assert.equal(session.staffCount, 3);
   assert.deepEqual(session.staffNames, ["An", "Bình", "Chi"]);
   assert.equal(session.date?.getDate(), 20);
+});
+
+test("parses daily, weekly and flexible posting norms", () => {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = addSheet(
+    workbook,
+    DASHBOARD_SHEETS.postingNorms,
+    POSTING_NORM_REQUIRED_HEADERS,
+  );
+  const values = [
+    {
+      [POSTING_NORM_COLUMNS.platform]: "Facebook BBStore",
+      [POSTING_NORM_COLUMNS.target]: 12,
+      [POSTING_NORM_COLUMNS.unit]: "Ngày",
+      [POSTING_NORM_COLUMNS.note]: "6 post 6 reels",
+    },
+    {
+      [POSTING_NORM_COLUMNS.platform]: "Pinterest",
+      [POSTING_NORM_COLUMNS.target]: "",
+      [POSTING_NORM_COLUMNS.unit]: "Ngày",
+      [POSTING_NORM_COLUMNS.note]: "Theo ấn phẩm mới",
+    },
+  ];
+  for (const value of values) {
+    sheet.addRow(
+      POSTING_NORM_REQUIRED_HEADERS.map(
+        (header) => value[header as keyof typeof value] ?? "",
+      ),
+    );
+  }
+
+  assert.deepEqual(parsePostingNorms(sheet), [
+    {
+      platform: "Facebook BBStore",
+      target: 12,
+      unit: "Ngày",
+      note: "6 post 6 reels",
+    },
+    {
+      platform: "Pinterest",
+      target: null,
+      unit: "Ngày",
+      note: "Theo ấn phẩm mới",
+    },
+  ]);
 });
 
 test("normalizes supported Excel date values", () => {
