@@ -7,16 +7,13 @@ import type {
   MediaTrendBucket,
   MediaTrendGranularity,
   QuantityReference,
-  ShootContributionMetric,
-  ShootStaffContributionRow,
-  ShootStaffContributionStats,
   ShootTypeBaselinePlan,
   ShootTypeBaselinePlanRow,
 } from "../analytics/calculateMediaCapacity";
 import {
   calculateMediaCapacity,
   calculateMediaTrendSeries,
-  calculateShootStaffContributions,
+  calculateShootTaskMinutesByStaff,
   calculateShootTypeBaselinePlan,
 } from "../analytics/calculateMediaCapacity";
 import { HelpButton } from "../components/HelpButton";
@@ -24,6 +21,7 @@ import type {
   DashboardData,
   DashboardHelp,
   DetailView,
+  ShootSession,
   Task,
 } from "../model/types";
 
@@ -164,17 +162,17 @@ const capacityHelp: Record<
       "Tạm thời không áp dụng ngưỡng số buổi tối thiểu: mỗi loại ca dùng trực tiếp P50 của chính các buổi đang có trong khoảng lọc. Vì vậy loại chỉ có 1–2 buổi có thể dao động mạnh. Bộ lọc này chỉ tác động chart và không đổi baseline khóa tháng phía trên.",
   },
   staffContribution: {
-    title: "Tỷ trọng tham gia ca quay",
+    title: "Thời gian tham gia theo ca quay",
     purpose:
-      "Phân bổ sản lượng của từng ca cho các nhân sự có tên trong ca để nhìn mức tham gia của từng người trong khoảng đang chọn.",
+      "Theo dõi tổng số phút dự kiến mà từng nhân sự được giao trong mỗi ca quay, dựa trên task liên kết từ Tasklist.",
     objective:
-      "Cho biết ai xuất hiện nhiều và đang gánh tỷ trọng thời gian, task hoặc mã sản phẩm lớn hơn trong lịch quay.",
+      "Cho biết trong từng ca ai đang phụ trách những task nào và tổng khối lượng phút dự kiến của người đó.",
     calculation:
-      "Trong mỗi ca, buổi 4 giờ, task và mã được chia đều cho số nhân sự của ca. Tỷ trọng kỳ = phần quy đổi của nhân sự / tổng phần có đủ tên nhân sự. Một người xuất hiện nhiều lần trong cùng ca chỉ tính một lần. Ca thiếu danh sách tên không được phân bổ và được phản ánh trong độ phủ dữ liệu.",
+      "Task được liên kết bằng danh sách mã task trong Lịch Quay hoặc cột Ca Quay trong Tasklist. Trong từng ca, hệ thống nhóm task theo Assignee và cộng Số phút dự kiến của các task đó.",
     example:
-      "Ca một ngày bằng 2 buổi có 4 người: mỗi người nhận 0,5 buổi quy đổi và 25% tỷ trọng của ca. Nếu ca có 40 task thì mỗi người nhận 10 task quy đổi.",
+      "Trong ca CQ-081, An có ba task 30, 45 và 60 phút thì điểm của An là 135 phút.",
     note:
-      "Đây là tỷ trọng tham gia phân bổ đều, không phải đánh giá năng suất thực tế. Muốn đo đóng góp thực tế cần có task hoặc mã phụ trách riêng cho từng nhân sự.",
+      "Nhân sự có tên trong lịch nhưng không có task được giao sẽ ở mức 0. Task chưa có Assignee được gom vào nhóm Chưa có assignee để không thất thoát khối lượng.",
   },
 };
 
@@ -649,171 +647,298 @@ function ShootTypeBaselineChart({
   );
 }
 
-const contributionMetricCopy: Record<
-  ShootContributionMetric,
-  {
-    label: string;
-    unit: string;
-    value: (row: ShootStaffContributionRow) => number;
-    percentage: (row: ShootStaffContributionRow) => number;
-  }
-> = {
-  time: {
-    label: "Thời gian",
-    unit: "buổi quy đổi",
-    value: (row) => row.timeValue,
-    percentage: (row) => row.timePercentage,
-  },
-  tasks: {
-    label: "Task",
-    unit: "task quy đổi",
-    value: (row) => row.taskValue,
-    percentage: (row) => row.taskPercentage,
-  },
-  products: {
-    label: "Mã",
-    unit: "mã quy đổi",
-    value: (row) => row.productValue,
-    percentage: (row) => row.productPercentage,
-  },
-};
+const staffParticipationColors = [
+  "#d9ff72",
+  "#9bcbbb",
+  "#fff4d0",
+  "#f3b562",
+  "#e89284",
+  "#aab7ff",
+  "#d7a9e3",
+  "#79d4c2",
+];
 
-function StaffContributionChart({
-  stats,
-  metric,
+function StaffParticipationChart({
+  sessions,
+  tasks,
   dateFrom,
   dateTo,
-  onMetricChange,
-  onSelect,
+  onSelectPoint,
 }: {
-  stats: ShootStaffContributionStats;
-  metric: ShootContributionMetric;
+  sessions: ShootSession[];
+  tasks: Task[];
   dateFrom: Date | null;
   dateTo: Date | null;
-  onMetricChange: (metric: ShootContributionMetric) => void;
-  onSelect: (row: ShootStaffContributionRow) => void;
+  onSelectPoint: (
+    staffName: string,
+    session: ShootSession,
+    tasks: Task[],
+    minutes: number,
+  ) => void;
 }) {
-  const metricCopy = contributionMetricCopy[metric];
-  const rows = [...stats.rows].sort(
-    (left, right) =>
-      metricCopy.percentage(right) - metricCopy.percentage(left) ||
-      left.staffName.localeCompare(right.staffName, "vi"),
+  const [excludedSessionIds, setExcludedSessionIds] = useState<string[]>([]);
+  const [hiddenStaffNames, setHiddenStaffNames] = useState<string[]>([]);
+  const sessionWorkloads = useMemo(
+    () => calculateShootTaskMinutesByStaff(sessions, tasks),
+    [sessions, tasks],
   );
-  const topRow = rows[0];
+  const selectedWorkloads = sessionWorkloads.filter(
+    (row) => !excludedSessionIds.includes(row.session.id),
+  );
+  const selectedSessions = selectedWorkloads.map((row) => row.session);
+  const staffNames = Array.from(
+    new Map(
+      selectedWorkloads.flatMap((workload) =>
+        workload.staffRows.map((row) => [
+          row.staffName.toLocaleLowerCase("vi"),
+          row.staffName,
+        ]),
+      ),
+    ).values(),
+  ).sort((left, right) => left.localeCompare(right, "vi"));
+  const chartWidth = Math.max(860, selectedSessions.length * 145);
+  const chartHeight = 390;
+  const plot = { left: 60, right: chartWidth - 24, top: 24, bottom: 310 };
+  const maxMinutes = Math.max(
+    60,
+    ...selectedWorkloads.flatMap((workload) =>
+      workload.staffRows.map((row) => row.minutes),
+    ),
+  );
+  const yMax = Math.max(60, Math.ceil(maxMinutes / 60) * 60);
+  const yTicks = Array.from({ length: 5 }, (_, index) => (yMax / 4) * index);
+  const xFor = (index: number) =>
+    selectedSessions.length <= 1
+      ? (plot.left + plot.right) / 2
+      : plot.left +
+        (index / (selectedSessions.length - 1)) * (plot.right - plot.left);
+  const yFor = (minutes: number) =>
+    plot.bottom - (minutes / yMax) * (plot.bottom - plot.top);
+  const selectedCount = selectedSessions.length;
+
   return (
     <article className="capacityStaffContributionCard">
       <div className="capacityCardHeader">
         <div>
-          <span className="chartKicker">
-            PHÂN BỔ ĐỀU · THEO NHÂN SỰ
-          </span>
-          <h3>Tỷ trọng tham gia ca quay</h3>
+          <span className="chartKicker">NHÂN SỰ × CA QUAY</span>
+          <h3>Thời gian tham gia theo từng ca quay</h3>
           <p>
-            {formatDate(dateFrom)}–{formatDate(dateTo)} · cùng khoảng với
-            baseline theo loại ca
+            {formatDate(dateFrom)}–{formatDate(dateTo)} · cộng phút dự kiến
+            của task liên kết theo Assignee · đơn vị phút
           </p>
         </div>
         <div className="capacityStaffContributionTools">
-          <div
-            className="capacityStaffContributionSwitch"
-            role="group"
-            aria-label="Chỉ số tỷ trọng tham gia ca quay"
-          >
-            {(Object.keys(
-              contributionMetricCopy,
-            ) as ShootContributionMetric[]).map((value) => (
-              <button
-                type="button"
-                key={value}
-                aria-pressed={metric === value}
-                onClick={() => onMetricChange(value)}
-              >
-                {contributionMetricCopy[value].label}
-              </button>
-            ))}
-          </div>
+          <details className="capacitySessionDropdown">
+            <summary>
+              Ca quay · {formatNumber(selectedCount)}/{formatNumber(sessions.length)}
+            </summary>
+            <div>
+              <span>CHỌN CA HIỂN THỊ</span>
+              <div className="capacitySessionDropdownActions">
+                <button
+                  type="button"
+                  onClick={() => setExcludedSessionIds([])}
+                >
+                  Chọn tất cả
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExcludedSessionIds(sessions.map((session) => session.id))
+                  }
+                >
+                  Bỏ chọn
+                </button>
+              </div>
+              <div className="capacitySessionDropdownOptions">
+                {sessionWorkloads.map(({ session, linkedTasks }) => (
+                  <button
+                    type="button"
+                    key={session.id}
+                    aria-pressed={!excludedSessionIds.includes(session.id)}
+                    onClick={() =>
+                      setExcludedSessionIds((current) =>
+                        current.includes(session.id)
+                          ? current.filter((id) => id !== session.id)
+                          : [...current, session.id],
+                      )
+                    }
+                  >
+                    <i aria-hidden="true">
+                      {excludedSessionIds.includes(session.id) ? "" : "✓"}
+                    </i>
+                    <span>
+                      <strong>{session.id}</strong>
+                      <small>
+                        {formatDate(session.date)} · {session.type || "Chưa phân loại"} · {formatNumber(linkedTasks.length)} task
+                      </small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </details>
           <HelpButton help={capacityHelp.staffContribution} />
         </div>
       </div>
-      <div className="capacityStaffContributionSummary">
-        <span>
-          <small>Nhân sự có tên</small>
-          <strong>{formatNumber(rows.length)}</strong>
-        </span>
-        <span>
-          <small>Ca phân bổ được</small>
-          <strong>
-            {formatNumber(stats.namedSessionCount)}/
-            {formatNumber(stats.sessionCount)}
-          </strong>
-        </span>
-        <span>
-          <small>Độ phủ dữ liệu</small>
-          <strong>{formatRate(stats.coveragePercentage)}</strong>
-        </span>
-        <span>
-          <small>Tỷ trọng cao nhất</small>
-          <strong>{topRow ? topRow.staffName : "—"}</strong>
-          <em>
-            {topRow
-              ? formatRate(metricCopy.percentage(topRow))
-              : "Chưa có dữ liệu"}
-          </em>
-        </span>
-      </div>
-      {rows.length ? (
-        <div className="capacityStaffContributionRows">
-          {rows.map((row, index) => {
-            const value = metricCopy.value(row);
-            const percentage = metricCopy.percentage(row);
-            return (
-              <button
-                type="button"
-                key={row.staffName}
-                onClick={() => onSelect(row)}
-                aria-label={
-                  row.staffName +
-                  ": " +
-                  formatRate(percentage) +
-                  " theo " +
-                  metricCopy.label
-                }
-              >
-                <span className="capacityStaffRank">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <span className="capacityStaffIdentity">
-                  <strong>{row.staffName}</strong>
-                  <small>
-                    {formatNumber(row.sessionCount)} ca · tham gia{" "}
-                    {formatMetric(row.participatedSessionUnits)} buổi 4 giờ
-                  </small>
-                </span>
-                <span className="capacityStaffContributionBar">
+      {staffNames.length && selectedSessions.length ? (
+        <>
+          <div className="capacityStaffLineLegend" aria-label="Nhân sự">
+            {staffNames.map((staffName, index) => {
+              const active = !hiddenStaffNames.includes(staffName);
+              return (
+                <button
+                  type="button"
+                  key={staffName}
+                  aria-pressed={active}
+                  onClick={() =>
+                    setHiddenStaffNames((current) =>
+                      active
+                        ? [...current, staffName]
+                        : current.filter((name) => name !== staffName),
+                    )
+                  }
+                >
                   <i
                     style={{
-                      width:
-                        Math.max(
-                          percentage ? 2 : 0,
-                          Math.min(100, percentage),
-                        ) + "%",
+                      background: staffParticipationColors[
+                        index % staffParticipationColors.length
+                      ],
                     }}
                   />
-                </span>
-                <span className="capacityStaffContributionValue">
-                  <strong>{formatMetric(value)}</strong>
-                  <small>{metricCopy.unit}</small>
-                </span>
-                <strong className="capacityStaffContributionRate">
-                  {formatRate(percentage)}
-                </strong>
-              </button>
-            );
-          })}
-        </div>
+                  {staffName}
+                </button>
+              );
+            })}
+          </div>
+          <div className="capacityStaffLineScroller">
+            <svg
+              className="capacityStaffLineChart"
+              viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+              style={{ minWidth: chartWidth }}
+              role="img"
+              aria-label="Biểu đồ thời gian nhân sự tham gia theo từng ca quay"
+            >
+              {yTicks.map((tick) => {
+                const y = yFor(tick);
+                return (
+                  <g key={tick}>
+                    <line
+                      className="capacityStaffLineGrid"
+                      x1={plot.left}
+                      x2={plot.right}
+                      y1={y}
+                      y2={y}
+                    />
+                    <text className="capacityStaffLineAxis" x={plot.left - 12} y={y + 4} textAnchor="end">
+                      {formatMetric(tick)}ph
+                    </text>
+                  </g>
+                );
+              })}
+              {selectedSessions.map((session, index) => {
+                const x = xFor(index);
+                return (
+                  <g key={session.id}>
+                    <line
+                      className="capacityStaffLineVertical"
+                      x1={x}
+                      x2={x}
+                      y1={plot.top}
+                      y2={plot.bottom}
+                    />
+                    <text className="capacityStaffLineSession" x={x} y={plot.bottom + 27} textAnchor="middle">
+                      {session.id}
+                    </text>
+                    <text className="capacityStaffLineDate" x={x} y={plot.bottom + 43} textAnchor="middle">
+                      {formatDate(session.date)}
+                    </text>
+                  </g>
+                );
+              })}
+              {staffNames.map((staffName, staffIndex) => {
+                if (hiddenStaffNames.includes(staffName)) return null;
+                const color =
+                  staffParticipationColors[
+                    staffIndex % staffParticipationColors.length
+                  ];
+                const points = selectedWorkloads.map((workload, index) => {
+                  const staffRow = workload.staffRows.find(
+                    (row) =>
+                      row.staffName.toLocaleLowerCase("vi") ===
+                      staffName.toLocaleLowerCase("vi"),
+                  );
+                  return {
+                    session: workload.session,
+                    tasks: staffRow?.tasks ?? [],
+                    x: xFor(index),
+                    minutes: staffRow?.minutes ?? 0,
+                  };
+                });
+                return (
+                  <g key={staffName}>
+                    <polyline
+                      fill="none"
+                      points={points
+                        .map((point) => `${point.x},${yFor(point.minutes)}`)
+                        .join(" ")}
+                      stroke={color}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="3"
+                    />
+                    {points.map((point) =>
+                      point.minutes ? (
+                        <g
+                          key={point.session.id}
+                          className="capacityStaffLinePoint"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`${staffName} · ${point.session.id} · ${formatMetric(point.minutes)} phút`}
+                          onClick={() =>
+                            onSelectPoint(
+                              staffName,
+                              point.session,
+                              point.tasks,
+                              point.minutes,
+                            )
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              onSelectPoint(
+                                staffName,
+                                point.session,
+                                point.tasks,
+                                point.minutes,
+                              );
+                            }
+                          }}
+                        >
+                          <circle cx={point.x} cy={yFor(point.minutes)} r="8" fill="transparent" />
+                          <circle cx={point.x} cy={yFor(point.minutes)} r="4.5" fill={color} />
+                          <text x={point.x} y={yFor(point.minutes) - 10} textAnchor="middle">
+                            {formatMetric(point.minutes)}ph
+                          </text>
+                        </g>
+                      ) : null,
+                    )}
+                  </g>
+                );
+              })}
+              <text className="capacityStaffLineAxisTitle" x={(plot.left + plot.right) / 2} y={chartHeight - 7} textAnchor="middle">
+                Ca quay
+              </text>
+              <text className="capacityStaffLineAxisTitle" transform={`translate(14 ${(plot.top + plot.bottom) / 2}) rotate(-90)`} textAnchor="middle">
+                Tổng phút dự kiến từ Tasklist
+              </text>
+            </svg>
+          </div>
+        </>
       ) : (
         <p className="capacityTypeEmpty">
-          Chưa có danh sách tên nhân sự trong các ca thuộc khoảng này.
+          {sessions.length
+            ? "Hãy chọn ít nhất một ca có danh sách nhân sự."
+            : "Chưa có ca quay trong khoảng thời gian này."}
         </p>
       )}
     </article>
@@ -1332,9 +1457,7 @@ export function MediaCapacitySection({
 }: MediaCapacitySectionProps) {
   const [workloadDisplayMode, setWorkloadDisplayMode] = useState<
     "hours" | "tasks"
-  >("hours");
-  const [staffContributionMetric, setStaffContributionMetric] =
-    useState<ShootContributionMetric>("time");
+  >("tasks");
   const commonFlowRange = useMemo(
     () => flowRangeFromGlobal(globalDateFrom, globalDateTo),
     [globalDateFrom, globalDateTo],
@@ -1382,9 +1505,7 @@ export function MediaCapacitySection({
     forecastOutputCount,
     isCompleteWeek,
     shootReference,
-    outputReference,
     shootTaskReference,
-    outputTaskReference,
     standardMinutes,
   } = flowViewModel;
   const baselineDateFrom = toInputDate(
@@ -1463,10 +1584,6 @@ export function MediaCapacitySection({
   const typeBaselineSessionUnits = typeBaselinePlan.rows.reduce(
     (total, row) => total + row.sessionUnits,
     0,
-  );
-  const staffContributionStats = useMemo(
-    () => calculateShootStaffContributions(typeBaselineSessions),
-    [typeBaselineSessions],
   );
   const trendDataFrom = toInputDate(viewModel.trendDateRange.from);
   const trendDataTo = toInputDate(viewModel.trendDateRange.to);
@@ -1831,6 +1948,52 @@ export function MediaCapacitySection({
           </CapacityFlowCard>
         </div>
 
+        <div className="capacityWorkloadIntro compact">
+          <div>
+            <span className="chartKicker">VỊ TRÍ SO VỚI VÙNG THƯỜNG</span>
+            <h3>Tải quay/chụp đang dưới, trong hay vượt vùng?</h3>
+          </div>
+          <div
+            className="capacityWorkloadSwitch"
+            role="group"
+            aria-label="Đơn vị hiển thị tải công việc"
+          >
+            <button
+              type="button"
+              aria-pressed={workloadDisplayMode === "hours"}
+              onClick={() => setWorkloadDisplayMode("hours")}
+            >
+              Giờ
+            </button>
+            <button
+              type="button"
+              aria-pressed={workloadDisplayMode === "tasks"}
+              onClick={() => setWorkloadDisplayMode("tasks")}
+            >
+              Task
+            </button>
+          </div>
+        </div>
+        <div className="capacityTopGrid single">
+          <CapacityCard
+            type="shoot"
+            title="Tải quay/chụp quy đổi"
+            actualMinutes={focusWeek.shootMinutes}
+            taskCount={focusWeek.shootTasks.length}
+            mappedCount={focusWeek.shootMapped}
+            reference={shootReference}
+            taskReference={shootTaskReference}
+            displayMode={workloadDisplayMode}
+            onClick={() =>
+              openStandardTasks(
+                `Quay/Chụp ước tính · ${focusWeek.label}`,
+                "Task Quay/Chụp dùng Ngày Bắt Đầu làm mốc tạm thời",
+                focusWeek.shootTasks,
+              )
+            }
+          />
+        </div>
+
         <ShootTypeBaselineChart
           plan={typeBaselinePlan}
           dateFrom={typeDateFrom}
@@ -1862,103 +2025,28 @@ export function MediaCapacitySection({
           }
         />
 
-        <StaffContributionChart
-          stats={staffContributionStats}
-          metric={staffContributionMetric}
+        <StaffParticipationChart
+          sessions={typeBaselineSessions}
+          tasks={data.tasks}
           dateFrom={typeRangeStart}
           dateTo={typeRangeEnd}
-          onMetricChange={setStaffContributionMetric}
-          onSelect={(row) => {
-            const metricCopy =
-              contributionMetricCopy[staffContributionMetric];
+          onSelectPoint={(staffName, session, staffTasks, minutes) => {
             onOpenDetail({
-              title: row.staffName + " · tỷ trọng tham gia ca quay",
+              title: staffName + " · " + session.id,
               subtitle:
-                formatDate(typeRangeStart) +
-                "–" +
-                formatDate(typeRangeEnd) +
+                formatDate(session.date) +
                 " · " +
-                formatNumber(row.sessionCount) +
-                " ca · " +
-                formatRate(metricCopy.percentage(row)) +
-                " theo " +
-                metricCopy.label.toLocaleLowerCase("vi") +
-                " · phân bổ đều theo số nhân sự của từng ca",
-              shootSessions: row.sessions,
-              shootContribution: {
-                staffName: row.staffName,
-                metric: staffContributionMetric,
-              },
+                (session.type || "Chưa phân loại") +
+                " · " +
+                formatNumber(staffTasks.length) +
+                " task · " +
+                formatMetric(minutes) +
+                " phút dự kiến",
+              tasks: staffTasks,
+              shootSessions: [session],
             });
           }}
         />
-
-        <div className="capacityWorkloadIntro">
-          <div>
-            <span className="chartKicker">GÓC NHÌN TẢI QUY ĐỔI</span>
-            <h3>Giờ chuẩn và số task theo cùng một tập công việc</h3>
-          </div>
-          <div
-            className="capacityWorkloadSwitch"
-            role="group"
-            aria-label="Đơn vị hiển thị tải công việc"
-          >
-            <button
-              type="button"
-              aria-pressed={workloadDisplayMode === "hours"}
-              onClick={() => setWorkloadDisplayMode("hours")}
-            >
-              Giờ
-            </button>
-            <button
-              type="button"
-              aria-pressed={workloadDisplayMode === "tasks"}
-              onClick={() => setWorkloadDisplayMode("tasks")}
-            >
-              Task
-            </button>
-          </div>
-          <p>
-            Chọn đơn vị nào thì số lớn, trạng thái và P25–P50–P75 đều
-            dùng đơn vị đó; đơn vị còn lại nằm ở dòng phụ.
-          </p>
-        </div>
-        <div className="capacityTopGrid">
-          <CapacityCard
-            type="shoot"
-            title="Tải quay/chụp quy đổi"
-            actualMinutes={focusWeek.shootMinutes}
-            taskCount={focusWeek.shootTasks.length}
-            mappedCount={focusWeek.shootMapped}
-            reference={shootReference}
-            taskReference={shootTaskReference}
-            displayMode={workloadDisplayMode}
-            onClick={() =>
-              openStandardTasks(
-                `Quay/Chụp ước tính · ${focusWeek.label}`,
-                "Task Quay/Chụp dùng Ngày Bắt Đầu làm mốc tạm thời",
-                focusWeek.shootTasks,
-              )
-            }
-          />
-          <CapacityCard
-            type="output"
-            title="Tải bàn giao quy đổi"
-            actualMinutes={focusWeek.outputMinutes}
-            taskCount={focusWeek.outputTasks.length}
-            mappedCount={focusWeek.outputMapped}
-            reference={outputReference}
-            taskReference={outputTaskReference}
-            displayMode={workloadDisplayMode}
-            onClick={() =>
-              openStandardTasks(
-                `Ấn phẩm bàn giao · ${focusWeek.label}`,
-                "Video/Graphic có Ngày Kiểm Duyệt trong tuần",
-                focusWeek.outputTasks,
-              )
-            }
-          />
-        </div>
 
         <CapacityTrend
           rows={trendSeries.rows}

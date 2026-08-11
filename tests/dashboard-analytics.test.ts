@@ -7,6 +7,7 @@ import {
   calculateMediaCapacity,
   calculateMediaTrendSeries,
   calculateShootStaffContributions,
+  calculateShootTaskMinutesByStaff,
   calculateShootTypeBaselinePlan,
   calculateShootTypeBaselines,
 } from "../features/dashboard/analytics/calculateMediaCapacity";
@@ -967,6 +968,51 @@ test("allocates shoot participation by time, tasks and products", () => {
   );
   assert.ok(
     Math.abs((chi?.timePercentage ?? 0) - 100 / 6) < 1e-9,
+  );
+});
+
+test("sums expected task minutes by assignee inside each shoot session", () => {
+  const sessions = [
+    {
+      id: "SESSION-01",
+      date: date(20),
+      duration: "Một buổi",
+      sessionUnits: 1,
+      taskCount: 3,
+      productCount: 0,
+      productCodes: [],
+      taskCodes: ["TASK-01", "TASK-02"],
+      type: "Bộ Sưu Tập",
+      timeWindow: "",
+      model: "",
+      staffNames: ["An", "Bình"],
+      staffCount: 2,
+      status: "Đóng",
+    },
+  ];
+  const result = calculateShootTaskMinutesByStaff(sessions, [
+    task("TASK-01", { assignee: "An", expectedMinutes: 45 }),
+    task("TASK-02", { assignee: "An", expectedMinutes: 75 }),
+    task("TASK-03", {
+      assignee: "Bình",
+      expectedMinutes: 60,
+      shootSession: "SESSION-01",
+    }),
+    task("TASK-OUTSIDE", {
+      assignee: "An",
+      expectedMinutes: 999,
+      shootSession: "SESSION-02",
+    }),
+  ]);
+
+  assert.equal(result[0].linkedTasks.length, 3);
+  assert.equal(
+    result[0].staffRows.find((row) => row.staffName === "An")?.minutes,
+    120,
+  );
+  assert.equal(
+    result[0].staffRows.find((row) => row.staffName === "Bình")?.minutes,
+    60,
   );
 });
 

@@ -187,7 +187,36 @@ test("DashboardFilters hides task backlog date on business dashboard", () => {
 test("Media shoot-type baseline uses an independent date range", () => {
   const data: DashboardData = {
     fileName: "media-baseline-range.xlsx",
-    tasks: [],
+    tasks: [
+      {
+        ...task(),
+        code: "JULY-TASK-01",
+        assignee: "An",
+        expectedMinutes: 90,
+        shootSession: "JULY-21",
+      },
+      {
+        ...task(),
+        code: "JULY-TASK-02",
+        assignee: "An",
+        expectedMinutes: 30,
+        shootSession: "JULY-21",
+      },
+      {
+        ...task(),
+        code: "JULY-TASK-03",
+        assignee: "Bình",
+        expectedMinutes: 60,
+        shootSession: "JULY-21",
+      },
+      {
+        ...task(),
+        code: "JULY-TASK-04",
+        assignee: "Chi",
+        expectedMinutes: 75,
+        shootSession: "JULY-28",
+      },
+    ],
     feedback: [],
     norms: [],
     publications: [],
@@ -263,40 +292,44 @@ test("Media shoot-type baseline uses an independent date range", () => {
   assert.ok(shootWorkloadValue);
   assert.ok(shootWorkloadP50);
   assert.ok(shootWorkloadReference);
-  assert.match(shootWorkloadValue.textContent ?? "", /giờ/);
+  assert.match(shootWorkloadValue.textContent ?? "", /task/);
   const taskModeButton = Array.from(
     container.querySelectorAll(".capacityWorkloadSwitch button"),
   ).find((button) => button.textContent === "Task");
   assert.ok(taskModeButton);
-  fireEvent.click(taskModeButton);
   assert.equal(taskModeButton.getAttribute("aria-pressed"), "true");
-  assert.match(shootWorkloadValue.textContent ?? "", /task/);
-  assert.match(shootWorkloadReference.textContent ?? "", /task/);
   fireEvent.click(screen.getByRole("button", { name: "Giờ" }));
   assert.match(shootWorkloadValue.textContent ?? "", /giờ/);
+  fireEvent.click(taskModeButton);
+  assert.match(shootWorkloadValue.textContent ?? "", /task/);
+  assert.match(shootWorkloadReference.textContent ?? "", /task/);
 
-  assert.ok(screen.getByText("Tỷ trọng tham gia ca quay"));
+  assert.ok(screen.getByText("Thời gian tham gia theo từng ca quay"));
+  assert.ok(screen.getByText("Ca quay · 1/1"));
   assert.ok(
-    screen.getByRole("button", {
-      name: "An: 50% theo Thời gian",
+    screen.getByRole("img", {
+      name: "Biểu đồ thời gian nhân sự tham gia theo từng ca quay",
     }),
   );
-  const contributionSwitch = screen.getByRole("group", {
-    name: "Chỉ số tỷ trọng tham gia ca quay",
+  const shootSessionOption = screen.getByRole("button", {
+    name: /^JULY-21.*Bộ Sưu Tập/,
   });
-  const contributionTaskButton = Array.from(
-    contributionSwitch.querySelectorAll("button"),
-  ).find((button) => button.textContent === "Task");
-  assert.ok(contributionTaskButton);
-  fireEvent.click(contributionTaskButton);
+  fireEvent.click(shootSessionOption);
+  assert.ok(screen.getByText("Ca quay · 0/1"));
+  fireEvent.click(shootSessionOption);
+  assert.ok(screen.getByText("Ca quay · 1/1"));
   fireEvent.click(
-    screen.getByRole("button", { name: "An: 50% theo Task" }),
+    screen.getByRole("button", { name: "An · JULY-21 · 120 phút" }),
   );
-  assert.equal(openedTrendDetail?.shootContribution?.staffName, "An");
-  assert.equal(openedTrendDetail?.shootContribution?.metric, "tasks");
+  assert.equal(openedTrendDetail?.tasks?.length, 2);
+  assert.equal(openedTrendDetail?.shootSessions?.length, 1);
+  assert.equal(openedTrendDetail?.shootSessions?.[0]?.id, "JULY-21");
+  assert.match(openedTrendDetail?.subtitle ?? "", /2 task · 120 phút/);
 
   assert.ok(screen.getByText("20/7/2026–26/7/2026"));
-  assert.ok(screen.getByRole("button", { name: /Bộ Sưu Tập/ }));
+  assert.ok(
+    screen.getByRole("button", { name: /^Bộ Sưu Tập1 buổi/ }),
+  );
   assert.equal(screen.queryByRole("button", { name: /Order Lại/ }), null);
   assert.equal(
     screen.getByRole("button", { name: "3M" }).getAttribute("aria-pressed"),
@@ -345,7 +378,7 @@ test("Media shoot-type baseline uses an independent date range", () => {
   });
 
   assert.ok(screen.getByText("27/7/2026–2/8/2026"));
-  assert.ok(screen.getByRole("button", { name: /Order Lại/ }));
+  assert.ok(screen.getByRole("button", { name: /^Order Lại1 buổi/ }));
   assert.equal(
     screen.queryByRole("button", { name: /Bộ Sưu Tập/ }),
     null,

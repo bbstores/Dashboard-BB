@@ -173,6 +173,19 @@ export type ShootStaffContributionStats = {
   attributedProductCount: number;
 };
 
+export type ShootStaffTaskMinutesRow = {
+  staffName: string;
+  tasks: Task[];
+  minutes: number;
+};
+
+export type ShootSessionTaskMinutes = {
+  session: ShootSession;
+  linkedTasks: Task[];
+  staffRows: ShootStaffTaskMinutesRow[];
+  totalMinutes: number;
+};
+
 const BASELINE_WEEK_COUNT = 8;
 const OFFICIAL_BASELINE_WEEK_COUNT = 12;
 const MIN_OFFICIAL_BASELINE_WEEKS = 8;
@@ -286,6 +299,59 @@ export function calculateShootStaffContributions(
     attributedTaskCount,
     attributedProductCount,
   };
+}
+
+export function calculateShootTaskMinutesByStaff(
+  sessions: ShootSession[],
+  tasks: Task[],
+): ShootSessionTaskMinutes[] {
+  const taskByCode = new Map(
+    tasks.map((task) => [normalizedKey(task.code), task]),
+  );
+
+  return sessions.map((session) => {
+    const sessionKey = normalizedKey(session.id);
+    const linkedTasks = new Map<string, Task>();
+
+    for (const taskCode of session.taskCodes) {
+      const task = taskByCode.get(normalizedKey(taskCode));
+      if (task) linkedTasks.set(normalizedKey(task.code), task);
+    }
+    for (const task of tasks) {
+      const taskSessionKeys = normalize(task.shootSession)
+        .split(/\s*[|,;\n]\s*/)
+        .map(normalizedKey)
+        .filter(Boolean);
+      if (taskSessionKeys.includes(sessionKey)) {
+        linkedTasks.set(normalizedKey(task.code), task);
+      }
+    }
+
+    const staffRows = new Map<string, ShootStaffTaskMinutesRow>();
+    for (const task of linkedTasks.values()) {
+      for (const staffName of assigneeNames(task.assignee)) {
+        const key = normalizedKey(staffName);
+        const row = staffRows.get(key) ?? {
+          staffName,
+          tasks: [],
+          minutes: 0,
+        };
+        row.tasks.push(task);
+        row.minutes += task.expectedMinutes;
+        staffRows.set(key, row);
+      }
+    }
+
+    const rows = Array.from(staffRows.values()).sort((left, right) =>
+      left.staffName.localeCompare(right.staffName, "vi"),
+    );
+    return {
+      session,
+      linkedTasks: Array.from(linkedTasks.values()),
+      staffRows: rows,
+      totalMinutes: rows.reduce((total, row) => total + row.minutes, 0),
+    };
+  });
 }
 
 function startOfWeek(value: Date) {
