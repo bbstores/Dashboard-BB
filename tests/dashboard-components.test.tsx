@@ -576,6 +576,9 @@ test("KPI selection opens the matching detail data", () => {
 
   assert.ok(screen.getByText("ANON-DETAIL-001"));
   assert.ok(screen.getByText("Anonymous detail task"));
+  assert.ok(screen.getByText("Bắt đầu"));
+  assert.ok(screen.getByText("20/7/2026"));
+  assert.ok(screen.getByText("Thực tế nhận"));
   assert.ok(screen.getByText("09:05 20/07/2026"));
   fireEvent.click(
     screen.getByRole("button", { name: "Đóng chi tiết" }),

@@ -481,9 +481,9 @@ function detailColumns(detail: DetailView): DetailColumn[] {
       search: (record) =>
         record.kind === "task"
           ? [
+              formatDate(record.value.startDate),
               formatDateTime(
-                record.value.receivedStartDate ??
-                  record.value.startDate,
+                record.value.receivedStartDate ?? null,
               ),
               formatDateTime(record.value.inspectionDate),
               formatDateTime(record.value.completedDate),
@@ -529,20 +529,26 @@ function TaskDetailRow({
   const hasBusinessApproval = Boolean(task.businessApprovalDate);
   const milestones = [
     {
-      label: "Bắt đầu",
+      label: "Thực tế nhận",
       date: task.receivedStartDate
         ? formatDateTime(task.receivedStartDate)
-        : formatDate(task.startDate),
+        : "Chưa có dữ liệu",
+      topLabel: "Bắt đầu",
+      topDate: formatDate(task.startDate),
       reached: Boolean(task.receivedStartDate || task.startDate),
     },
     {
       label: "Kiểm duyệt",
       date: formatDateTime(task.inspectionDate),
+      topLabel: "",
+      topDate: "",
       reached: Boolean(task.inspectionDate),
     },
     {
       label: "Hoàn thành",
       date: formatDateTime(task.completedDate),
+      topLabel: "",
+      topDate: "",
       reached:
         Boolean(task.completedDate) ||
         ["done", "kinh doanh done"].includes(
@@ -554,6 +560,8 @@ function TaskDetailRow({
           {
             label: "Kinh doanh duyệt",
             date: formatDateTime(task.businessApprovalDate),
+            topLabel: "",
+            topDate: "",
             reached: true,
           },
         ]
@@ -605,9 +613,19 @@ function TaskDetailRow({
             className={milestone.reached ? "reachedMilestone" : ""}
             key={milestone.label}
           >
+            <span className="taskTimelineAbove">
+              {milestone.topLabel && (
+                <>
+                  <small>{milestone.topLabel}</small>
+                  <strong>{milestone.topDate}</strong>
+                </>
+              )}
+            </span>
             <i>{String(milestoneIndex + 1).padStart(2, "0")}</i>
-            <small>{milestone.label}</small>
-            <strong>{milestone.date}</strong>
+            <span className="taskTimelineBelow">
+              <small>{milestone.label}</small>
+              <strong>{milestone.date}</strong>
+            </span>
           </span>
         ))}
       </td>

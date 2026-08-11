@@ -700,7 +700,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(115px, 1fr));
   padding-bottom: 22px !important;
-  padding-top: 22px !important;
+  padding-top: 16px !important;
   position: relative;
 }
 .taskTimeline.stages4 {
@@ -712,11 +712,12 @@
   left: 31px;
   position: absolute;
   right: 31px;
-  top: 32px;
+  top: 60px;
 }
 .taskTimeline > span {
   display: grid;
   gap: 4px;
+  grid-template-rows: 34px 22px auto;
   justify-items: start;
   position: relative;
   z-index: 1;
@@ -741,21 +742,36 @@
   justify-content: center;
   width: 22px;
 }
+.taskTimelineAbove,
+.taskTimelineBelow {
+  display: grid;
+  gap: 3px;
+  justify-items: inherit;
+}
+.taskTimelineAbove {
+  align-content: end;
+}
+.taskTimelineBelow {
+  align-content: start;
+}
 .taskTimeline .reachedMilestone i {
   background: #d9ff72;
   color: #174f3d;
   box-shadow: 0 0 0 2px rgba(217, 255, 114, .28);
 }
-.taskTimeline small {
+.taskTimelineAbove small,
+.taskTimelineBelow small {
   color: var(--muted);
   font-size: 8px;
   text-transform: uppercase;
 }
-.taskTimeline strong {
+.taskTimelineAbove strong,
+.taskTimelineBelow strong {
   font-size: 9px;
   white-space: nowrap;
 }
-.reachedMilestone strong {
+.reachedMilestone .taskTimelineAbove strong,
+.reachedMilestone .taskTimelineBelow strong {
   color: #174f3d;
 }
 .minutesCell {
