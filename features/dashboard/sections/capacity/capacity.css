@@ -555,13 +555,13 @@
 .capacitySessionDropdownOptions > button > span { display: grid; gap: 2px; }
 .capacitySessionDropdownOptions strong { font-size: 8px; }
 .capacitySessionDropdownOptions small { color: #aebfb8; font-size: 7px; }
-.capacityStaffLineLegend {
+.capacityStaffBarLegend {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 14px;
   margin-top: 18px;
 }
-.capacityStaffLineLegend button {
+.capacityStaffBarLegend button {
   align-items: center;
   background: transparent;
   border: 0;
@@ -572,26 +572,29 @@
   gap: 6px;
   padding: 2px 0;
 }
-.capacityStaffLineLegend button[aria-pressed="false"] { opacity: .35; }
-.capacityStaffLineLegend i { border-radius: 50%; height: 8px; width: 8px; }
-.capacityStaffLineScroller { margin-top: 14px; overflow-x: auto; padding-bottom: 3px; }
-.capacityStaffLineChart { display: block; width: 100%; }
-.capacityStaffLineGrid { stroke: rgba(255, 255, 255, .13); stroke-dasharray: 5 8; }
-.capacityStaffLineVertical { stroke: rgba(255, 255, 255, .045); }
-.capacityStaffLineAxis,
-.capacityStaffLineSession,
-.capacityStaffLineDate,
-.capacityStaffLineAxisTitle { fill: #aebfb8; font-size: 9px; }
-.capacityStaffLineSession { fill: #fff; font-weight: 800; }
-.capacityStaffLineDate { font-size: 8px; }
-.capacityStaffLineAxisTitle {
+.capacityStaffBarLegend button[aria-pressed="false"] { opacity: .35; }
+.capacityStaffBarLegend i { border-radius: 2px; height: 8px; width: 8px; }
+.capacityStaffBarScroller { margin-top: 14px; overflow-x: auto; padding-bottom: 3px; }
+.capacityStaffBarChart { display: block; width: 100%; }
+.capacityStaffBarGrid { stroke: rgba(255, 255, 255, .13); stroke-dasharray: 5 8; }
+.capacityStaffBarGroup {
+  fill: rgba(255, 255, 255, .018);
+  stroke: rgba(255, 255, 255, .045);
+}
+.capacityStaffBarAxis,
+.capacityStaffBarSession,
+.capacityStaffBarDate,
+.capacityStaffBarAxisTitle { fill: #aebfb8; font-size: 9px; }
+.capacityStaffBarSession { fill: #fff; font-weight: 800; }
+.capacityStaffBarDate { font-size: 8px; }
+.capacityStaffBarAxisTitle {
   fill: #d9ff72;
   font-size: 8px;
   font-weight: 850;
   letter-spacing: .06em;
 }
-.capacityStaffLinePoint { cursor: pointer; outline: none; }
-.capacityStaffLinePoint text {
+.capacityStaffBarPoint { cursor: pointer; outline: none; }
+.capacityStaffBarPoint text {
   fill: #fff4d0;
   font-size: 8px;
   font-weight: 850;
@@ -599,8 +602,18 @@
   stroke: #174f3d;
   stroke-width: 3px;
 }
-.capacityStaffLinePoint:focus-visible circle:last-of-type,
-.capacityStaffLinePoint:hover circle:last-of-type { stroke: #fff; stroke-width: 2px; }
+.capacityStaffBarHit { fill: transparent; }
+.capacityStaffBar {
+  opacity: .92;
+  transition: filter .15s ease, opacity .15s ease;
+}
+.capacityStaffBarPoint:focus-visible .capacityStaffBar,
+.capacityStaffBarPoint:hover .capacityStaffBar {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .35));
+  opacity: 1;
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
 .capacityWorkloadIntro {
   border-top: 1px solid rgba(255, 255, 255, .14);
   margin-top: 30px;

@@ -170,7 +170,7 @@ const capacityHelp: Record<
     calculation:
       "Task được liên kết bằng danh sách mã task trong Lịch Quay hoặc cột Ca Quay trong Tasklist. Trong từng ca, hệ thống nhóm task theo Assignee và cộng Số phút dự kiến của các task đó.",
     example:
-      "Trong ca CQ-081, An có ba task 30, 45 và 60 phút thì điểm của An là 135 phút.",
+      "Trong ca CQ-081, An có ba task 30, 45 và 60 phút thì cột của An là 135 phút.",
     note:
       "Nhân sự có tên trong lịch nhưng không có task được giao sẽ ở mức 0. Task chưa có Assignee được gom vào nhóm Chưa có assignee để không thất thoát khối lượng.",
   },
@@ -696,7 +696,17 @@ function StaffParticipationChart({
       ),
     ).values(),
   ).sort((left, right) => left.localeCompare(right, "vi"));
-  const chartWidth = Math.max(860, selectedSessions.length * 145);
+  const activeStaffNames = staffNames.filter(
+    (staffName) => !hiddenStaffNames.includes(staffName),
+  );
+  const groupWidth = Math.max(
+    180,
+    activeStaffNames.length * 44 + 36,
+  );
+  const chartWidth = Math.max(
+    860,
+    84 + selectedSessions.length * groupWidth,
+  );
   const chartHeight = 390;
   const plot = { left: 60, right: chartWidth - 24, top: 24, bottom: 310 };
   const maxMinutes = Math.max(
@@ -707,13 +717,21 @@ function StaffParticipationChart({
   );
   const yMax = Math.max(60, Math.ceil(maxMinutes / 60) * 60);
   const yTicks = Array.from({ length: 5 }, (_, index) => (yMax / 4) * index);
+  const plotWidth = plot.right - plot.left;
+  const sessionSlotWidth = plotWidth / Math.max(1, selectedSessions.length);
   const xFor = (index: number) =>
-    selectedSessions.length <= 1
-      ? (plot.left + plot.right) / 2
-      : plot.left +
-        (index / (selectedSessions.length - 1)) * (plot.right - plot.left);
+    plot.left + sessionSlotWidth * (index + 0.5);
   const yFor = (minutes: number) =>
     plot.bottom - (minutes / yMax) * (plot.bottom - plot.top);
+  const barWidth = 28;
+  const barGap = 14;
+  const barGroupWidth = activeStaffNames.length
+    ? activeStaffNames.length * barWidth +
+      (activeStaffNames.length - 1) * barGap
+    : 0;
+  const barXFor = (sessionIndex: number, staffIndex: number) =>
+    xFor(sessionIndex) - barGroupWidth / 2 +
+    staffIndex * (barWidth + barGap);
   const selectedCount = selectedSessions.length;
 
   return (
@@ -730,7 +748,8 @@ function StaffParticipationChart({
         <div className="capacityStaffContributionTools">
           <details className="capacitySessionDropdown">
             <summary>
-              Ca quay · {formatNumber(selectedCount)}/{formatNumber(sessions.length)}
+              Ca quay · {formatNumber(selectedCount)}/
+              {formatNumber(sessions.length)}
             </summary>
             <div>
               <span>CHỌN CA HIỂN THỊ</span>
@@ -783,7 +802,7 @@ function StaffParticipationChart({
       </div>
       {staffNames.length && selectedSessions.length ? (
         <>
-          <div className="capacityStaffLineLegend" aria-label="Nhân sự">
+          <div className="capacityStaffBarLegend" aria-label="Nhân sự">
             {staffNames.map((staffName, index) => {
               const active = !hiddenStaffNames.includes(staffName);
               return (
@@ -811,26 +830,31 @@ function StaffParticipationChart({
               );
             })}
           </div>
-          <div className="capacityStaffLineScroller">
+          <div className="capacityStaffBarScroller">
             <svg
-              className="capacityStaffLineChart"
+              className="capacityStaffBarChart"
               viewBox={`0 0 ${chartWidth} ${chartHeight}`}
               style={{ minWidth: chartWidth }}
               role="img"
-              aria-label="Biểu đồ thời gian nhân sự tham gia theo từng ca quay"
+              aria-label="Biểu đồ cột thời gian nhân sự tham gia theo từng ca quay"
             >
               {yTicks.map((tick) => {
                 const y = yFor(tick);
                 return (
                   <g key={tick}>
                     <line
-                      className="capacityStaffLineGrid"
+                      className="capacityStaffBarGrid"
                       x1={plot.left}
                       x2={plot.right}
                       y1={y}
                       y2={y}
                     />
-                    <text className="capacityStaffLineAxis" x={plot.left - 12} y={y + 4} textAnchor="end">
+                    <text
+                      className="capacityStaffBarAxis"
+                      x={plot.left - 12}
+                      y={y + 4}
+                      textAnchor="end"
+                    >
                       {formatMetric(tick)}ph
                     </text>
                   </g>
@@ -840,95 +864,122 @@ function StaffParticipationChart({
                 const x = xFor(index);
                 return (
                   <g key={session.id}>
-                    <line
-                      className="capacityStaffLineVertical"
-                      x1={x}
-                      x2={x}
-                      y1={plot.top}
-                      y2={plot.bottom}
+                    <rect
+                      className="capacityStaffBarGroup"
+                      x={x - sessionSlotWidth / 2 + 6}
+                      y={plot.top}
+                      width={Math.max(0, sessionSlotWidth - 12)}
+                      height={plot.bottom - plot.top}
                     />
-                    <text className="capacityStaffLineSession" x={x} y={plot.bottom + 27} textAnchor="middle">
+                    <text
+                      className="capacityStaffBarSession"
+                      x={x}
+                      y={plot.bottom + 27}
+                      textAnchor="middle"
+                    >
                       {session.id}
                     </text>
-                    <text className="capacityStaffLineDate" x={x} y={plot.bottom + 43} textAnchor="middle">
+                    <text
+                      className="capacityStaffBarDate"
+                      x={x}
+                      y={plot.bottom + 43}
+                      textAnchor="middle"
+                    >
                       {formatDate(session.date)}
                     </text>
                   </g>
                 );
               })}
-              {staffNames.map((staffName, staffIndex) => {
-                if (hiddenStaffNames.includes(staffName)) return null;
-                const color =
-                  staffParticipationColors[
-                    staffIndex % staffParticipationColors.length
-                  ];
-                const points = selectedWorkloads.map((workload, index) => {
-                  const staffRow = workload.staffRows.find(
-                    (row) =>
-                      row.staffName.toLocaleLowerCase("vi") ===
-                      staffName.toLocaleLowerCase("vi"),
-                  );
-                  return {
-                    session: workload.session,
-                    tasks: staffRow?.tasks ?? [],
-                    x: xFor(index),
-                    minutes: staffRow?.minutes ?? 0,
-                  };
-                });
-                return (
-                  <g key={staffName}>
-                    <polyline
-                      fill="none"
-                      points={points
-                        .map((point) => `${point.x},${yFor(point.minutes)}`)
-                        .join(" ")}
-                      stroke={color}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="3"
-                    />
-                    {points.map((point) =>
-                      point.minutes ? (
-                        <g
-                          key={point.session.id}
-                          className="capacityStaffLinePoint"
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`${staffName} · ${point.session.id} · ${formatMetric(point.minutes)} phút`}
-                          onClick={() =>
+              {selectedWorkloads.map((workload, sessionIndex) => (
+                <g key={workload.session.id}>
+                  {activeStaffNames.map(
+                    (staffName, activeStaffIndex) => {
+                      const staffIndex = staffNames.indexOf(staffName);
+                      const color =
+                        staffParticipationColors[
+                          staffIndex % staffParticipationColors.length
+                        ];
+                      const staffRow = workload.staffRows.find(
+                        (row) =>
+                          row.staffName.toLocaleLowerCase("vi") ===
+                          staffName.toLocaleLowerCase("vi"),
+                      );
+                    const minutes = staffRow?.minutes ?? 0;
+                    if (!minutes) return null;
+                    const x = barXFor(sessionIndex, activeStaffIndex);
+                    const y = yFor(minutes);
+                    return (
+                      <g
+                        key={staffName}
+                        className="capacityStaffBarPoint"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`${staffName} · ${workload.session.id} · ${formatMetric(minutes)} phút`}
+                        onClick={() =>
+                          onSelectPoint(
+                            staffName,
+                            workload.session,
+                            staffRow?.tasks ?? [],
+                            minutes,
+                          )
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
                             onSelectPoint(
                               staffName,
-                              point.session,
-                              point.tasks,
-                              point.minutes,
-                            )
+                              workload.session,
+                              staffRow?.tasks ?? [],
+                              minutes,
+                            );
                           }
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              onSelectPoint(
-                                staffName,
-                                point.session,
-                                point.tasks,
-                                point.minutes,
-                              );
-                            }
-                          }}
+                        }}
+                      >
+                        <rect
+                          className="capacityStaffBarHit"
+                          x={x - 4}
+                          y={Math.min(y - 8, plot.bottom - 32)}
+                          width={barWidth + 8}
+                          height={Math.max(32, plot.bottom - y + 12)}
+                        />
+                        <rect
+                          className="capacityStaffBar"
+                          x={x}
+                          y={y}
+                          width={barWidth}
+                          height={plot.bottom - y}
+                          rx="5"
+                          fill={color}
+                        />
+                        <text
+                          x={x + barWidth / 2}
+                          y={y - 9}
+                          textAnchor="middle"
                         >
-                          <circle cx={point.x} cy={yFor(point.minutes)} r="8" fill="transparent" />
-                          <circle cx={point.x} cy={yFor(point.minutes)} r="4.5" fill={color} />
-                          <text x={point.x} y={yFor(point.minutes) - 10} textAnchor="middle">
-                            {formatMetric(point.minutes)}ph
-                          </text>
-                        </g>
-                      ) : null,
-                    )}
-                  </g>
-                );
-              })}
-              <text className="capacityStaffLineAxisTitle" x={(plot.left + plot.right) / 2} y={chartHeight - 7} textAnchor="middle">
+                          {formatMetric(minutes)}ph
+                        </text>
+                        <title>
+                          {staffName} · {workload.session.id} · {formatMetric(minutes)} phút
+                        </title>
+                      </g>
+                    );
+                    },
+                  )}
+                </g>
+              ))}
+              <text
+                className="capacityStaffBarAxisTitle"
+                x={(plot.left + plot.right) / 2}
+                y={chartHeight - 7}
+                textAnchor="middle"
+              >
                 Ca quay
               </text>
-              <text className="capacityStaffLineAxisTitle" transform={`translate(14 ${(plot.top + plot.bottom) / 2}) rotate(-90)`} textAnchor="middle">
+              <text
+                className="capacityStaffBarAxisTitle"
+                transform={`translate(14 ${(plot.top + plot.bottom) / 2}) rotate(-90)`}
+                textAnchor="middle"
+              >
                 Tổng phút dự kiến từ Tasklist
               </text>
             </svg>

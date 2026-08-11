@@ -291,9 +291,11 @@ test("Media shoot-type baseline uses an independent date range", () => {
   assert.ok(screen.getByText("Ca quay · 1/1"));
   assert.ok(
     screen.getByRole("img", {
-      name: "Biểu đồ thời gian nhân sự tham gia theo từng ca quay",
+      name: "Biểu đồ cột thời gian nhân sự tham gia theo từng ca quay",
     }),
   );
+  assert.ok(container.querySelector(".capacityStaffBar"));
+  assert.equal(container.querySelector("polyline"), null);
   const shootSessionOption = screen.getByRole("button", {
     name: /^JULY-21.*Bộ Sưu Tập/,
   });
