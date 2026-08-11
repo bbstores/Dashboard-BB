@@ -259,6 +259,7 @@
   font-style: normal;
 }
 .postingNormTable {
+  --posting-norm-columns: minmax(220px, 1.8fr) 110px 100px 80px 80px minmax(170px, 1fr);
   margin-top: 16px;
   overflow-x: auto;
   padding-bottom: 3px;
@@ -268,8 +269,9 @@
   align-items: center;
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(180px, 1.6fr) 100px 90px 70px 70px minmax(130px, 1fr);
-  min-width: 800px;
+  grid-template-columns: var(--posting-norm-columns);
+  min-width: 900px;
+  width: 100%;
 }
 .postingNormTableHeader {
   color: var(--muted);
@@ -280,6 +282,7 @@
   text-transform: uppercase;
 }
 .postingNormRow {
+  appearance: none;
   background: rgba(255, 255, 255, .55);
   border: 0;
   border-left: 3px solid transparent;
