@@ -287,6 +287,47 @@ test("Media shoot-type baseline uses an independent date range", () => {
   assert.ok(demandCard.querySelector(".capacityQuantityBand"));
   assert.equal(container.querySelector(".capacityMetricCard"), null);
 
+  const demandNewButton = Array.from(
+    demandCard.querySelectorAll<HTMLButtonElement>(
+      ".capacityFlowBreakdownButton",
+    ),
+  ).find((button) => button.textContent?.includes("task mới trong kỳ"));
+  assert.ok(demandNewButton);
+  fireEvent.click(demandNewButton);
+  assert.match(
+    openedTrendDetail?.title ?? "",
+    /Task Quay\/Chụp mới trong kỳ/,
+  );
+
+  const sessionsCard = container.querySelector(".capacityFlowCard.sessions");
+  assert.ok(sessionsCard);
+  const scheduledTaskButton = Array.from(
+    sessionsCard.querySelectorAll<HTMLButtonElement>(
+      ".capacityFlowBreakdownButton",
+    ),
+  ).find((button) => button.textContent?.includes("task đã xếp cả tuần"));
+  assert.ok(scheduledTaskButton);
+  fireEvent.click(scheduledTaskButton);
+  assert.match(openedTrendDetail?.title ?? "", /Task đã xếp ca/);
+  assert.equal(openedTrendDetail?.shootSessions?.length, 1);
+
+  const outputsCard = container.querySelector(".capacityFlowCard.outputs");
+  assert.ok(outputsCard);
+  const outputNewButton = Array.from(
+    outputsCard.querySelectorAll<HTMLButtonElement>(
+      ".capacityFlowBreakdownButton",
+    ),
+  ).find((button) =>
+    button.textContent?.includes("task ấn phẩm mới trong kỳ"),
+  );
+  assert.ok(outputNewButton);
+  fireEvent.click(outputNewButton);
+  assert.match(
+    openedTrendDetail?.title ?? "",
+    /Task ấn phẩm mới trong kỳ/,
+  );
+  assert.equal(openedTrendDetail?.tasks?.length, 4);
+
   assert.ok(screen.getByText("Thời gian tham gia theo từng ca quay"));
   assert.ok(screen.getByText("Ca quay · 1/1"));
   assert.ok(

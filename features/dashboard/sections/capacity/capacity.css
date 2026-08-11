@@ -123,12 +123,35 @@
   background: transparent;
   border: 0;
   color: inherit;
-  cursor: pointer;
   display: block;
   margin-top: 22px;
   padding: 0;
   text-align: left;
   width: 100%;
+}
+.capacityFlowSummary,
+.capacityFlowReference {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: block;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+.capacityFlowSummary:focus-visible,
+.capacityFlowReference:focus-visible,
+.capacityFlowBreakdownButton:focus-visible {
+  outline: 2px solid #d9ff72;
+  outline-offset: 3px;
+}
+.capacityFlowReference {
+  border-radius: 10px;
+}
+.capacityFlowReference:hover .capacityQuantityBand {
+  background: rgba(255, 255, 255, .12);
 }
 .capacityFlowPrimary {
   align-items: baseline;
@@ -200,31 +223,53 @@
   margin-top: 15px;
   padding-top: 14px;
 }
-.capacityFlowBreakdown span {
+.capacityFlowBreakdownButton {
   align-items: baseline;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
   color: #b9cac3;
+  cursor: pointer;
   display: flex;
+  font: inherit;
   font-size: 9px;
   gap: 7px;
+  padding: 3px 4px;
+  text-align: left;
+  width: 100%;
 }
-.capacityFlowBreakdown b {
+.capacityFlowBreakdownButton:hover {
+  background: rgba(255, 255, 255, .06);
+  color: #fff;
+}
+.capacityFlowBreakdownButton b {
   color: #fff;
   font-size: 14px;
 }
-.capacityFlowBreakdown .flowAdded b {
+.capacityFlowBreakdownButton.flowAdded b {
   color: #d9ff72;
 }
-.capacityFlowBreakdown .flowRemoved b {
+.capacityFlowBreakdownButton.flowRemoved b {
   color: #f3b562;
 }
-.capacityFlowBreakdown .flowClosing {
+.capacityFlowBreakdownButton.flowClosing {
   background: rgba(255, 255, 255, .08);
   border-radius: 8px;
   margin: 1px -7px;
   padding: 8px 7px;
+  width: calc(100% + 14px);
 }
-.capacityFlowBreakdown .flowClosing b {
+.capacityFlowBreakdownButton.flowClosing b {
   color: #fff;
+}
+.capacityFlowBreakdownCluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.capacityFlowBreakdownCluster .capacityFlowBreakdownButton {
+  flex: 0 0 auto;
+  width: auto;
 }
 .capacityEvidenceHint {
   color: #d9ff72;

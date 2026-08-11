@@ -354,6 +354,26 @@ function QuantityBand({
   );
 }
 
+function FlowBreakdownButton({
+  className = "",
+  onClick,
+  children,
+}: {
+  className?: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className={`capacityFlowBreakdownButton ${className}`.trim()}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
 function CapacityFlowCard({
   type,
   kicker,
@@ -393,41 +413,48 @@ function CapacityFlowCard({
         </div>
         <HelpButton help={help} />
       </div>
-      <button
-        type="button"
-        className="capacityFlowBody"
-        onClick={onClick}
-      >
-        <div className="capacityFlowPrimary">
-          <strong>{formatMetric(primaryValue)}</strong>
-          <span>{primaryUnit}</span>
-          {status && (
-            <i className={`capacityBandStatus ${status.className}`}>
-              {status.label}
-            </i>
-          )}
-        </div>
-        {!completeWeek && forecastValue !== undefined && (
-          <div className="capacityForecast">
-            <span>THỰC TẾ ĐẾN HIỆN TẠI</span>
-            <strong>
-              Dự báo hết tuần {formatMetric(forecastValue)} {primaryUnit}
-            </strong>
+      <div className="capacityFlowBody">
+        <button
+          type="button"
+          className="capacityFlowSummary"
+          aria-label={`${title}: ${formatMetric(primaryValue)} ${primaryUnit}`}
+          onClick={onClick}
+        >
+          <div className="capacityFlowPrimary">
+            <strong>{formatMetric(primaryValue)}</strong>
+            <span>{primaryUnit}</span>
+            {status && (
+              <i className={`capacityBandStatus ${status.className}`}>
+                {status.label}
+              </i>
+            )}
           </div>
-        )}
+          {!completeWeek && forecastValue !== undefined && (
+            <div className="capacityForecast">
+              <span>THỰC TẾ ĐẾN HIỆN TẠI</span>
+              <strong>
+                Dự báo hết tuần {formatMetric(forecastValue)} {primaryUnit}
+              </strong>
+            </div>
+          )}
+        </button>
         {reference && (
-          <>
+          <button
+            type="button"
+            className="capacityFlowReference"
+            onClick={onOpenBaseline ?? onClick}
+          >
             <p className="capacityFlowP50">
               {formatRate(reference.percentage)} so với P50
             </p>
             <QuantityBand reference={reference} unit={primaryUnit} />
-          </>
+          </button>
         )}
         <div className="capacityFlowBreakdown">{children}</div>
         <small className="capacityEvidenceHint">
-          Nhấn để xem bảng dẫn chứng
+          Nhấn từng dòng để xem đúng bảng dẫn chứng
         </small>
-      </button>
+      </div>
       {onOpenBaseline && (
         <button
           type="button"
@@ -1744,6 +1771,19 @@ export function MediaCapacitySection({
               focusFullWeek.shootTasks.length
             }
             completeWeek={isCompleteWeek}
+            baselineLabel={`baseline ${officialBaseline.versionLabel}`}
+            onOpenBaseline={() =>
+              openStandardTasks(
+                `Task Quay/Chụp tạo baseline ${officialBaseline.versionLabel}`,
+                `${officialBaseline.windowLabel} · tồn đầu tuần cộng task mới trong tuần`,
+                uniqueTasks(
+                  officialBaseline.weeks.flatMap((week) => [
+                    ...week.shootOpeningBacklogTasks,
+                    ...week.shootTasks,
+                  ]),
+                ),
+              )
+            }
             help={capacityHelp.demand}
             onClick={() =>
               openStandardTasks(
@@ -1756,26 +1796,70 @@ export function MediaCapacitySection({
               )
             }
           >
-            <span className="flowOpening">
+            <FlowBreakdownButton
+              className="flowOpening"
+              onClick={() =>
+                openStandardTasks(
+                  `Task Quay/Chụp tồn đầu kỳ · ${focusWeek.label}`,
+                  "Đã bắt đầu trước kỳ và chưa được kiểm duyệt trước đầu kỳ",
+                  focusWeek.shootOpeningBacklogTasks,
+                )
+              }
+            >
               <b>{formatNumber(focusWeek.shootOpeningBacklogTasks.length)}</b>
               tồn đầu kỳ
-            </span>
-            <span className="flowAdded">
+            </FlowBreakdownButton>
+            <FlowBreakdownButton
+              className="flowAdded"
+              onClick={() =>
+                openStandardTasks(
+                  `Task Quay/Chụp mới trong kỳ · ${focusWeek.label}`,
+                  "Task có Ngày Bắt Đầu nằm trong khoảng đang chọn",
+                  focusWeek.shootTasks,
+                )
+              }
+            >
               <b>+{formatNumber(focusWeek.shootTasks.length)}</b>
               task mới trong kỳ
-            </span>
-            <span className="flowRemoved">
+            </FlowBreakdownButton>
+            <FlowBreakdownButton
+              className="flowRemoved"
+              onClick={() =>
+                openStandardTasks(
+                  `Task Quay/Chụp đã bàn giao · ${focusWeek.label}`,
+                  "Task có Ngày Kiểm Duyệt trong kỳ, gồm task tồn và task mới",
+                  focusWeek.shootHandedTasks,
+                )
+              }
+            >
               <b>−{formatNumber(focusWeek.shootHandedTasks.length)}</b>
               đã bàn giao · {formatNumber(focusWeek.shootHandedCarryTasks.length)} tồn + {formatNumber(focusWeek.shootHandedNewTasks.length)} mới
-            </span>
-            <span className="flowClosing">
+            </FlowBreakdownButton>
+            <FlowBreakdownButton
+              className="flowClosing"
+              onClick={() =>
+                openStandardTasks(
+                  `Task Quay/Chụp còn tồn cuối kỳ · ${focusWeek.label}`,
+                  "Tồn đầu kỳ cộng task mới nhưng chưa được kiểm duyệt tại cuối kỳ",
+                  focusWeek.shootClosingBacklogTasks,
+                )
+              }
+            >
               <b>{formatNumber(focusWeek.shootClosingBacklogTasks.length)}</b>
               còn tồn tại cuối kỳ
-            </span>
-            <span>
+            </FlowBreakdownButton>
+            <FlowBreakdownButton
+              onClick={() =>
+                openStandardTasks(
+                  `Task mới đã có Ca Quay · ${focusWeek.label}`,
+                  "Task Quay/Chụp mới trong kỳ có giá trị tại cột Ca Quay",
+                  focusWeek.linkedShootTasks,
+                )
+              }
+            >
               <b>{formatRate(shootCoverage)}</b>
               task mới đã có Ca Quay
-            </span>
+            </FlowBreakdownButton>
           </CapacityFlowCard>
 
           <CapacityFlowCard
@@ -1807,22 +1891,49 @@ export function MediaCapacitySection({
               })
             }
           >
-            <span>
+            <FlowBreakdownButton
+              onClick={() =>
+                onOpenDetail({
+                  title: `Task đã xếp ca · ${focusWeek.label}`,
+                  subtitle:
+                    "Các ca quay trong kỳ; Tổng Số Task được lấy từ Lịch Quay",
+                  shootSessions: focusFullWeek.shootSessions,
+                })
+              }
+            >
               <b>{formatNumber(focusFullWeek.scheduledTaskCount)}</b>
               task đã xếp cả tuần · P50{" "}
               {formatMetric(officialBaseline.scheduledTaskReference.p50)}
-            </span>
-            <span>
+            </FlowBreakdownButton>
+            <FlowBreakdownButton
+              onClick={() =>
+                onOpenDetail({
+                  title: `Mã sản phẩm đã xếp ca · ${focusWeek.label}`,
+                  subtitle:
+                    "Hợp mã sản phẩm không trùng từ các ca quay trong kỳ",
+                  shootSessions: focusFullWeek.shootSessions,
+                })
+              }
+            >
               <b>{formatNumber(focusFullWeek.uniqueProductCount)}</b>
               mã đã xếp cả tuần · P50{" "}
               {formatMetric(officialBaseline.productReference.p50)}
-            </span>
-            <span>
+            </FlowBreakdownButton>
+            <FlowBreakdownButton
+              onClick={() =>
+                onOpenDetail({
+                  title: `Nhân sự tham gia ca quay · ${focusWeek.label}`,
+                  subtitle:
+                    "Danh sách nhân sự không trùng từ các ca quay trong kỳ",
+                  shootSessions: focusFullWeek.shootSessions,
+                })
+              }
+            >
               <b>{formatNumber(focusFullWeek.uniqueStaffCount)}</b>
               {focusFullWeek.uniqueStaffCount
                 ? ` nhân sự · P50 ${formatMetric(officialBaseline.uniqueStaffReference.p50)}`
                 : " chưa có dữ liệu nhân sự ca quay"}
-            </span>
+            </FlowBreakdownButton>
           </CapacityFlowCard>
 
           <CapacityFlowCard
@@ -1853,27 +1964,93 @@ export function MediaCapacitySection({
               )
             }
           >
-            <span className="flowOpening">
+            <FlowBreakdownButton
+              className="flowOpening"
+              onClick={() =>
+                openStandardTasks(
+                  `Ấn phẩm tồn đầu kỳ · ${focusWeek.label}`,
+                  "Task ấn phẩm bắt đầu trước kỳ và chưa được kiểm duyệt trước đầu kỳ",
+                  focusWeek.outputOpeningBacklogTasks,
+                )
+              }
+            >
               <b>{formatNumber(focusWeek.outputOpeningBacklogTasks.length)}</b>
               tồn đầu kỳ
-            </span>
-            <span className="flowAdded">
+            </FlowBreakdownButton>
+            <FlowBreakdownButton
+              className="flowAdded"
+              onClick={() =>
+                openStandardTasks(
+                  `Task ấn phẩm mới trong kỳ · ${focusWeek.label}`,
+                  "Task Video–Edit hoặc Graphic–Graphic Design có Ngày Bắt Đầu trong kỳ",
+                  focusWeek.outputStartedTasks,
+                )
+              }
+            >
               <b>+{formatNumber(focusWeek.outputStartedTasks.length)}</b>
               task ấn phẩm mới trong kỳ
-            </span>
-            <span className="flowRemoved">
+            </FlowBreakdownButton>
+            <FlowBreakdownButton
+              className="flowRemoved"
+              onClick={() =>
+                openStandardTasks(
+                  `Ấn phẩm đã bàn giao · ${focusWeek.label}`,
+                  "Task ấn phẩm có Ngày Kiểm Duyệt trong kỳ",
+                  focusWeek.outputTasks,
+                )
+              }
+            >
               <b>−{formatNumber(focusWeek.outputTasks.length)}</b>
               đã bàn giao · {formatNumber(focusWeek.outputHandedCarryTasks.length)} tồn + {formatNumber(focusWeek.outputHandedNewTasks.length)} mới
-            </span>
-            <span className="flowClosing">
+            </FlowBreakdownButton>
+            <FlowBreakdownButton
+              className="flowClosing"
+              onClick={() =>
+                openStandardTasks(
+                  `Ấn phẩm còn tồn cuối kỳ · ${focusWeek.label}`,
+                  "Tồn đầu kỳ cộng task mới nhưng chưa được kiểm duyệt tại cuối kỳ",
+                  focusWeek.outputClosingBacklogTasks,
+                )
+              }
+            >
               <b>{formatNumber(focusWeek.outputClosingBacklogTasks.length)}</b>
               còn tồn tại cuối kỳ
-            </span>
-            <span>
-              <b>{formatNumber(focusWeek.videoTasks.length)}</b> Video ·{" "}
-              <b>{formatNumber(focusWeek.graphicTasks.length)}</b> Graphic ·{" "}
-              {formatHours(focusWeek.outputMinutes)} tải chuẩn
-            </span>
+            </FlowBreakdownButton>
+            <div className="capacityFlowBreakdownCluster">
+              <FlowBreakdownButton
+                onClick={() =>
+                  openStandardTasks(
+                    `Video đã bàn giao · ${focusWeek.label}`,
+                    "Task Video–Edit có Ngày Kiểm Duyệt trong kỳ",
+                    focusWeek.videoTasks,
+                  )
+                }
+              >
+                <b>{formatNumber(focusWeek.videoTasks.length)}</b> Video
+              </FlowBreakdownButton>
+              <FlowBreakdownButton
+                onClick={() =>
+                  openStandardTasks(
+                    `Graphic đã bàn giao · ${focusWeek.label}`,
+                    "Task Graphic–Graphic Design có Ngày Kiểm Duyệt trong kỳ",
+                    focusWeek.graphicTasks,
+                  )
+                }
+              >
+                <b>{formatNumber(focusWeek.graphicTasks.length)}</b> Graphic
+              </FlowBreakdownButton>
+              <FlowBreakdownButton
+                onClick={() =>
+                  openStandardTasks(
+                    `Tải chuẩn ấn phẩm bàn giao · ${focusWeek.label}`,
+                    "Tổng phút định mức của các ấn phẩm có Ngày Kiểm Duyệt trong kỳ",
+                    focusWeek.outputTasks,
+                  )
+                }
+              >
+                {formatHours(focusWeek.outputMinutes)} tải chuẩn
+              </FlowBreakdownButton>
+            </div>
           </CapacityFlowCard>
         </div>
 
