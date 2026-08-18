@@ -8,6 +8,7 @@ import {
   type PublicationDailyRow,
   type PublicationPlatformRow,
   type PublicationNormPerformance,
+  type PublicationSupplyPerformance,
   type PublicationSource,
 } from "../analytics/calculatePublicationStats";
 import { PieChart } from "../components/PieChart";
@@ -204,6 +205,204 @@ function PostingNormPanel({
         <p className="emptyText">
           Workbook chưa có dữ liệu trong sheet Định Mức Đăng Bài.
         </p>
+      )}
+    </article>
+  );
+}
+
+function MediaSupplyResponseChart({
+  performance,
+  onOpenDetail,
+}: {
+  performance: PublicationSupplyPerformance;
+  onOpenDetail: (detail: DetailView) => void;
+}) {
+  const scale = Math.max(
+    1,
+    performance.expectedPosts,
+    performance.availableTasks.length,
+    performance.actualPosts,
+  );
+  const widthFor = (value: number) => `${(value / scale) * 100}%`;
+  const openTasks = (title: string, subtitle: string, selectedTasks: Task[]) =>
+    onOpenDetail({ title, subtitle, tasks: selectedTasks });
+  const openPosts = (
+    title: string,
+    subtitle: string,
+    items: ClassifiedPublication[],
+  ) =>
+    onOpenDetail({
+      title,
+      subtitle,
+      publicationEvidence: publicationEvidence(items),
+      publicationEvidenceLabel: "Nguồn đáp ứng",
+    });
+
+  return (
+    <article className="postingSupplyPanel">
+      <div className="postingSubchartTitle">
+        <div>
+          <span className="chartKicker">MEDIA → KINH DOANH</span>
+          <h3>Khả năng đáp ứng KPI đăng bài</h3>
+          <p className="postingChartNote">
+            {formatNumber(performance.days)} ngày lịch · 1 task final = 1
+            ấn phẩm khả dụng · KPI chỉ gồm các kênh có định mức cố định
+          </p>
+        </div>
+        <HelpButton
+          help={{
+            title: "Media đáp ứng KPI đăng bài",
+            purpose:
+              "Tách phần thiếu KPI do Kinh doanh chưa dùng ấn phẩm sẵn có và phần thiếu do Media chưa có đủ ấn phẩm.",
+            objective:
+              "So sánh tốc độ bàn giao Media, kho ấn phẩm khả dụng, số bài thực đăng và KPI trên cùng một đơn vị.",
+            calculation:
+              "Video là task Edit có Format Type chứa Video hoặc Xào Source. Hình ảnh là task Graphic Design không thuộc hai nhóm trên. Task BST, IG hoặc Instagram sẵn sàng khi Done; task khác phải đạt Kinh Doanh Duyệt. Thiếu KPI được ưu tiên gán cho ấn phẩm sẵn nhưng chưa đăng, phần còn lại là thiếu nguồn cung Media.",
+            example:
+              "KPI 100, có 80 ấn phẩm, đăng 70 bài Media và 10 Reup: thiếu 20, trong đó 10 do chưa dùng ấn phẩm và 10 do chưa có nguồn cung.",
+            note:
+              "Phần vượt KPI được ước tính theo cơ cấu nguồn của bài đã đăng. Task final thiếu ngày sẵn sàng không được tự động gán vào timeline.",
+          }}
+        />
+      </div>
+
+      <div className="postingSupplyHeadline">
+        <span className="primary">
+          <small>MEDIA ĐÁP ỨNG NGUỒN CUNG</small>
+          <strong>
+            {formatPercent(
+              performance.availableTasks.length,
+              performance.expectedPosts,
+            )}
+          </strong>
+          <em>
+            {formatNumber(performance.availableTasks.length)}/
+            {formatNormValue(performance.expectedPosts)} ấn phẩm cần cho KPI
+          </em>
+        </span>
+        <span>
+          <small>Tốc độ Media trả task</small>
+          <strong>{formatNormValue(performance.mediaDeliveryRate)}/ngày</strong>
+          <em>
+            {formatNumber(performance.deliveredTasks.length)} task · {formatNormValue(performance.deliveredMinutes / 60)} giờ dự kiến
+          </em>
+        </span>
+        <span>
+          <small>Nhịp KPI đăng bài</small>
+          <strong>{formatNormValue(performance.kpiDailyRate)}/ngày</strong>
+          <em>{formatNormValue(performance.expectedPosts)} bài trong kỳ</em>
+        </span>
+        <span className={performance.postingAttainment >= 100 ? "met" : "below"}>
+          <small>Thực tế hoàn thành KPI</small>
+          <strong>
+            {formatPercent(
+              performance.actualPosts,
+              performance.expectedPosts,
+            )}
+          </strong>
+          <em>{formatNumber(performance.actualPosts)} bài đã đăng</em>
+        </span>
+      </div>
+
+      <div className="postingSupplyBars" role="group" aria-label="So sánh KPI, nguồn cung Media và bài đã đăng">
+        <div className="postingSupplyBarRow target">
+          <span><strong>KPI cần đăng</strong><small>{formatNormValue(performance.expectedPosts)} bài</small></span>
+          <i><b style={{ width: widthFor(performance.expectedPosts) }} /></i>
+        </div>
+        <div className="postingSupplyBarRow supply">
+          <span><strong>Ấn phẩm Media khả dụng</strong><small>{formatNumber(performance.availableTasks.length)} task</small></span>
+          <i>
+            <button
+              type="button"
+              className="opening"
+              style={{ width: widthFor(performance.openingReadyTasks.length) }}
+              aria-label={`Tồn sẵn đầu kỳ: ${performance.openingReadyTasks.length} task`}
+              onClick={() => openTasks("Ấn phẩm tồn sẵn đầu kỳ", "Đã sẵn sàng trước kỳ và còn khả dụng cho kỳ đang xem", performance.openingReadyTasks)}
+            />
+            <button
+              type="button"
+              className="delivered"
+              style={{ width: widthFor(performance.deliveredTasks.length) }}
+              aria-label={`Media trả trong kỳ: ${performance.deliveredTasks.length} task`}
+              onClick={() => openTasks("Media trả task trong kỳ", "Task đạt trạng thái sẵn sàng đăng trong khoảng ngày đang lọc", performance.deliveredTasks)}
+            />
+          </i>
+        </div>
+        <div className="postingSupplyBarRow actual">
+          <span><strong>Bài thực đăng</strong><small>{formatNumber(performance.actualPosts)} bài</small></span>
+          <i>
+            <button
+              type="button"
+              className="media"
+              style={{ width: widthFor(performance.mediaPosts) }}
+              aria-label={`Đã đăng từ Media: ${performance.mediaPosts} bài`}
+              onClick={() => openPosts("Đã đăng từ ấn phẩm Media", "Bài đã đăng trên các kênh có KPI và có Book Task Video/Hình ảnh", performance.mediaPostEvidence)}
+            />
+            <button
+              type="button"
+              className="reup"
+              style={{ width: widthFor(performance.reupPosts) }}
+              aria-label={`Reup/Kinh doanh chủ động: ${performance.reupPosts} bài`}
+              onClick={() => openPosts("Bài Reup/Kinh doanh chủ động", "Bài đã đăng trên kênh có KPI nhưng không có Book Task", performance.reupPostEvidence)}
+            />
+            {performance.unknownPosts > 0 && (
+              <button
+                type="button"
+                className="unknown"
+                style={{ width: widthFor(performance.unknownPosts) }}
+                aria-label={`Chưa xác định nguồn: ${performance.unknownPosts} bài`}
+                onClick={() => openPosts("Bài chưa xác định nguồn", "Book Task chưa khớp quy tắc phân loại ấn phẩm", performance.unknownPostEvidence)}
+              />
+            )}
+          </i>
+        </div>
+        <div className="postingSupplyLegend" aria-label="Chú thích biểu đồ">
+          <span><i className="opening" />Tồn sẵn đầu kỳ</span>
+          <span><i className="delivered" />Media trả trong kỳ</span>
+          <span><i className="media" />Đăng từ Media</span>
+          <span><i className="reup" />Reup/Kinh doanh</span>
+        </div>
+      </div>
+
+      <div className="postingSupplyDiagnosis">
+        <button
+          type="button"
+          className="businessGap"
+          onClick={() => openTasks("Ấn phẩm sẵn nhưng chưa được đăng", "Nguồn cung Media đã sẵn sàng nhưng chưa có bài đã đăng trong kỳ", performance.unusedReadyTasks)}
+        >
+          <small>THIẾU DO CHƯA SỬ DỤNG ẤN PHẨM</small>
+          <strong>{formatNumber(performance.businessUnusedGap)} bài</strong>
+          <em>{formatNumber(performance.unusedReadyTasks.length)} task sẵn chưa dùng · nhấn xem</em>
+        </button>
+        <div className="mediaGap">
+          <small>THIẾU DO CHƯA CÓ ẤN PHẨM</small>
+          <strong>{formatNormValue(performance.mediaSupplyGap)} bài</strong>
+          <em>Phần thiếu KPI còn lại sau khi trừ kho sẵn</em>
+        </div>
+        <div className={performance.excessPosts > 0 ? "excess active" : "excess"}>
+          <small>VƯỢT KPI ĐẾN TỬ ĐÂU?</small>
+          <strong>{formatNormValue(performance.excessPosts)} bài</strong>
+          <em>
+            Media {formatNormValue(performance.mediaExcessEstimate)} · Kinh doanh/Reup {formatNormValue(performance.businessExcessEstimate)}
+            {performance.excessPosts ? " (theo cơ cấu nguồn)" : ""}
+          </em>
+        </div>
+      </div>
+
+      {(performance.readyWithoutDateTasks.length > 0 ||
+        performance.postedWithoutReadyTasks.length > 0) && (
+        <div className="postingSupplyWarnings">
+          {performance.readyWithoutDateTasks.length > 0 && (
+            <button type="button" onClick={() => openTasks("Task final thiếu ngày sẵn sàng", "Trạng thái đã final nhưng thiếu Ngày Hoàn Thành hoặc Ngày Kinh Doanh Duyệt phù hợp", performance.readyWithoutDateTasks)}>
+              {formatNumber(performance.readyWithoutDateTasks.length)} task final thiếu ngày sẵn sàng
+            </button>
+          )}
+          {performance.postedWithoutReadyTasks.length > 0 && (
+            <button type="button" onClick={() => openTasks("Bài đã đăng nhưng task chưa đủ điều kiện final", "Book Task đã phát sinh bài đăng nhưng không nằm trong kho ấn phẩm sẵn sàng của kỳ", performance.postedWithoutReadyTasks)}>
+              {formatNumber(performance.postedWithoutReadyTasks.length)} task đã đăng nhưng chưa đủ mốc final
+            </button>
+          )}
+        </div>
       )}
     </article>
   );
@@ -816,7 +1015,7 @@ export function PostingSection({
             objective:
               "Tách rõ tồn cũ, ấn phẩm mới, ấn phẩm chuyển tiếp và task thiếu mốc ngày.",
             calculation:
-              "Đầu tiên lấy task Video–Edit hoặc Hình ảnh–Graphic Design, loại Nền Tảng = Không Đăng Social và chỉ giữ task chưa có liên kết 2.7 Đăng Bài. Ấn phẩm cũ có ngày sẵn sàng trước 01/07; Bắt đầu từ 01/07 dùng Ngày Bắt Đầu; Chuyển tiếp bắt đầu trước mốc nhưng sẵn sàng từ mốc; phần còn lại là Chưa đủ mốc ngày.",
+              "Đầu tiên lấy task Video/Xào Source–Edit hoặc Hình ảnh–Graphic Design, loại Nền Tảng = Không Đăng Social và chỉ giữ task chưa có liên kết 2.7 Đăng Bài. Ấn phẩm cũ có ngày sẵn sàng trước 01/07; Bắt đầu từ 01/07 dùng Ngày Bắt Đầu; Chuyển tiếp bắt đầu trước mốc nhưng sẵn sàng từ mốc; phần còn lại là Chưa đủ mốc ngày.",
             example:
               "703 task được tách thành 508 cũ + 43 bắt đầu mới + 3 chuyển tiếp + 149 thiếu mốc ngày.",
             note:
@@ -840,6 +1039,11 @@ export function PostingSection({
           }
         />
       </div>
+
+      <MediaSupplyResponseChart
+        performance={stats.supplyPerformance}
+        onOpenDetail={onOpenDetail}
+      />
 
       <PostingNormPanel
         performance={stats.normPerformance}
@@ -869,7 +1073,7 @@ export function PostingSection({
             objective:
               "Cho biết tỷ trọng nội dung tái sử dụng so với sản xuất mới, đồng thời tách media video và hình ảnh.",
             calculation:
-              "Book Task trống là Reup. Book Task nối tới task Video + Edit là Media Video; nối tới task không phải Video + Graphic Design là Media Hình ảnh. Mỗi dòng đăng ở một nền tảng được tính là một bài.",
+              "Book Task trống là Reup. Book Task nối tới task Edit có Format Type chứa Video hoặc Xào Source là Media Video; nối tới task Graphic Design không thuộc hai nhóm trên là Media Hình ảnh. Mỗi dòng đăng ở một nền tảng được tính là một bài.",
             example:
               "Một video có hai dòng Facebook và TikTok sẽ đóng góp hai bài Media Video.",
             note:
@@ -954,7 +1158,7 @@ export function PostingSection({
             objective:
               "Cho biết bao nhiêu ấn phẩm đã được book lịch và bao nhiêu ấn phẩm vẫn chưa có lịch đăng.",
             calculation:
-              "Đầu tiên lọc task theo Ngày Bắt Đầu. Ấn phẩm Video là task có Format Type chứa Video và Công đoạn Edit; ấn phẩm Hình ảnh là task có Format Type không phải Video và Công đoạn Graphic Design. Task có Nền Tảng = Không Đăng Social được loại khỏi thống kê đăng bài. Với các task còn lại, cột 2.7 Đăng Bài có mã là Đã lên lịch, để trống là Chưa lên lịch. Khi rê vào Đã lên lịch, task được tính Đã đăng nếu có ít nhất một bài liên kết có Đã Đăng = 1.",
+              "Đầu tiên lọc task theo Ngày Bắt Đầu. Ấn phẩm Video là task Edit có Format Type chứa Video hoặc Xào Source; ấn phẩm Hình ảnh là task Graphic Design không thuộc hai nhóm trên. Task có Nền Tảng = Không Đăng Social được loại khỏi thống kê đăng bài. Với các task còn lại, cột 2.7 Đăng Bài có mã là Đã lên lịch, để trống là Chưa lên lịch. Khi rê vào Đã lên lịch, task được tính Đã đăng nếu có ít nhất một bài liên kết có Đã Đăng = 1.",
             example:
               "Một task video có lịch Facebook và TikTok vẫn chỉ là một ấn phẩm; nếu Facebook đã đăng thì task đó được xếp vào Đã đăng.",
             note:
@@ -978,8 +1182,8 @@ export function PostingSection({
         >
           <strong>{formatNumber(stats.unknown)} bài cần kiểm tra dữ liệu</strong>
           <span>
-            Có Book Task nhưng task liên kết không khớp quy tắc Video–Edit
-            hoặc Hình ảnh–Graphic Design.
+            Có Book Task nhưng task liên kết không khớp quy tắc
+            Video/Xào Source–Edit hoặc Hình ảnh–Graphic Design.
           </span>
           <small>Nhấn để xem dẫn chứng</small>
         </button>

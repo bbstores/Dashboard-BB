@@ -348,8 +348,12 @@ test("Media shoot-type baseline uses an independent date range", () => {
     screen.getByRole("button", { name: "An · JULY-21 · 120 phút" }),
   );
   assert.equal(openedTrendDetail?.tasks?.length, 2);
-  assert.equal(openedTrendDetail?.shootSessions?.length, 1);
-  assert.equal(openedTrendDetail?.shootSessions?.[0]?.id, "JULY-21");
+  assert.deepEqual(
+    openedTrendDetail?.tasks?.map((item) => item.code),
+    ["JULY-TASK-01", "JULY-TASK-02"],
+  );
+  assert.equal(openedTrendDetail?.shootSessions, undefined);
+  assert.match(openedTrendDetail?.title ?? "", /Task An đảm nhiệm · JULY-21/);
   assert.match(openedTrendDetail?.subtitle ?? "", /2 task · 120 phút/);
 
   assert.ok(screen.getByText("20/7/2026–26/7/2026"));
@@ -890,20 +894,27 @@ test("posting section shows source mix and counts multi-platform posts independe
     ...task(),
     code: "VIDEO-POST",
     startDate: new Date(2026, 6, 10, 9),
+    status: "Kinh Doanh Duyệt",
+    businessApprovalDate: new Date(2026, 6, 10, 9),
     publicationIds: ["POST-1", "POST-3"],
   };
   const scheduledUnpostedTask = {
     ...task(),
     code: "VIDEO-NOT-POSTED",
     startDate: new Date(2026, 6, 10, 9),
+    status: "Kinh Doanh Duyệt",
+    businessApprovalDate: new Date(2026, 6, 10, 10),
     publicationIds: ["POST-MISSING"],
   };
   const recentGraphicTask = {
     ...task(),
     code: "GRAPHIC-NOT-SCHEDULED",
+    title: "IG · Graphic chủ động",
     stage: "Graphic Design",
     formatType: "Ảnh Post",
     startDate: new Date(2026, 6, 11, 9),
+    status: "Done",
+    completedDate: new Date(2026, 6, 11, 11),
     publicationIds: [],
   };
   const noSocialTask = {
@@ -995,6 +1006,26 @@ test("posting section shows source mix and counts multi-platform posts independe
   assert.ok(screen.getAllByText("TikTok").length >= 1);
   assert.ok(screen.getByText("Bài đăng theo nền tảng"));
   assert.ok(screen.getByText("Mức độ hoàn thành theo từng kênh"));
+  assert.ok(screen.getByText("Khả năng đáp ứng KPI đăng bài"));
+  assert.ok(
+    screen.getByRole("group", {
+      name: "So sánh KPI, nguồn cung Media và bài đã đăng",
+    }),
+  );
+  assert.equal(
+    container.querySelector(".postingSupplyHeadline .primary strong")
+      ?.textContent,
+    "150%",
+  );
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: /THIẾU DO CHƯA SỬ DỤNG ẤN PHẨM1 bài/,
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.tasks?.map((item) => item.code),
+    ["VIDEO-NOT-POSTED", "GRAPHIC-NOT-SCHEDULED"],
+  );
   assert.ok(screen.getByText("Mỗi ngày một bài"));
   assert.ok(screen.getByText("Theo ấn phẩm mới"));
   assert.ok(
@@ -1289,6 +1320,7 @@ test("posting data alert opens publication evidence", () => {
   const issueTask = {
     ...task(),
     code: "ISSUE-TASK",
+    stage: "Graphic Design",
     formatType: "Xào Source",
     publicationIds: ["ISSUE-POST"],
   };
@@ -1335,5 +1367,5 @@ test("posting data alert opens publication evidence", () => {
   );
   assert.ok(screen.getByText("ISSUE-POST"));
   assert.ok(screen.getByText("ISSUE-TASK"));
-  assert.ok(screen.getByText(/không phải Graphic Design/));
+  assert.ok(screen.getByText(/không phải Edit/));
 });

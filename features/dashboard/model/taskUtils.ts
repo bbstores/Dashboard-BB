@@ -36,16 +36,19 @@ export function assigneeNames(value: string) {
 }
 
 export function isVideoPublication(task: Task) {
+  const formatType = normalizedKey(task.formatType);
   return (
-    normalizedKey(task.formatType).includes("video") &&
+    (formatType.includes("video") || formatType.includes("xào source")) &&
     normalizedKey(task.stage) === "edit"
   );
 }
 
 export function isGraphicPublication(task: Task) {
+  const formatType = normalizedKey(task.formatType);
   return (
-    Boolean(normalizedKey(task.formatType)) &&
-    !normalizedKey(task.formatType).includes("video") &&
+    Boolean(formatType) &&
+    !formatType.includes("video") &&
+    !formatType.includes("xào source") &&
     normalizedKey(task.stage) === "graphic design"
   );
 }
@@ -56,6 +59,32 @@ export function isFinalPublicationTask(task: Task) {
 
 export function isNoSocialPublicationTask(task: Task) {
   return normalizedKey(task.platform) === "không đăng social";
+}
+
+export function publicationSkipsBusinessApproval(task: Task) {
+  const title = normalizedKey(task.title);
+  const isInstagramTask =
+    title.includes("instagram") ||
+    /(^|[^\p{L}\p{N}])ig(?=$|[^\p{L}\p{N}])/u.test(title);
+  return Boolean(normalize(task.collection)) || isInstagramTask;
+}
+
+export function isPublicationReady(task: Task) {
+  if (!isFinalPublicationTask(task) || isNoSocialPublicationTask(task)) {
+    return false;
+  }
+  const status = normalizedKey(task.status);
+  if (publicationSkipsBusinessApproval(task)) {
+    return ["done", "kinh doanh done", "kinh doanh duyệt"].includes(status);
+  }
+  return ["kinh doanh done", "kinh doanh duyệt"].includes(status);
+}
+
+export function publicationSupplyReadyDate(task: Task) {
+  if (!isPublicationReady(task)) return null;
+  return publicationSkipsBusinessApproval(task)
+    ? task.completedDate ?? task.businessApprovalDate
+    : task.businessApprovalDate;
 }
 
 export function publicationReadyDate(task: Task) {

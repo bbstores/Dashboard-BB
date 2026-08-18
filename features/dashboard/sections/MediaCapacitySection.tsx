@@ -2092,7 +2092,8 @@ export function MediaCapacitySection({
           dateTo={typeRangeEnd}
           onSelectPoint={(staffName, session, staffTasks, minutes) => {
             onOpenDetail({
-              title: staffName + " · " + session.id,
+              title:
+                "Task " + staffName + " đảm nhiệm · " + session.id,
               subtitle:
                 formatDate(session.date) +
                 " · " +
@@ -2103,7 +2104,6 @@ export function MediaCapacitySection({
                 formatMetric(minutes) +
                 " phút dự kiến",
               tasks: staffTasks,
-              shootSessions: [session],
             });
           }}
         />

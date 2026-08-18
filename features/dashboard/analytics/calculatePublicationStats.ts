@@ -1,5 +1,6 @@
 import {
   dateKey,
+  endOfDay,
   startOfDay,
 } from "@/shared/date/dateUtils";
 import type {
@@ -13,10 +14,12 @@ import {
   isFinalPublicationTask,
   isGraphicPublication,
   isNoSocialPublicationTask,
+  isPublicationReady,
   isVideoPublication,
   normalize,
   normalizedKey,
   publicationReadyDate,
+  publicationSupplyReadyDate,
 } from "../model/taskUtils";
 
 export type PublicationSource =
@@ -75,6 +78,38 @@ export type PublicationNormPerformance = {
     platform: string;
     posts: PublicationPost[];
   }>;
+};
+
+export type PublicationSupplyPerformance = {
+  days: number;
+  expectedPosts: number;
+  kpiDailyRate: number;
+  openingReadyTasks: Task[];
+  deliveredTasks: Task[];
+  availableTasks: Task[];
+  usedReadyTasks: Task[];
+  unusedReadyTasks: Task[];
+  readyWithoutDateTasks: Task[];
+  postedWithoutReadyTasks: Task[];
+  readyMinutes: number;
+  deliveredMinutes: number;
+  mediaDeliveryRate: number;
+  mediaSupplyCoverage: number;
+  actualPosts: number;
+  mediaPosts: number;
+  reupPosts: number;
+  unknownPosts: number;
+  postingAttainment: number;
+  postingShortfall: number;
+  businessUnusedGap: number;
+  mediaSupplyGap: number;
+  excessPosts: number;
+  mediaExcessEstimate: number;
+  businessExcessEstimate: number;
+  unknownExcessEstimate: number;
+  mediaPostEvidence: ClassifiedPublication[];
+  reupPostEvidence: ClassifiedPublication[];
+  unknownPostEvidence: ClassifiedPublication[];
 };
 
 export function publicationBelongsToPlatform(
@@ -218,6 +253,176 @@ export function calculatePostingNormPerformance(
   };
 }
 
+function calculatePublicationSupplyPerformance(
+  tasks: Task[],
+  publications: PublicationPost[],
+  classifiedPosts: ClassifiedPublication[],
+  normPerformance: PublicationNormPerformance,
+): PublicationSupplyPerformance {
+  const from = normPerformance.from;
+  const to = normPerformance.to ? endOfDay(normPerformance.to) : null;
+  const expectedPosts = normPerformance.expectedTotal;
+  const fixedRows = normPerformance.rows.filter(
+    (row) => row.expected !== null,
+  );
+  const classifiedByPost = new Map(
+    classifiedPosts.map((item) => [normalizedKey(item.post.id), item]),
+  );
+  let mediaPosts = 0;
+  let reupPosts = 0;
+  let unknownPosts = 0;
+  const mediaPostEvidence = new Map<string, ClassifiedPublication>();
+  const reupPostEvidence = new Map<string, ClassifiedPublication>();
+  const unknownPostEvidence = new Map<string, ClassifiedPublication>();
+  const postedMediaTaskCodes = new Set<string>();
+
+  for (const row of fixedRows) {
+    for (const post of row.posts) {
+      if (!post.posted) continue;
+      const item = classifiedByPost.get(normalizedKey(post.id));
+      if (!item) continue;
+      const evidenceKey = normalizedKey(post.id);
+      if (item.source === "video" || item.source === "graphic") {
+        mediaPosts += 1;
+        mediaPostEvidence.set(evidenceKey, item);
+        const taskCode = normalizedKey(item.task?.code);
+        if (taskCode) postedMediaTaskCodes.add(taskCode);
+      } else if (item.source === "reup") {
+        reupPosts += 1;
+        reupPostEvidence.set(evidenceKey, item);
+      } else {
+        unknownPosts += 1;
+        unknownPostEvidence.set(evidenceKey, item);
+      }
+    }
+  }
+
+  const finalTasks = tasks.filter(
+    (task) =>
+      isFinalPublicationTask(task) &&
+      !isNoSocialPublicationTask(task),
+  );
+  const readyWithoutDateTasks = finalTasks.filter(
+    (task) => isPublicationReady(task) && !publicationSupplyReadyDate(task),
+  );
+  const readyDatedTasks = finalTasks.filter(
+    (task) => Boolean(publicationSupplyReadyDate(task)),
+  );
+  const postsBeforeRange = new Set(
+    publications
+      .filter(
+        (post) =>
+          post.posted &&
+          post.scheduledAt &&
+          from &&
+          post.scheduledAt < from,
+      )
+      .map((post) => normalizedKey(post.bookTaskCode))
+      .filter(Boolean),
+  );
+  const openingReadyTasks = from
+    ? readyDatedTasks.filter((task) => {
+        const readyAt = publicationSupplyReadyDate(task);
+        const code = normalizedKey(task.code);
+        return Boolean(
+          readyAt &&
+          readyAt < from &&
+          (!postsBeforeRange.has(code) || postedMediaTaskCodes.has(code)),
+        );
+      })
+    : [];
+  const deliveredTasks = readyDatedTasks.filter((task) => {
+    const readyAt = publicationSupplyReadyDate(task);
+    if (!readyAt) return false;
+    if (from && readyAt < from) return false;
+    if (to && readyAt > to) return false;
+    return true;
+  });
+  const availableTasks = Array.from(
+    new Map(
+      [...openingReadyTasks, ...deliveredTasks].map((task) => [
+        normalizedKey(task.code),
+        task,
+      ]),
+    ).values(),
+  );
+  const availableTaskCodes = new Set(
+    availableTasks.map((task) => normalizedKey(task.code)),
+  );
+  const usedReadyTasks = availableTasks.filter((task) =>
+    postedMediaTaskCodes.has(normalizedKey(task.code)),
+  );
+  const unusedReadyTasks = availableTasks.filter(
+    (task) => !postedMediaTaskCodes.has(normalizedKey(task.code)),
+  );
+  const postedWithoutReadyTasks = Array.from(postedMediaTaskCodes)
+    .filter((code) => !availableTaskCodes.has(code))
+    .map((code) =>
+      finalTasks.find((task) => normalizedKey(task.code) === code),
+    )
+    .filter((task): task is Task => Boolean(task));
+
+  const actualPosts = mediaPosts + reupPosts + unknownPosts;
+  const postingShortfall = Math.max(0, expectedPosts - actualPosts);
+  const businessUnusedGap = Math.min(
+    postingShortfall,
+    unusedReadyTasks.length,
+  );
+  const mediaSupplyGap = Math.max(
+    0,
+    postingShortfall - businessUnusedGap,
+  );
+  const excessPosts = Math.max(0, actualPosts - expectedPosts);
+  const excessShare = (value: number) =>
+    actualPosts ? (excessPosts * value) / actualPosts : 0;
+
+  return {
+    days: normPerformance.days,
+    expectedPosts,
+    kpiDailyRate: normPerformance.days
+      ? expectedPosts / normPerformance.days
+      : 0,
+    openingReadyTasks,
+    deliveredTasks,
+    availableTasks,
+    usedReadyTasks,
+    unusedReadyTasks,
+    readyWithoutDateTasks,
+    postedWithoutReadyTasks,
+    readyMinutes: availableTasks.reduce(
+      (sum, task) => sum + task.expectedMinutes,
+      0,
+    ),
+    deliveredMinutes: deliveredTasks.reduce(
+      (sum, task) => sum + task.expectedMinutes,
+      0,
+    ),
+    mediaDeliveryRate: normPerformance.days
+      ? deliveredTasks.length / normPerformance.days
+      : 0,
+    mediaSupplyCoverage: expectedPosts
+      ? (availableTasks.length / expectedPosts) * 100
+      : 0,
+    actualPosts,
+    mediaPosts,
+    reupPosts,
+    unknownPosts,
+    postingAttainment: expectedPosts
+      ? (actualPosts / expectedPosts) * 100
+      : 0,
+    postingShortfall,
+    businessUnusedGap,
+    mediaSupplyGap,
+    excessPosts,
+    mediaExcessEstimate: excessShare(mediaPosts),
+    businessExcessEstimate: excessShare(reupPosts),
+    unknownExcessEstimate: excessShare(unknownPosts),
+    mediaPostEvidence: Array.from(mediaPostEvidence.values()),
+    reupPostEvidence: Array.from(reupPostEvidence.values()),
+    unknownPostEvidence: Array.from(unknownPostEvidence.values()),
+  };
+}
+
 function classifyPublicationSource(
   post: PublicationPost,
   taskByCode: Map<string, Task>,
@@ -241,8 +446,9 @@ function publicationIssueReason(
   if (!normalize(task.formatType)) {
     return "Format Type của task đang trống";
   }
-  if (normalize(task.formatType).toLocaleLowerCase("vi").includes("video")) {
-    return `Task Video nhưng Công đoạn là ${task.stage || "trống"}, không phải Edit`;
+  const formatType = normalizedKey(task.formatType);
+  if (formatType.includes("video") || formatType.includes("xào source")) {
+    return `Task Video/Xào Source nhưng Công đoạn là ${task.stage || "trống"}, không phải Edit`;
   }
   return `Format Type ${task.formatType} nhưng Công đoạn là ${task.stage || "trống"}, không phải Graphic Design`;
 }
@@ -505,6 +711,19 @@ export function calculatePublicationStats(
     reason:
       "Book Task liên kết tới task có Nền Tảng = Không Đăng Social",
   }));
+  const normPerformance = calculatePostingNormPerformance(
+    filteredPosts.filter(
+      (post) => normalizedKey(post.platform) !== "không đăng social",
+    ),
+    postingNorms,
+    dateWindow,
+  );
+  const supplyPerformance = calculatePublicationSupplyPerformance(
+    tasks,
+    publications,
+    classifiedPosts,
+    normPerformance,
+  );
 
   return {
     total: filteredPosts.length,
@@ -583,12 +802,7 @@ export function calculatePublicationStats(
     oldAssets,
     unknownPostDetails,
     noSocialPostDetails,
-    normPerformance: calculatePostingNormPerformance(
-      filteredPosts.filter(
-        (post) => normalizedKey(post.platform) !== "không đăng social",
-      ),
-      postingNorms,
-      dateWindow,
-    ),
+    normPerformance,
+    supplyPerformance,
   };
 }

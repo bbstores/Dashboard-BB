@@ -759,6 +759,146 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
   );
 });
 
+test("attributes posting KPI gaps to unused ready assets before Media shortage", () => {
+  const tasks = [
+    task("OPENING-BST", {
+      title: "Ảnh BST tháng 7",
+      stage: "Graphic Design",
+      formatType: "Ảnh Post",
+      collection: "BST 07.2026",
+      status: "Done",
+      completedDate: date(8),
+      expectedMinutes: 60,
+    }),
+    task("DELIVERED-IG", {
+      title: "IG · Lookbook",
+      stage: "Graphic Design",
+      formatType: "Ảnh Post",
+      status: "Done",
+      completedDate: date(10),
+      expectedMinutes: 90,
+    }),
+    task("DELIVERED-APPROVED", {
+      title: "Video campaign",
+      status: "Kinh Doanh Duyệt",
+      businessApprovalDate: date(11),
+      expectedMinutes: 120,
+    }),
+    task("DONE-BUT-NEEDS-APPROVAL", {
+      title: "Video thường",
+      status: "Done",
+      completedDate: date(10),
+    }),
+  ];
+  const publications: PublicationPost[] = [
+    {
+      id: "MEDIA-POST",
+      scheduledAt: date(10),
+      platform: "Facebook",
+      posted: true,
+      postType: "Ảnh",
+      title: "Bài từ BST",
+      bookTaskCode: "OPENING-BST",
+    },
+    {
+      id: "REUP-POST",
+      scheduledAt: date(11),
+      platform: "Facebook",
+      posted: true,
+      postType: "Reup",
+      title: "Bài reup",
+      bookTaskCode: "",
+    },
+  ];
+
+  const stats = calculatePublicationStats(
+    tasks,
+    publications,
+    {
+      from: new Date(2026, 6, 10),
+      to: new Date(2026, 6, 12, 23, 59, 59, 999),
+      hasFilter: true,
+    },
+    [
+      {
+        platform: "Facebook",
+        target: 2,
+        unit: "Ngày",
+        note: "Hai bài mỗi ngày",
+      },
+    ],
+  );
+  const supply = stats.supplyPerformance;
+
+  assert.equal(supply.expectedPosts, 6);
+  assert.equal(supply.kpiDailyRate, 2);
+  assert.deepEqual(
+    supply.openingReadyTasks.map((item) => item.code),
+    ["OPENING-BST"],
+  );
+  assert.deepEqual(
+    supply.deliveredTasks.map((item) => item.code),
+    ["DELIVERED-IG", "DELIVERED-APPROVED"],
+  );
+  assert.equal(supply.availableTasks.length, 3);
+  assert.equal(supply.mediaSupplyCoverage, 50);
+  assert.equal(supply.mediaPosts, 1);
+  assert.equal(supply.reupPosts, 1);
+  assert.equal(supply.postingShortfall, 4);
+  assert.equal(supply.businessUnusedGap, 2);
+  assert.equal(supply.mediaSupplyGap, 2);
+  assert.equal(supply.readyMinutes, 270);
+  assert.equal(supply.deliveredMinutes, 210);
+  assert.equal(supply.readyWithoutDateTasks.length, 0);
+});
+
+test("estimates excess KPI contribution from Media and Reup source mix", () => {
+  const approvedTasks = ["MEDIA-1", "MEDIA-2"].map((code) =>
+    task(code, {
+      status: "Kinh Doanh Duyệt",
+      businessApprovalDate: date(10),
+    }),
+  );
+  const posts: PublicationPost[] = [
+    ...approvedTasks.map((item, index) => ({
+      id: `POST-${index + 1}`,
+      scheduledAt: date(10),
+      platform: "Facebook",
+      posted: true,
+      postType: "Video",
+      title: item.code,
+      bookTaskCode: item.code,
+    })),
+    {
+      id: "POST-REUP",
+      scheduledAt: date(10),
+      platform: "Facebook",
+      posted: true,
+      postType: "Reup",
+      title: "Reup",
+      bookTaskCode: "",
+    },
+  ];
+  const stats = calculatePublicationStats(
+    approvedTasks,
+    posts,
+    {
+      from: new Date(2026, 6, 10),
+      to: new Date(2026, 6, 10, 23, 59, 59, 999),
+      hasFilter: true,
+    },
+    [{ platform: "Facebook", target: 1, unit: "Ngày", note: "" }],
+  );
+
+  assert.equal(stats.supplyPerformance.excessPosts, 2);
+  assert.ok(
+    Math.abs(stats.supplyPerformance.mediaExcessEstimate - 4 / 3) < 1e-9,
+  );
+  assert.ok(
+    Math.abs(stats.supplyPerformance.businessExcessEstimate - 2 / 3) < 1e-9,
+  );
+});
+
 test("attributes Shopee to direct posts and selected TikTok posts", () => {
   const posts: PublicationPost[] = [
     {
@@ -880,14 +1020,14 @@ test("partitions every unscheduled asset into one exclusive age group", () => {
   );
 });
 
-test("explains publication rows whose Book Task is not a final asset", () => {
-  const nonFinalTask = task("XAO-SOURCE", {
+test("classifies Xào Source at Edit as a final video asset", () => {
+  const xaoSourceTask = task("XAO-SOURCE", {
     stage: "Edit",
     formatType: "Xào Source",
     publicationIds: ["POST-ISSUE"],
   });
   const stats = calculatePublicationStats(
-    [nonFinalTask],
+    [xaoSourceTask],
     [
       {
         id: "POST-ISSUE",
@@ -902,13 +1042,9 @@ test("explains publication rows whose Book Task is not a final asset", () => {
     dateWindow,
   );
 
-  assert.equal(stats.unknown, 1);
-  assert.equal(stats.unknownPostDetails.length, 1);
-  assert.equal(stats.unknownPostDetails[0].task?.code, "XAO-SOURCE");
-  assert.match(
-    stats.unknownPostDetails[0].reason,
-    /không phải Graphic Design/,
-  );
+  assert.equal(stats.video, 1);
+  assert.equal(stats.unknown, 0);
+  assert.equal(stats.classifiedPosts[0].task?.code, "XAO-SOURCE");
 });
 
 test("excludes Pending / Cancel tasks from every collection metric", () => {
