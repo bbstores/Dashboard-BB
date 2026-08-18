@@ -1069,6 +1069,12 @@ test("posting section shows source mix and counts multi-platform posts independe
       ?.textContent,
     "250%",
   );
+  assert.ok(screen.getByText("Nguồn Media có trong kỳ"));
+  assert.ok(screen.getByText("Kho đầu kỳ chưa sử dụng"));
+  assert.ok(screen.getByText("Đã sử dụng từ kho đầu kỳ"));
+  assert.ok(
+    screen.getByRole("button", { name: "Kho đầu kỳ ban đầu: 2 task" }),
+  );
   fireEvent.click(
     screen.getByRole("button", {
       name: "Kho free đầu kỳ, cột 2.7 trống: 1 task",

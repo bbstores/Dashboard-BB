@@ -321,6 +321,8 @@
   outline-offset: -3px;
 }
 .postingSupplyBarRow.target > i > b { background: #e8a94f; }
+.postingSupplyBarRow .openingStock,
+.postingSupplyLegend .openingStock { background: #9bcbbb; }
 .postingSupplyBarRow .openingFree,
 .postingSupplyLegend .openingFree { background: #75bdb3; }
 .postingSupplyBarRow .openingPlanned,

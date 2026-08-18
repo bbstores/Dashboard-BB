@@ -257,7 +257,7 @@ function MediaSupplyResponseChart({
             objective:
               "So sánh tốc độ bàn giao Media, kho ấn phẩm khả dụng, số bài thực đăng và KPI trên cùng một đơn vị.",
             calculation:
-              "Video là task Edit có Format Type chứa Video hoặc Xào Source. Hình ảnh là task Graphic Design không thuộc hai nhóm trên. Task BST, IG hoặc Instagram sẵn sàng khi Done; task khác phải đạt Kinh Doanh Duyệt. Chỉ tính task bắt đầu từ 01/07/2026 hoặc task cũ hơn nhưng cột 2.7 Đăng Bài có mã. Nguồn đầu kỳ được tách theo cột 2.7: để trống là kho free; có mã nhưng chưa chọn Đã Đăng là đã có kế hoạch, chưa ghi nhận đăng. Task trước 01/07 có cột này trống được tách sang Ấn phẩm cũ và không tham gia % đáp ứng.",
+              "Video là task Edit có Format Type chứa Video hoặc Xào Source. Hình ảnh là task Graphic Design không thuộc hai nhóm trên. Task BST, IG hoặc Instagram sẵn sàng khi Done; task khác phải đạt Kinh Doanh Duyệt. Chỉ tính task bắt đầu từ 01/07/2026 hoặc task cũ hơn nhưng cột 2.7 Đăng Bài có mã. Nguồn Media trong kỳ được tách theo xuất xứ: kho đầu kỳ ban đầu và Media trả mới trong kỳ. Kho đầu kỳ có thêm hai dòng trạng thái riêng: chưa sử dụng gồm kho free và task có kế hoạch nhưng chưa ghi nhận đăng; đã sử dụng là task có ít nhất một bài được chọn Đã Đăng. Task trước 01/07 có cột 2.7 trống được tách sang Ấn phẩm cũ và không tham gia % đáp ứng.",
             example:
               "KPI 100, có 80 ấn phẩm, đăng 70 bài Media và 10 Reup: thiếu 20, trong đó 10 do chưa dùng ấn phẩm và 10 do chưa có nguồn cung.",
             note:
@@ -277,7 +277,7 @@ function MediaSupplyResponseChart({
           </strong>
           <em>
             {formatNumber(performance.availableTasks.length)}/
-            {formatNormValue(performance.expectedPosts)} nguồn Media đã bàn giao · không đồng nghĩa toàn bộ là kho free
+            {formatNormValue(performance.expectedPosts)} ấn phẩm Media khả dụng trong kỳ · gồm kho đầu kỳ và bàn giao mới
           </em>
         </span>
         <span>
@@ -310,7 +310,34 @@ function MediaSupplyResponseChart({
           <i><b style={{ width: widthFor(performance.expectedPosts) }} /></i>
         </div>
         <div className="postingSupplyBarRow supply">
-          <span><strong>Nguồn Media theo trạng thái</strong><small>{formatNumber(performance.availableTasks.length)} task</small></span>
+          <span><strong>Nguồn Media có trong kỳ</strong><small>{formatNumber(performance.availableTasks.length)} task</small></span>
+          <i>
+            <button
+              type="button"
+              className="openingStock"
+              style={{ width: widthFor(performance.openingReadyTasks.length) }}
+              aria-label={`Kho đầu kỳ ban đầu: ${performance.openingReadyTasks.length} task`}
+              onClick={() => openTasks("Kho ấn phẩm ban đầu kỳ", "Toàn bộ task đã sẵn sàng trước ngày bắt đầu kỳ, gồm cả phần đã và chưa được sử dụng trong kỳ", performance.openingReadyTasks)}
+            />
+            <button
+              type="button"
+              className="delivered"
+              style={{ width: widthFor(performance.deliveredTasks.length) }}
+              aria-label={`Media trả trong kỳ: ${performance.deliveredTasks.length} task`}
+              onClick={() => openTasks("Media trả task trong kỳ", "Task đạt trạng thái sẵn sàng đăng trong khoảng ngày đang lọc", performance.deliveredTasks)}
+            />
+          </i>
+        </div>
+        <div className="postingSupplyBarRow openingUnused">
+          <span>
+            <strong>Kho đầu kỳ chưa sử dụng</strong>
+            <small>
+              {formatNumber(
+                performance.openingFreeTasks.length +
+                  performance.openingPlannedUnpostedTasks.length,
+              )} task
+            </small>
+          </span>
           <i>
             <button
               type="button"
@@ -326,22 +353,23 @@ function MediaSupplyResponseChart({
               aria-label={`Đã có kế hoạch nhưng chưa ghi nhận đăng: ${performance.openingPlannedUnpostedTasks.length} task`}
               onClick={() => openTasks("Đã có kế hoạch nhưng chưa ghi nhận đăng", "Cột 2.7 Đăng Bài đã có mã nhưng chưa có bài liên kết nào được chọn Đã Đăng", performance.openingPlannedUnpostedTasks)}
             />
+          </i>
+        </div>
+        <div className="postingSupplyBarRow openingUsed">
+          <span>
+            <strong>Đã sử dụng từ kho đầu kỳ</strong>
+            <small>{formatNumber(performance.openingPlannedPostedTasks.length)} task</small>
+          </span>
+          <i>
             {performance.openingPlannedPostedTasks.length > 0 && (
               <button
                 type="button"
                 className="openingPosted"
                 style={{ width: widthFor(performance.openingPlannedPostedTasks.length) }}
-                aria-label={`Đã đăng từ nguồn đầu kỳ: ${performance.openingPlannedPostedTasks.length} task`}
-                onClick={() => openTasks("Đã đăng từ nguồn đầu kỳ", "Task đã sẵn sàng trước kỳ, có mã ở cột 2.7 và đã ghi nhận ít nhất một bài Đã Đăng", performance.openingPlannedPostedTasks)}
+                aria-label={`Đã sử dụng từ kho đầu kỳ: ${performance.openingPlannedPostedTasks.length} task`}
+                onClick={() => openTasks("Đã sử dụng từ kho đầu kỳ", "Task đã sẵn sàng trước kỳ, có mã ở cột 2.7 và đã ghi nhận ít nhất một bài Đã Đăng; đây là nguồn đã dùng, không phải tồn còn lại", performance.openingPlannedPostedTasks)}
               />
             )}
-            <button
-              type="button"
-              className="delivered"
-              style={{ width: widthFor(performance.deliveredTasks.length) }}
-              aria-label={`Media trả trong kỳ: ${performance.deliveredTasks.length} task`}
-              onClick={() => openTasks("Media trả task trong kỳ", "Task đạt trạng thái sẵn sàng đăng trong khoảng ngày đang lọc", performance.deliveredTasks)}
-            />
           </i>
         </div>
         <div className="postingSupplyBarRow actual">
@@ -373,12 +401,13 @@ function MediaSupplyResponseChart({
           </i>
         </div>
         <div className="postingSupplyLegend" aria-label="Chú thích biểu đồ">
+          <span><i className="openingStock" />Kho đầu kỳ ban đầu: {formatNumber(performance.openingReadyTasks.length)}</span>
+          <span><i className="delivered" />Media trả trong kỳ: {formatNumber(performance.deliveredTasks.length)}</span>
           <span><i className="openingFree" />Kho free đầu kỳ · 2.7 trống: {formatNumber(performance.openingFreeTasks.length)}</span>
           <span><i className="openingPlanned" />Có kế hoạch, chưa ghi nhận đăng: {formatNumber(performance.openingPlannedUnpostedTasks.length)}</span>
           {performance.openingPlannedPostedTasks.length > 0 && (
-            <span><i className="openingPosted" />Đã đăng từ nguồn đầu kỳ: {formatNumber(performance.openingPlannedPostedTasks.length)}</span>
+            <span><i className="openingPosted" />Đã sử dụng từ kho đầu kỳ: {formatNumber(performance.openingPlannedPostedTasks.length)}</span>
           )}
-          <span><i className="delivered" />Media trả trong kỳ</span>
           <span><i className="media" />Đăng từ Media</span>
           <span><i className="reup" />Reup/Kinh doanh</span>
         </div>
