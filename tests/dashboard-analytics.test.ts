@@ -1180,7 +1180,7 @@ test("allocates shoot participation by time, tasks and products", () => {
   );
 });
 
-test("sums expected task minutes by assignee inside each shoot session", () => {
+test("sums shoot task minutes by outsource when present, otherwise by assignee", () => {
   const sessions = [
     {
       id: "SESSION-01",
@@ -1207,6 +1207,12 @@ test("sums expected task minutes by assignee inside each shoot session", () => {
       expectedMinutes: 60,
       shootSession: "SESSION-01",
     }),
+    task("TASK-OUTSOURCE", {
+      assignee: "Người follow",
+      outsource: "Agency A",
+      expectedMinutes: 90,
+      shootSession: "SESSION-01",
+    }),
     task("TASK-OUTSIDE", {
       assignee: "An",
       expectedMinutes: 999,
@@ -1214,7 +1220,7 @@ test("sums expected task minutes by assignee inside each shoot session", () => {
     }),
   ]);
 
-  assert.equal(result[0].linkedTasks.length, 3);
+  assert.equal(result[0].linkedTasks.length, 4);
   assert.equal(
     result[0].staffRows.find((row) => row.staffName === "An")?.minutes,
     120,
@@ -1222,6 +1228,14 @@ test("sums expected task minutes by assignee inside each shoot session", () => {
   assert.equal(
     result[0].staffRows.find((row) => row.staffName === "Bình")?.minutes,
     60,
+  );
+  assert.equal(
+    result[0].staffRows.find((row) => row.staffName === "Agency A")?.minutes,
+    90,
+  );
+  assert.equal(
+    result[0].staffRows.find((row) => row.staffName === "Người follow"),
+    undefined,
   );
 });
 

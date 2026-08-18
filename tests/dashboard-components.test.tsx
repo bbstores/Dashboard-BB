@@ -211,6 +211,14 @@ test("Media shoot-type baseline uses an independent date range", () => {
       },
       {
         ...task(),
+        code: "JULY-TASK-OUTSOURCE",
+        assignee: "Người follow",
+        outsource: "Agency A",
+        expectedMinutes: 50,
+        shootSession: "JULY-21",
+      },
+      {
+        ...task(),
         code: "JULY-TASK-04",
         assignee: "Chi",
         expectedMinutes: 75,
@@ -337,6 +345,13 @@ test("Media shoot-type baseline uses an independent date range", () => {
   );
   assert.ok(container.querySelector(".capacityStaffBar"));
   assert.equal(container.querySelector("polyline"), null);
+  assert.ok(
+    screen.getByRole("button", { name: "Agency A · JULY-21 · 50 phút" }),
+  );
+  assert.equal(
+    screen.queryByRole("button", { name: /Người follow · JULY-21/ }),
+    null,
+  );
   const shootSessionOption = screen.getByRole("button", {
     name: /^JULY-21.*Bộ Sưu Tập/,
   });
@@ -353,7 +368,7 @@ test("Media shoot-type baseline uses an independent date range", () => {
     ["JULY-TASK-01", "JULY-TASK-02"],
   );
   assert.equal(openedTrendDetail?.shootSessions, undefined);
-  assert.match(openedTrendDetail?.title ?? "", /Task An đảm nhiệm · JULY-21/);
+  assert.match(openedTrendDetail?.title ?? "", /Task An thực hiện · JULY-21/);
   assert.match(openedTrendDetail?.subtitle ?? "", /2 task · 120 phút/);
 
   assert.ok(screen.getByText("20/7/2026–26/7/2026"));

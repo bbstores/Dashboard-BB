@@ -329,7 +329,8 @@ export function calculateShootTaskMinutesByStaff(
 
     const staffRows = new Map<string, ShootStaffTaskMinutesRow>();
     for (const task of linkedTasks.values()) {
-      for (const staffName of assigneeNames(task.assignee)) {
+      const workloadOwner = normalize(task.outsource) || task.assignee;
+      for (const staffName of assigneeNames(workloadOwner)) {
         const key = normalizedKey(staffName);
         const row = staffRows.get(key) ?? {
           staffName,

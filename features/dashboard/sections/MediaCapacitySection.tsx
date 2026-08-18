@@ -164,15 +164,15 @@ const capacityHelp: Record<
   staffContribution: {
     title: "Thời gian tham gia theo ca quay",
     purpose:
-      "Theo dõi tổng số phút dự kiến mà từng nhân sự được giao trong mỗi ca quay, dựa trên task liên kết từ Tasklist.",
+      "Theo dõi tổng số phút dự kiến của từng người thực hiện trong mỗi ca quay, dựa trên task liên kết từ Tasklist.",
     objective:
-      "Cho biết trong từng ca ai đang phụ trách những task nào và tổng khối lượng phút dự kiến của người đó.",
+      "Cho biết trong từng ca assignee hoặc outsource nào đang thực hiện những task nào và tổng khối lượng phút dự kiến tương ứng.",
     calculation:
-      "Task được liên kết bằng danh sách mã task trong Lịch Quay hoặc cột Ca Quay trong Tasklist. Trong từng ca, hệ thống nhóm task theo Assignee và cộng Số phút dự kiến của các task đó.",
+      "Task được liên kết bằng danh sách mã task trong Lịch Quay hoặc cột Ca Quay trong Tasklist. Nếu cột Outsource có giá trị, hệ thống nhóm và cộng Số phút dự kiến theo giá trị Outsource; Assignee của task đó chỉ là người follow và không được cộng. Nếu Outsource trống, hệ thống nhóm theo Assignee.",
     example:
-      "Trong ca CQ-081, An có ba task 30, 45 và 60 phút thì cột của An là 135 phút.",
+      "Trong ca CQ-081, An có ba task nội bộ 30, 45 và 60 phút thì cột của An là 135 phút. Một task khác 90 phút có Outsource là Agency A sẽ tạo cột Agency A 90 phút, không cộng cho Assignee đang follow task.",
     note:
-      "Nhân sự có tên trong lịch nhưng không có task được giao sẽ ở mức 0. Task chưa có Assignee được gom vào nhóm Chưa có assignee để không thất thoát khối lượng.",
+      "Nhân sự có tên trong lịch nhưng không có task được giao sẽ ở mức 0. Task không có cả Outsource lẫn Assignee được gom vào nhóm Chưa có assignee để không thất thoát khối lượng.",
   },
 };
 
@@ -765,11 +765,11 @@ function StaffParticipationChart({
     <article className="capacityStaffContributionCard">
       <div className="capacityCardHeader">
         <div>
-          <span className="chartKicker">NHÂN SỰ × CA QUAY</span>
+          <span className="chartKicker">ASSIGNEE / OUTSOURCE × CA QUAY</span>
           <h3>Thời gian tham gia theo từng ca quay</h3>
           <p>
             {formatDate(dateFrom)}–{formatDate(dateTo)} · cộng phút dự kiến
-            của task liên kết theo Assignee · đơn vị phút
+            của task liên kết theo Outsource nếu có, nếu không theo Assignee · đơn vị phút
           </p>
         </div>
         <div className="capacityStaffContributionTools">
@@ -829,7 +829,10 @@ function StaffParticipationChart({
       </div>
       {staffNames.length && selectedSessions.length ? (
         <>
-          <div className="capacityStaffBarLegend" aria-label="Nhân sự">
+          <div
+            className="capacityStaffBarLegend"
+            aria-label="Assignee / Outsource"
+          >
             {staffNames.map((staffName, index) => {
               const active = !hiddenStaffNames.includes(staffName);
               return (
@@ -2093,7 +2096,7 @@ export function MediaCapacitySection({
           onSelectPoint={(staffName, session, staffTasks, minutes) => {
             onOpenDetail({
               title:
-                "Task " + staffName + " đảm nhiệm · " + session.id,
+                "Task " + staffName + " thực hiện · " + session.id,
               subtitle:
                 formatDate(session.date) +
                 " · " +
