@@ -85,6 +85,9 @@ export type PublicationSupplyPerformance = {
   expectedPosts: number;
   kpiDailyRate: number;
   openingReadyTasks: Task[];
+  openingFreeTasks: Task[];
+  openingPlannedUnpostedTasks: Task[];
+  openingPlannedPostedTasks: Task[];
   deliveredTasks: Task[];
   availableTasks: Task[];
   legacyOldTasks: Task[];
@@ -345,6 +348,38 @@ function calculatePublicationSupplyPerformance(
         );
       })
     : [];
+  const postsByTaskCode = new Map<string, PublicationPost[]>();
+  const postById = new Map(
+    publications.map((post) => [normalizedKey(post.id), post]),
+  );
+  for (const post of publications) {
+    const taskCode = normalizedKey(post.bookTaskCode);
+    if (!taskCode) continue;
+    postsByTaskCode.set(taskCode, [
+      ...(postsByTaskCode.get(taskCode) ?? []),
+      post,
+    ]);
+  }
+  const hasRecordedPost = (task: Task) => {
+    const linkedPosts = new Map<string, PublicationPost>();
+    for (const post of postsByTaskCode.get(normalizedKey(task.code)) ?? []) {
+      linkedPosts.set(normalizedKey(post.id), post);
+    }
+    for (const publicationId of task.publicationIds ?? []) {
+      const post = postById.get(normalizedKey(publicationId));
+      if (post) linkedPosts.set(normalizedKey(post.id), post);
+    }
+    return Array.from(linkedPosts.values()).some((post) => post.posted);
+  };
+  const openingFreeTasks = openingReadyTasks.filter(
+    (task) => !task.publicationIds?.length,
+  );
+  const openingPlannedUnpostedTasks = openingReadyTasks.filter(
+    (task) => Boolean(task.publicationIds?.length) && !hasRecordedPost(task),
+  );
+  const openingPlannedPostedTasks = openingReadyTasks.filter(
+    (task) => Boolean(task.publicationIds?.length) && hasRecordedPost(task),
+  );
   const deliveredTasks = readyDatedTasks.filter((task) => {
     const readyAt = publicationSupplyReadyDate(task);
     if (!readyAt) return false;
@@ -397,6 +432,9 @@ function calculatePublicationSupplyPerformance(
       ? expectedPosts / normPerformance.days
       : 0,
     openingReadyTasks,
+    openingFreeTasks,
+    openingPlannedUnpostedTasks,
+    openingPlannedPostedTasks,
     deliveredTasks,
     availableTasks,
     legacyOldTasks,

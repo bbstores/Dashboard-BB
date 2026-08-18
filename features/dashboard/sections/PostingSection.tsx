@@ -257,7 +257,7 @@ function MediaSupplyResponseChart({
             objective:
               "So sánh tốc độ bàn giao Media, kho ấn phẩm khả dụng, số bài thực đăng và KPI trên cùng một đơn vị.",
             calculation:
-              "Video là task Edit có Format Type chứa Video hoặc Xào Source. Hình ảnh là task Graphic Design không thuộc hai nhóm trên. Task BST, IG hoặc Instagram sẵn sàng khi Done; task khác phải đạt Kinh Doanh Duyệt. Chỉ tính task bắt đầu từ 01/07/2026 hoặc task cũ hơn nhưng cột 2.7 Đăng Bài có mã. Task trước 01/07 có cột này trống được tách sang Ấn phẩm cũ và không tham gia % đáp ứng.",
+              "Video là task Edit có Format Type chứa Video hoặc Xào Source. Hình ảnh là task Graphic Design không thuộc hai nhóm trên. Task BST, IG hoặc Instagram sẵn sàng khi Done; task khác phải đạt Kinh Doanh Duyệt. Chỉ tính task bắt đầu từ 01/07/2026 hoặc task cũ hơn nhưng cột 2.7 Đăng Bài có mã. Nguồn đầu kỳ được tách theo cột 2.7: để trống là kho free; có mã nhưng chưa chọn Đã Đăng là đã có kế hoạch, chưa ghi nhận đăng. Task trước 01/07 có cột này trống được tách sang Ấn phẩm cũ và không tham gia % đáp ứng.",
             example:
               "KPI 100, có 80 ấn phẩm, đăng 70 bài Media và 10 Reup: thiếu 20, trong đó 10 do chưa dùng ấn phẩm và 10 do chưa có nguồn cung.",
             note:
@@ -277,7 +277,7 @@ function MediaSupplyResponseChart({
           </strong>
           <em>
             {formatNumber(performance.availableTasks.length)}/
-            {formatNormValue(performance.expectedPosts)} ấn phẩm cần cho KPI
+            {formatNormValue(performance.expectedPosts)} nguồn Media đã bàn giao · không đồng nghĩa toàn bộ là kho free
           </em>
         </span>
         <span>
@@ -310,15 +310,31 @@ function MediaSupplyResponseChart({
           <i><b style={{ width: widthFor(performance.expectedPosts) }} /></i>
         </div>
         <div className="postingSupplyBarRow supply">
-          <span><strong>Ấn phẩm Media khả dụng</strong><small>{formatNumber(performance.availableTasks.length)} task</small></span>
+          <span><strong>Nguồn Media theo trạng thái</strong><small>{formatNumber(performance.availableTasks.length)} task</small></span>
           <i>
             <button
               type="button"
-              className="opening"
-              style={{ width: widthFor(performance.openingReadyTasks.length) }}
-              aria-label={`Tồn sẵn đầu kỳ: ${performance.openingReadyTasks.length} task`}
-              onClick={() => openTasks("Ấn phẩm tồn sẵn đầu kỳ", "Đã sẵn sàng trước kỳ và còn khả dụng cho kỳ đang xem", performance.openingReadyTasks)}
+              className="openingFree"
+              style={{ width: widthFor(performance.openingFreeTasks.length) }}
+              aria-label={`Kho free đầu kỳ, cột 2.7 trống: ${performance.openingFreeTasks.length} task`}
+              onClick={() => openTasks("Kho ấn phẩm free đầu kỳ", "Task sẵn sàng trước kỳ và cột 2.7 Đăng Bài đang để trống", performance.openingFreeTasks)}
             />
+            <button
+              type="button"
+              className="openingPlanned"
+              style={{ width: widthFor(performance.openingPlannedUnpostedTasks.length) }}
+              aria-label={`Đã có kế hoạch nhưng chưa ghi nhận đăng: ${performance.openingPlannedUnpostedTasks.length} task`}
+              onClick={() => openTasks("Đã có kế hoạch nhưng chưa ghi nhận đăng", "Cột 2.7 Đăng Bài đã có mã nhưng chưa có bài liên kết nào được chọn Đã Đăng", performance.openingPlannedUnpostedTasks)}
+            />
+            {performance.openingPlannedPostedTasks.length > 0 && (
+              <button
+                type="button"
+                className="openingPosted"
+                style={{ width: widthFor(performance.openingPlannedPostedTasks.length) }}
+                aria-label={`Đã đăng từ nguồn đầu kỳ: ${performance.openingPlannedPostedTasks.length} task`}
+                onClick={() => openTasks("Đã đăng từ nguồn đầu kỳ", "Task đã sẵn sàng trước kỳ, có mã ở cột 2.7 và đã ghi nhận ít nhất một bài Đã Đăng", performance.openingPlannedPostedTasks)}
+              />
+            )}
             <button
               type="button"
               className="delivered"
@@ -357,7 +373,11 @@ function MediaSupplyResponseChart({
           </i>
         </div>
         <div className="postingSupplyLegend" aria-label="Chú thích biểu đồ">
-          <span><i className="opening" />Tồn sẵn đầu kỳ</span>
+          <span><i className="openingFree" />Kho free đầu kỳ · 2.7 trống: {formatNumber(performance.openingFreeTasks.length)}</span>
+          <span><i className="openingPlanned" />Có kế hoạch, chưa ghi nhận đăng: {formatNumber(performance.openingPlannedUnpostedTasks.length)}</span>
+          {performance.openingPlannedPostedTasks.length > 0 && (
+            <span><i className="openingPosted" />Đã đăng từ nguồn đầu kỳ: {formatNumber(performance.openingPlannedPostedTasks.length)}</span>
+          )}
           <span><i className="delivered" />Media trả trong kỳ</span>
           <span><i className="media" />Đăng từ Media</span>
           <span><i className="reup" />Reup/Kinh doanh</span>

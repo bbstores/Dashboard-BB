@@ -321,8 +321,12 @@
   outline-offset: -3px;
 }
 .postingSupplyBarRow.target > i > b { background: #e8a94f; }
-.postingSupplyBarRow .opening,
-.postingSupplyLegend .opening { background: #79a7a0; }
+.postingSupplyBarRow .openingFree,
+.postingSupplyLegend .openingFree { background: #75bdb3; }
+.postingSupplyBarRow .openingPlanned,
+.postingSupplyLegend .openingPlanned { background: #d7a451; }
+.postingSupplyBarRow .openingPosted,
+.postingSupplyLegend .openingPosted { background: #527e70; }
 .postingSupplyBarRow .delivered,
 .postingSupplyLegend .delivered { background: #d9ff72; }
 .postingSupplyBarRow .media,

@@ -768,6 +768,7 @@ test("attributes posting KPI gaps to unused ready assets before Media shortage",
       collection: "BST 07.2026",
       status: "Done",
       completedDate: date(8),
+      publicationIds: ["MEDIA-POST"],
       expectedMinutes: 60,
     }),
     task("DELIVERED-IG", {
@@ -857,6 +858,18 @@ test("attributes posting KPI gaps to unused ready assets before Media shortage",
   assert.deepEqual(
     supply.openingReadyTasks.map((item) => item.code),
     ["OPENING-BST", "OLD-LINKED"],
+  );
+  assert.deepEqual(
+    supply.openingFreeTasks.map((item) => item.code),
+    [],
+  );
+  assert.deepEqual(
+    supply.openingPlannedUnpostedTasks.map((item) => item.code),
+    ["OLD-LINKED"],
+  );
+  assert.deepEqual(
+    supply.openingPlannedPostedTasks.map((item) => item.code),
+    ["OPENING-BST"],
   );
   assert.deepEqual(
     supply.deliveredTasks.map((item) => item.code),

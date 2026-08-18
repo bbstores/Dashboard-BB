@@ -936,6 +936,28 @@ test("posting section shows source mix and counts multi-platform posts independe
     completedDate: new Date(2026, 5, 21, 9),
     publicationIds: [],
   };
+  const openingFreeTask = {
+    ...task(),
+    code: "OPENING-FREE",
+    title: "IG · Ấn phẩm free đầu kỳ",
+    stage: "Graphic Design",
+    formatType: "Ảnh Post",
+    startDate: new Date(2026, 6, 5, 9),
+    status: "Done",
+    completedDate: new Date(2026, 6, 8, 9),
+    publicationIds: [],
+  };
+  const openingPlannedTask = {
+    ...task(),
+    code: "OPENING-PLANNED",
+    title: "IG · Đã có kế hoạch đăng",
+    stage: "Graphic Design",
+    formatType: "Ảnh Post",
+    startDate: new Date(2026, 6, 5, 9),
+    status: "Done",
+    completedDate: new Date(2026, 6, 8, 10),
+    publicationIds: ["POST-PLANNED"],
+  };
   const publications: PublicationPost[] = [
     {
       id: "POST-1",
@@ -985,6 +1007,8 @@ test("posting section shows source mix and counts multi-platform posts independe
         recentGraphicTask,
         noSocialTask,
         oldUnlinkedTask,
+        openingFreeTask,
+        openingPlannedTask,
       ]}
       publications={publications}
       postingNorms={[
@@ -1028,7 +1052,25 @@ test("posting section shows source mix and counts multi-platform posts independe
   assert.equal(
     container.querySelector(".postingSupplyHeadline .primary strong")
       ?.textContent,
-    "150%",
+    "250%",
+  );
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Kho free đầu kỳ, cột 2.7 trống: 1 task",
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.tasks?.map((item) => item.code),
+    ["OPENING-FREE"],
+  );
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Đã có kế hoạch nhưng chưa ghi nhận đăng: 1 task",
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.tasks?.map((item) => item.code),
+    ["OPENING-PLANNED"],
   );
   fireEvent.click(
     screen.getByRole("button", {
@@ -1037,7 +1079,12 @@ test("posting section shows source mix and counts multi-platform posts independe
   );
   assert.deepEqual(
     postingDetailState.current?.tasks?.map((item) => item.code),
-    ["VIDEO-NOT-POSTED", "GRAPHIC-NOT-SCHEDULED"],
+    [
+      "OPENING-FREE",
+      "OPENING-PLANNED",
+      "VIDEO-NOT-POSTED",
+      "GRAPHIC-NOT-SCHEDULED",
+    ],
   );
   fireEvent.click(
     screen.getByRole("button", {
@@ -1154,12 +1201,12 @@ test("posting section shows source mix and counts multi-platform posts independe
 
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Lát biểu đồ Bắt đầu từ 01/07: 1 Task",
+      name: "Lát biểu đồ Bắt đầu từ 01/07: 2 Task",
     }),
   );
   assert.deepEqual(
     postingDetailState.current?.tasks?.map((item) => item.code),
-    ["GRAPHIC-NOT-SCHEDULED"],
+    ["GRAPHIC-NOT-SCHEDULED", "OPENING-FREE"],
   );
 
   fireEvent.click(
