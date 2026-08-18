@@ -257,7 +257,7 @@ function MediaSupplyResponseChart({
             objective:
               "So sánh tốc độ bàn giao Media, kho ấn phẩm khả dụng, số bài thực đăng và KPI trên cùng một đơn vị.",
             calculation:
-              "Video là task Edit có Format Type chứa Video hoặc Xào Source. Hình ảnh là task Graphic Design không thuộc hai nhóm trên. Task BST, IG hoặc Instagram sẵn sàng khi Done; task khác phải đạt Kinh Doanh Duyệt. Thiếu KPI được ưu tiên gán cho ấn phẩm sẵn nhưng chưa đăng, phần còn lại là thiếu nguồn cung Media.",
+              "Video là task Edit có Format Type chứa Video hoặc Xào Source. Hình ảnh là task Graphic Design không thuộc hai nhóm trên. Task BST, IG hoặc Instagram sẵn sàng khi Done; task khác phải đạt Kinh Doanh Duyệt. Chỉ tính task bắt đầu từ 01/07/2026 hoặc task cũ hơn nhưng cột 2.7 Đăng Bài có mã. Task trước 01/07 có cột này trống được tách sang Ấn phẩm cũ và không tham gia % đáp ứng.",
             example:
               "KPI 100, có 80 ấn phẩm, đăng 70 bài Media và 10 Reup: thiếu 20, trong đó 10 do chưa dùng ấn phẩm và 10 do chưa có nguồn cung.",
             note:
@@ -388,6 +388,26 @@ function MediaSupplyResponseChart({
           </em>
         </div>
       </div>
+
+      <button
+        type="button"
+        className="postingSupplyLegacy"
+        onClick={() =>
+          openTasks(
+            "Ấn phẩm cũ không tính vào KPI",
+            "Task bắt đầu trước 01/07/2026, đã đủ trạng thái final nhưng cột 2.7 Đăng Bài để trống",
+            performance.legacyOldTasks,
+          )
+        }
+      >
+        <span>
+          <small>ẤN PHẨM CŨ · KHÔNG TÍNH VÀO % ĐÁP ỨNG</small>
+          <strong>{formatNumber(performance.legacyOldTasks.length)} task</strong>
+        </span>
+        <em>
+          Bắt đầu trước 01/07 · cột 2.7 Đăng Bài trống · nhấn xem minh chứng
+        </em>
+      </button>
 
       {(performance.readyWithoutDateTasks.length > 0 ||
         performance.postedWithoutReadyTasks.length > 0) && (

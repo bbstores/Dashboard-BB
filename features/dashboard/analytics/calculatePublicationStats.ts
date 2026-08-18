@@ -87,6 +87,7 @@ export type PublicationSupplyPerformance = {
   openingReadyTasks: Task[];
   deliveredTasks: Task[];
   availableTasks: Task[];
+  legacyOldTasks: Task[];
   usedReadyTasks: Task[];
   unusedReadyTasks: Task[];
   readyWithoutDateTasks: Task[];
@@ -302,10 +303,23 @@ function calculatePublicationSupplyPerformance(
       isFinalPublicationTask(task) &&
       !isNoSocialPublicationTask(task),
   );
-  const readyWithoutDateTasks = finalTasks.filter(
+  const legacyOldTasks = finalTasks.filter(
+    (task) =>
+      isPublicationReady(task) &&
+      Boolean(task.startDate && task.startDate < OLD_ASSET_CUTOFF) &&
+      !task.publicationIds?.length,
+  );
+  const scopedFinalTasks = finalTasks.filter((task) => {
+    if (!task.startDate) return false;
+    return (
+      task.startDate >= OLD_ASSET_CUTOFF ||
+      Boolean(task.publicationIds?.length)
+    );
+  });
+  const readyWithoutDateTasks = scopedFinalTasks.filter(
     (task) => isPublicationReady(task) && !publicationSupplyReadyDate(task),
   );
-  const readyDatedTasks = finalTasks.filter(
+  const readyDatedTasks = scopedFinalTasks.filter(
     (task) => Boolean(publicationSupplyReadyDate(task)),
   );
   const postsBeforeRange = new Set(
@@ -385,6 +399,7 @@ function calculatePublicationSupplyPerformance(
     openingReadyTasks,
     deliveredTasks,
     availableTasks,
+    legacyOldTasks,
     usedReadyTasks,
     unusedReadyTasks,
     readyWithoutDateTasks,

@@ -784,6 +784,28 @@ test("attributes posting KPI gaps to unused ready assets before Media shortage",
       businessApprovalDate: date(11),
       expectedMinutes: 120,
     }),
+    task("OLD-LINKED", {
+      title: "Ảnh BST cũ đã có mã đăng bài",
+      stage: "Graphic Design",
+      formatType: "Ảnh Post",
+      collection: "BST 06.2026",
+      status: "Done",
+      startDate: new Date(2026, 5, 20),
+      completedDate: date(8),
+      publicationIds: ["OLD-POST-ID"],
+      expectedMinutes: 30,
+    }),
+    task("OLD-EMPTY", {
+      title: "Ảnh BST cũ chưa có mã đăng bài",
+      stage: "Graphic Design",
+      formatType: "Ảnh Post",
+      collection: "BST 06.2026",
+      status: "Done",
+      startDate: new Date(2026, 5, 21),
+      completedDate: date(8),
+      publicationIds: [],
+      expectedMinutes: 45,
+    }),
     task("DONE-BUT-NEEDS-APPROVAL", {
       title: "Video thường",
       status: "Done",
@@ -834,22 +856,26 @@ test("attributes posting KPI gaps to unused ready assets before Media shortage",
   assert.equal(supply.kpiDailyRate, 2);
   assert.deepEqual(
     supply.openingReadyTasks.map((item) => item.code),
-    ["OPENING-BST"],
+    ["OPENING-BST", "OLD-LINKED"],
   );
   assert.deepEqual(
     supply.deliveredTasks.map((item) => item.code),
     ["DELIVERED-IG", "DELIVERED-APPROVED"],
   );
-  assert.equal(supply.availableTasks.length, 3);
-  assert.equal(supply.mediaSupplyCoverage, 50);
+  assert.equal(supply.availableTasks.length, 4);
+  assert.ok(Math.abs(supply.mediaSupplyCoverage - 200 / 3) < 1e-9);
   assert.equal(supply.mediaPosts, 1);
   assert.equal(supply.reupPosts, 1);
   assert.equal(supply.postingShortfall, 4);
-  assert.equal(supply.businessUnusedGap, 2);
-  assert.equal(supply.mediaSupplyGap, 2);
-  assert.equal(supply.readyMinutes, 270);
+  assert.equal(supply.businessUnusedGap, 3);
+  assert.equal(supply.mediaSupplyGap, 1);
+  assert.equal(supply.readyMinutes, 300);
   assert.equal(supply.deliveredMinutes, 210);
   assert.equal(supply.readyWithoutDateTasks.length, 0);
+  assert.deepEqual(
+    supply.legacyOldTasks.map((item) => item.code),
+    ["OLD-EMPTY"],
+  );
 });
 
 test("estimates excess KPI contribution from Media and Reup source mix", () => {

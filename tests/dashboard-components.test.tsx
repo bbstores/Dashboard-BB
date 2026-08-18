@@ -924,6 +924,18 @@ test("posting section shows source mix and counts multi-platform posts independe
     platform: "Không Đăng Social",
     publicationIds: ["POST-NO-SOCIAL"],
   };
+  const oldUnlinkedTask = {
+    ...task(),
+    code: "OLD-UNLINKED-ASSET",
+    title: "Ảnh BST cũ",
+    stage: "Graphic Design",
+    formatType: "Ảnh Post",
+    collection: "BST 06.2026",
+    startDate: new Date(2026, 5, 20, 9),
+    status: "Done",
+    completedDate: new Date(2026, 5, 21, 9),
+    publicationIds: [],
+  };
   const publications: PublicationPost[] = [
     {
       id: "POST-1",
@@ -972,6 +984,7 @@ test("posting section shows source mix and counts multi-platform posts independe
         scheduledUnpostedTask,
         recentGraphicTask,
         noSocialTask,
+        oldUnlinkedTask,
       ]}
       publications={publications}
       postingNorms={[
@@ -1025,6 +1038,15 @@ test("posting section shows source mix and counts multi-platform posts independe
   assert.deepEqual(
     postingDetailState.current?.tasks?.map((item) => item.code),
     ["VIDEO-NOT-POSTED", "GRAPHIC-NOT-SCHEDULED"],
+  );
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: /ẤN PHẨM CŨ · KHÔNG TÍNH VÀO % ĐÁP ỨNG1 task/,
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.tasks?.map((item) => item.code),
+    ["OLD-UNLINKED-ASSET"],
   );
   assert.ok(screen.getByText("Mỗi ngày một bài"));
   assert.ok(screen.getByText("Theo ấn phẩm mới"));
