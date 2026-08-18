@@ -329,6 +329,8 @@
 .postingSupplyLegend .openingPlanned { background: #d7a451; }
 .postingSupplyBarRow .openingPosted,
 .postingSupplyLegend .openingPosted { background: #527e70; }
+.postingSupplyBarRow .deliveredUsed,
+.postingSupplyLegend .deliveredUsed { background: #8aa66a; }
 .postingSupplyBarRow .delivered,
 .postingSupplyLegend .delivered { background: #d9ff72; }
 .postingSupplyBarRow .media,
@@ -354,6 +356,71 @@
   border-radius: 3px;
   height: 8px;
   width: 16px;
+}
+.postingSupplyPlatforms {
+  background: rgba(255, 255, 255, .5);
+  border: 1px solid rgba(23, 79, 61, .09);
+  border-radius: 16px;
+  margin-top: 14px;
+  overflow: hidden;
+}
+.postingSupplyPlatformHeader,
+.postingSupplyPlatformRow {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(130px, 1.5fr) repeat(4, minmax(62px, .62fr)) minmax(120px, 1fr);
+  padding: 10px 14px;
+}
+.postingSupplyPlatformHeader {
+  background: rgba(23, 79, 61, .06);
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.postingSupplyPlatformRow {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid rgba(23, 79, 61, .08);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+}
+.postingSupplyPlatformRow:hover,
+.postingSupplyPlatformRow:focus-visible {
+  background: rgba(217, 255, 114, .15);
+  outline: none;
+}
+.postingSupplyPlatformRow > strong,
+.postingSupplyPlatformRow > span {
+  font-size: 9px;
+}
+.postingSupplyPlatformRow > span:last-child {
+  align-items: center;
+  display: grid;
+  gap: 7px;
+  grid-template-columns: minmax(45px, 1fr) auto;
+}
+.postingSupplyPlatformRow > span:last-child > i {
+  background: #e2e5dc;
+  border-radius: 5px;
+  height: 8px;
+  overflow: hidden;
+}
+.postingSupplyPlatformRow > span:last-child b {
+  background: #75bdb3;
+  display: block;
+  height: 100%;
+}
+.postingSupplyPlatformRow em {
+  color: var(--green);
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 850;
 }
 .postingSupplyDiagnosis {
   display: grid;
@@ -952,6 +1019,13 @@
   .postingSupplyBarRow {
     gap: 7px;
     grid-template-columns: 1fr;
+  }
+  .postingSupplyPlatforms {
+    overflow-x: auto;
+  }
+  .postingSupplyPlatformHeader,
+  .postingSupplyPlatformRow {
+    min-width: 660px;
   }
   .postingSupplyDiagnosis {
     grid-template-columns: 1fr;

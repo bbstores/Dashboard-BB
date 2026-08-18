@@ -15,6 +15,7 @@ import {
   calculatePostingNormDailyTarget,
   calculatePublicationStats,
   publicationBelongsToPlatform,
+  taskPlatformNames,
 } from "../features/dashboard/analytics/calculatePublicationStats";
 import {
   calculateReportComparison,
@@ -85,6 +86,17 @@ test("converts posting norms to a daily target for selected platforms", () => {
   assert.equal(
     calculatePostingNormDailyTarget(norms, ["Shopee"]),
     0,
+  );
+});
+
+test("splits one final task into one supply slot per unique platform", () => {
+  assert.deepEqual(
+    taskPlatformNames(
+      task("MULTI-PLATFORM", {
+        platform: "Facebook, TikTok; Facebook | Không Đăng Social",
+      }),
+    ),
+    ["Facebook", "TikTok"],
   );
 });
 
@@ -770,6 +782,7 @@ test("attributes posting KPI gaps to unused ready assets before Media shortage",
       completedDate: date(8),
       publicationIds: ["MEDIA-POST"],
       expectedMinutes: 60,
+      platform: "Facebook",
     }),
     task("DELIVERED-IG", {
       title: "IG · Lookbook",
@@ -778,12 +791,14 @@ test("attributes posting KPI gaps to unused ready assets before Media shortage",
       status: "Done",
       completedDate: date(10),
       expectedMinutes: 90,
+      platform: "Facebook",
     }),
     task("DELIVERED-APPROVED", {
       title: "Video campaign",
       status: "Kinh Doanh Duyệt",
       businessApprovalDate: date(11),
       expectedMinutes: 120,
+      platform: "Facebook",
     }),
     task("OLD-LINKED", {
       title: "Ảnh BST cũ đã có mã đăng bài",
@@ -795,6 +810,7 @@ test("attributes posting KPI gaps to unused ready assets before Media shortage",
       completedDate: date(8),
       publicationIds: ["OLD-POST-ID"],
       expectedMinutes: 30,
+      platform: "Facebook",
     }),
     task("OLD-EMPTY", {
       title: "Ảnh BST cũ chưa có mã đăng bài",
@@ -831,6 +847,15 @@ test("attributes posting KPI gaps to unused ready assets before Media shortage",
       postType: "Reup",
       title: "Bài reup",
       bookTaskCode: "",
+    },
+    {
+      id: "OLD-POST-ID",
+      scheduledAt: date(12),
+      platform: "Facebook",
+      posted: false,
+      postType: "Ảnh",
+      title: "Bài đã lên lịch từ kho cũ",
+      bookTaskCode: "OLD-LINKED",
     },
   ];
 
@@ -876,6 +901,12 @@ test("attributes posting KPI gaps to unused ready assets before Media shortage",
     ["DELIVERED-IG", "DELIVERED-APPROVED"],
   );
   assert.equal(supply.availableTasks.length, 4);
+  assert.equal(supply.supplySlots.length, 4);
+  assert.equal(supply.openingSupplySlots.length, 2);
+  assert.equal(supply.deliveredSupplySlots.length, 2);
+  assert.equal(supply.usedSupplySlots.length, 1);
+  assert.equal(supply.unusedSupplySlots.length, 3);
+  assert.equal(supply.mediaCoveredPosts, 4);
   assert.ok(Math.abs(supply.mediaSupplyCoverage - 200 / 3) < 1e-9);
   assert.equal(supply.mediaPosts, 1);
   assert.equal(supply.reupPosts, 1);
@@ -889,6 +920,49 @@ test("attributes posting KPI gaps to unused ready assets before Media shortage",
     supply.legacyOldTasks.map((item) => item.code),
     ["OLD-EMPTY"],
   );
+});
+
+test("caps Media KPI coverage per platform so one channel cannot hide another", () => {
+  const readyTask = (code: string, platform: string) =>
+    task(code, {
+      status: "Kinh Doanh Duyệt",
+      businessApprovalDate: date(8),
+      platform,
+    });
+  const stats = calculatePublicationStats(
+    [
+      readyTask("MULTI", "Facebook, TikTok"),
+      readyTask("FACEBOOK-2", "Facebook"),
+      readyTask("FACEBOOK-3", "Facebook"),
+    ],
+    [],
+    {
+      from: new Date(2026, 6, 10),
+      to: new Date(2026, 6, 10, 23, 59, 59, 999),
+      hasFilter: true,
+    },
+    [
+      { platform: "Facebook", target: 2, unit: "Ngày", note: "" },
+      { platform: "TikTok", target: 2, unit: "Ngày", note: "" },
+    ],
+  );
+  const supply = stats.supplyPerformance;
+
+  assert.equal(supply.supplySlots.length, 4);
+  assert.deepEqual(
+    supply.platformSupplyRows.map((row) => ({
+      platform: row.platform,
+      expected: row.expectedPosts,
+      supplied: row.suppliedPosts,
+      covered: row.coveredPosts,
+    })),
+    [
+      { platform: "Facebook", expected: 2, supplied: 3, covered: 2 },
+      { platform: "TikTok", expected: 2, supplied: 1, covered: 1 },
+    ],
+  );
+  assert.equal(supply.mediaCoveredPosts, 3);
+  assert.equal(supply.mediaSupplyCoverage, 75);
 });
 
 test("estimates excess KPI contribution from Media and Reup source mix", () => {

@@ -49,6 +49,25 @@ export type ClassifiedPublication = {
   task?: Task;
 };
 
+export type MediaSupplySlot = {
+  key: string;
+  platform: string;
+  task: Task;
+  source: "opening" | "delivered";
+  state: "free" | "planned" | "used";
+  posts: PublicationPost[];
+};
+
+export type MediaSupplyPlatformRow = {
+  platform: string;
+  expectedPosts: number;
+  suppliedPosts: number;
+  coveredPosts: number;
+  usedPosts: number;
+  unusedPosts: number;
+  coveragePercentage: number;
+};
+
 export type PublicationNormRow = {
   platform: string;
   target: number | null;
@@ -90,6 +109,17 @@ export type PublicationSupplyPerformance = {
   openingPlannedPostedTasks: Task[];
   deliveredTasks: Task[];
   availableTasks: Task[];
+  supplySlots: MediaSupplySlot[];
+  openingSupplySlots: MediaSupplySlot[];
+  deliveredSupplySlots: MediaSupplySlot[];
+  usedSupplySlots: MediaSupplySlot[];
+  unusedSupplySlots: MediaSupplySlot[];
+  freeSupplySlots: MediaSupplySlot[];
+  plannedSupplySlots: MediaSupplySlot[];
+  openingUsedSupplySlots: MediaSupplySlot[];
+  deliveredUsedSupplySlots: MediaSupplySlot[];
+  platformSupplyRows: MediaSupplyPlatformRow[];
+  mediaCoveredPosts: number;
   legacyOldTasks: Task[];
   usedReadyTasks: Task[];
   unusedReadyTasks: Task[];
@@ -130,6 +160,26 @@ export function publicationBelongsToPlatform(
     );
   }
   return postPlatform === targetPlatform;
+}
+
+function comparablePlatformKey(value: string) {
+  return normalizedKey(value).replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+export function taskPlatformNames(task: Task) {
+  return Array.from(
+    new Map(
+      normalize(task.platform)
+        .split(/\s*[,;|\n]\s*/)
+        .map(normalize)
+        .filter(Boolean)
+        .filter(
+          (platform) =>
+            normalizedKey(platform) !== "không đăng social",
+        )
+        .map((platform) => [comparablePlatformKey(platform), platform]),
+    ).values(),
+  );
 }
 
 export const OLD_ASSET_CUTOFF = new Date(2026, 6, 1);
@@ -267,7 +317,10 @@ function calculatePublicationSupplyPerformance(
   const to = normPerformance.to ? endOfDay(normPerformance.to) : null;
   const expectedPosts = normPerformance.expectedTotal;
   const fixedRows = normPerformance.rows.filter(
-    (row) => row.expected !== null,
+    (
+      row,
+    ): row is PublicationNormRow & { expected: number } =>
+      row.expected !== null,
   );
   const classifiedByPost = new Map(
     classifiedPosts.map((item) => [normalizedKey(item.post.id), item]),
@@ -325,29 +378,6 @@ function calculatePublicationSupplyPerformance(
   const readyDatedTasks = scopedFinalTasks.filter(
     (task) => Boolean(publicationSupplyReadyDate(task)),
   );
-  const postsBeforeRange = new Set(
-    publications
-      .filter(
-        (post) =>
-          post.posted &&
-          post.scheduledAt &&
-          from &&
-          post.scheduledAt < from,
-      )
-      .map((post) => normalizedKey(post.bookTaskCode))
-      .filter(Boolean),
-  );
-  const openingReadyTasks = from
-    ? readyDatedTasks.filter((task) => {
-        const readyAt = publicationSupplyReadyDate(task);
-        const code = normalizedKey(task.code);
-        return Boolean(
-          readyAt &&
-          readyAt < from &&
-          (!postsBeforeRange.has(code) || postedMediaTaskCodes.has(code)),
-        );
-      })
-    : [];
   const postsByTaskCode = new Map<string, PublicationPost[]>();
   const postById = new Map(
     publications.map((post) => [normalizedKey(post.id), post]),
@@ -360,7 +390,8 @@ function calculatePublicationSupplyPerformance(
       post,
     ]);
   }
-  const hasRecordedPost = (task: Task) => {
+
+  const linkedPostsForTask = (task: Task) => {
     const linkedPosts = new Map<string, PublicationPost>();
     for (const post of postsByTaskCode.get(normalizedKey(task.code)) ?? []) {
       linkedPosts.set(normalizedKey(post.id), post);
@@ -369,40 +400,131 @@ function calculatePublicationSupplyPerformance(
       const post = postById.get(normalizedKey(publicationId));
       if (post) linkedPosts.set(normalizedKey(post.id), post);
     }
-    return Array.from(linkedPosts.values()).some((post) => post.posted);
+    return Array.from(linkedPosts.values());
   };
-  const openingFreeTasks = openingReadyTasks.filter(
-    (task) => !task.publicationIds?.length,
+
+  const fixedRowByPlatform = new Map(
+    fixedRows.map((row) => [comparablePlatformKey(row.platform), row]),
   );
-  const openingPlannedUnpostedTasks = openingReadyTasks.filter(
-    (task) => Boolean(task.publicationIds?.length) && !hasRecordedPost(task),
-  );
-  const openingPlannedPostedTasks = openingReadyTasks.filter(
-    (task) => Boolean(task.publicationIds?.length) && hasRecordedPost(task),
-  );
-  const deliveredTasks = readyDatedTasks.filter((task) => {
+  const openingCandidateTasks = from
+    ? readyDatedTasks.filter((task) => {
+        const readyAt = publicationSupplyReadyDate(task);
+        return Boolean(readyAt && readyAt < from);
+      })
+    : [];
+  const deliveredCandidateTasks = readyDatedTasks.filter((task) => {
     const readyAt = publicationSupplyReadyDate(task);
     if (!readyAt) return false;
     if (from && readyAt < from) return false;
     if (to && readyAt > to) return false;
     return true;
   });
-  const availableTasks = Array.from(
-    new Map(
-      [...openingReadyTasks, ...deliveredTasks].map((task) => [
-        normalizedKey(task.code),
-        task,
-      ]),
-    ).values(),
+
+  const postIsInRange = (post: PublicationPost) =>
+    Boolean(
+      post.scheduledAt &&
+        (!from || post.scheduledAt >= from) &&
+        (!to || post.scheduledAt <= to),
+    );
+  const slotsForTask = (
+    task: Task,
+    source: MediaSupplySlot["source"],
+  ): MediaSupplySlot[] => {
+    const linkedPosts = linkedPostsForTask(task);
+    const matchedRows = new Map<
+      string,
+      PublicationNormRow & { expected: number }
+    >();
+    for (const platform of taskPlatformNames(task)) {
+      const key = comparablePlatformKey(platform);
+      const row = fixedRowByPlatform.get(key);
+      if (row) matchedRows.set(key, row);
+    }
+
+    return Array.from(matchedRows.entries()).flatMap(([key, row]) => {
+      const platformPosts = linkedPosts.filter((post) =>
+        publicationBelongsToPlatform(post, row.platform),
+      );
+      if (
+        source === "opening" &&
+        from &&
+        platformPosts.some(
+          (post) =>
+            post.posted &&
+            post.scheduledAt &&
+            post.scheduledAt < from,
+        )
+      ) {
+        return [];
+      }
+      const periodPosts = platformPosts.filter(postIsInRange);
+      const state: MediaSupplySlot["state"] = periodPosts.some(
+        (post) => post.posted,
+      )
+        ? "used"
+        : periodPosts.length
+          ? "planned"
+          : "free";
+      return [
+        {
+          key: `${normalizedKey(task.code)}::${key}`,
+          platform: row.platform,
+          task,
+          source,
+          state,
+          posts: periodPosts,
+        },
+      ];
+    });
+  };
+
+  const openingSupplySlots = openingCandidateTasks.flatMap((task) =>
+    slotsForTask(task, "opening"),
   );
+  const deliveredSupplySlots = deliveredCandidateTasks.flatMap((task) =>
+    slotsForTask(task, "delivered"),
+  );
+  const supplySlots = [...openingSupplySlots, ...deliveredSupplySlots];
+  const usedSupplySlots = supplySlots.filter(
+    (slot) => slot.state === "used",
+  );
+  const unusedSupplySlots = supplySlots.filter(
+    (slot) => slot.state !== "used",
+  );
+  const freeSupplySlots = supplySlots.filter(
+    (slot) => slot.state === "free",
+  );
+  const plannedSupplySlots = supplySlots.filter(
+    (slot) => slot.state === "planned",
+  );
+  const openingUsedSupplySlots = openingSupplySlots.filter(
+    (slot) => slot.state === "used",
+  );
+  const deliveredUsedSupplySlots = deliveredSupplySlots.filter(
+    (slot) => slot.state === "used",
+  );
+  const tasksFromSlots = (slots: MediaSupplySlot[]) =>
+    Array.from(
+      new Map(
+        slots.map((slot) => [normalizedKey(slot.task.code), slot.task]),
+      ).values(),
+    );
+  const openingReadyTasks = tasksFromSlots(openingSupplySlots);
+  const openingFreeTasks = tasksFromSlots(
+    openingSupplySlots.filter((slot) => slot.state === "free"),
+  );
+  const openingPlannedUnpostedTasks = tasksFromSlots(
+    openingSupplySlots.filter((slot) => slot.state === "planned"),
+  );
+  const openingPlannedPostedTasks = tasksFromSlots(
+    openingUsedSupplySlots,
+  );
+  const deliveredTasks = tasksFromSlots(deliveredSupplySlots);
+  const availableTasks = tasksFromSlots(supplySlots);
+  const usedReadyTasks = tasksFromSlots(usedSupplySlots);
+  const unusedReadyTasks = tasksFromSlots(unusedSupplySlots);
   const availableTaskCodes = new Set(
     availableTasks.map((task) => normalizedKey(task.code)),
-  );
-  const usedReadyTasks = availableTasks.filter((task) =>
-    postedMediaTaskCodes.has(normalizedKey(task.code)),
-  );
-  const unusedReadyTasks = availableTasks.filter(
-    (task) => !postedMediaTaskCodes.has(normalizedKey(task.code)),
   );
   const postedWithoutReadyTasks = Array.from(postedMediaTaskCodes)
     .filter((code) => !availableTaskCodes.has(code))
@@ -411,17 +533,63 @@ function calculatePublicationSupplyPerformance(
     )
     .filter((task): task is Task => Boolean(task));
 
-  const actualPosts = mediaPosts + reupPosts + unknownPosts;
-  const postingShortfall = Math.max(0, expectedPosts - actualPosts);
-  const businessUnusedGap = Math.min(
-    postingShortfall,
-    unusedReadyTasks.length,
+  const platformSupplyRows: MediaSupplyPlatformRow[] = fixedRows.map(
+    (row) => {
+      const slots = supplySlots.filter(
+        (slot) =>
+          comparablePlatformKey(slot.platform) ===
+          comparablePlatformKey(row.platform),
+      );
+      const suppliedPosts = slots.length;
+      const usedPosts = slots.filter(
+        (slot) => slot.state === "used",
+      ).length;
+      const coveredPosts = Math.min(suppliedPosts, row.expected);
+      return {
+        platform: row.platform,
+        expectedPosts: row.expected,
+        suppliedPosts,
+        coveredPosts,
+        usedPosts,
+        unusedPosts: suppliedPosts - usedPosts,
+        coveragePercentage: row.expected
+          ? (coveredPosts / row.expected) * 100
+          : 0,
+      };
+    },
   );
-  const mediaSupplyGap = Math.max(
+  const mediaCoveredPosts = platformSupplyRows.reduce(
+    (sum, row) => sum + row.coveredPosts,
     0,
-    postingShortfall - businessUnusedGap,
   );
-  const excessPosts = Math.max(0, actualPosts - expectedPosts);
+
+  const actualPosts = mediaPosts + reupPosts + unknownPosts;
+  const postingShortfall = fixedRows.reduce(
+    (sum, row) => sum + Math.max(0, row.expected - row.posted),
+    0,
+  );
+  const businessUnusedGap = fixedRows.reduce((sum, row) => {
+    const gap = Math.max(0, row.expected - row.posted);
+    const unusedForPlatform = unusedSupplySlots.filter(
+      (slot) =>
+        comparablePlatformKey(slot.platform) ===
+        comparablePlatformKey(row.platform),
+    ).length;
+    return sum + Math.min(gap, unusedForPlatform);
+  }, 0);
+  const mediaSupplyGap = fixedRows.reduce((sum, row) => {
+    const gap = Math.max(0, row.expected - row.posted);
+    const unusedForPlatform = unusedSupplySlots.filter(
+      (slot) =>
+        comparablePlatformKey(slot.platform) ===
+        comparablePlatformKey(row.platform),
+    ).length;
+    return sum + Math.max(0, gap - unusedForPlatform);
+  }, 0);
+  const excessPosts = fixedRows.reduce(
+    (sum, row) => sum + Math.max(0, row.posted - row.expected),
+    0,
+  );
   const excessShare = (value: number) =>
     actualPosts ? (excessPosts * value) / actualPosts : 0;
 
@@ -437,6 +605,17 @@ function calculatePublicationSupplyPerformance(
     openingPlannedPostedTasks,
     deliveredTasks,
     availableTasks,
+    supplySlots,
+    openingSupplySlots,
+    deliveredSupplySlots,
+    usedSupplySlots,
+    unusedSupplySlots,
+    freeSupplySlots,
+    plannedSupplySlots,
+    openingUsedSupplySlots,
+    deliveredUsedSupplySlots,
+    platformSupplyRows,
+    mediaCoveredPosts,
     legacyOldTasks,
     usedReadyTasks,
     unusedReadyTasks,
@@ -451,10 +630,10 @@ function calculatePublicationSupplyPerformance(
       0,
     ),
     mediaDeliveryRate: normPerformance.days
-      ? deliveredTasks.length / normPerformance.days
+      ? deliveredSupplySlots.length / normPerformance.days
       : 0,
     mediaSupplyCoverage: expectedPosts
-      ? (availableTasks.length / expectedPosts) * 100
+      ? (mediaCoveredPosts / expectedPosts) * 100
       : 0,
     actualPosts,
     mediaPosts,
@@ -751,6 +930,16 @@ export function calculatePublicationStats(
       .map((item) => normalize(item.post.bookTaskCode))
       .filter(Boolean),
   );
+  const postedMediaEvidence = classifiedPosts.filter(
+    (item) =>
+      item.post.posted &&
+      (item.source === "video" || item.source === "graphic"),
+  );
+  const postedMediaTaskCodes = new Set(
+    postedMediaEvidence
+      .map((item) => normalizedKey(item.post.bookTaskCode))
+      .filter(Boolean),
+  );
   const unknownPostDetails = classifiedPosts
     .filter((item) => item.source === "unknown")
     .map((item) => ({
@@ -787,6 +976,15 @@ export function calculatePublicationStats(
     graphic: sourceCounts.graphic,
     unknown: sourceCounts.unknown,
     uniqueMediaTasks: mediaTaskCodes.size,
+    postedMedia: postedMediaEvidence.length,
+    postedVideo: postedMediaEvidence.filter(
+      (item) => item.source === "video",
+    ).length,
+    postedGraphic: postedMediaEvidence.filter(
+      (item) => item.source === "graphic",
+    ).length,
+    uniquePostedMediaTasks: postedMediaTaskCodes.size,
+    postedMediaEvidence,
     postMix: [
       { label: "Bài reup", value: sourceCounts.reup },
       { label: "Media · Video", value: sourceCounts.video },

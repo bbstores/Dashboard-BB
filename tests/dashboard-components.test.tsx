@@ -912,6 +912,7 @@ test("posting section shows source mix and counts multi-platform posts independe
     status: "Kinh Doanh Duyệt",
     businessApprovalDate: new Date(2026, 6, 10, 9),
     publicationIds: ["POST-1", "POST-3"],
+    platform: "Facebook, TikTok",
   };
   const scheduledUnpostedTask = {
     ...task(),
@@ -920,6 +921,7 @@ test("posting section shows source mix and counts multi-platform posts independe
     status: "Kinh Doanh Duyệt",
     businessApprovalDate: new Date(2026, 6, 10, 10),
     publicationIds: ["POST-MISSING"],
+    platform: "Facebook",
   };
   const recentGraphicTask = {
     ...task(),
@@ -931,6 +933,7 @@ test("posting section shows source mix and counts multi-platform posts independe
     status: "Done",
     completedDate: new Date(2026, 6, 11, 11),
     publicationIds: [],
+    platform: "Facebook",
   };
   const noSocialTask = {
     ...task(),
@@ -961,6 +964,7 @@ test("posting section shows source mix and counts multi-platform posts independe
     status: "Done",
     completedDate: new Date(2026, 6, 8, 9),
     publicationIds: [],
+    platform: "Facebook",
   };
   const openingPlannedTask = {
     ...task(),
@@ -972,6 +976,7 @@ test("posting section shows source mix and counts multi-platform posts independe
     status: "Done",
     completedDate: new Date(2026, 6, 8, 10),
     publicationIds: ["POST-PLANNED"],
+    platform: "Facebook",
   };
   const publications: PublicationPost[] = [
     {
@@ -1067,31 +1072,38 @@ test("posting section shows source mix and counts multi-platform posts independe
   assert.equal(
     container.querySelector(".postingSupplyHeadline .primary strong")
       ?.textContent,
-    "250%",
+    "100%",
   );
-  assert.ok(screen.getByText("Nguồn Media có trong kỳ"));
-  assert.ok(screen.getByText("Kho đầu kỳ chưa sử dụng"));
-  assert.ok(screen.getByText("Đã sử dụng từ kho đầu kỳ"));
+  assert.ok(screen.getByText("Nguồn Media quy đổi"));
+  assert.ok(screen.getByText("Nguồn Media đã sử dụng"));
+  assert.ok(screen.getByText("Nguồn Media còn khả dụng"));
   assert.ok(
-    screen.getByRole("button", { name: "Kho đầu kỳ ban đầu: 2 task" }),
+    screen.getByRole("button", {
+      name: "Nguồn quy đổi từ kho đầu kỳ: 2 bài",
+    }),
   );
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Kho free đầu kỳ, cột 2.7 trống: 1 task",
+      name: "Nguồn quy đổi từ kho đầu kỳ: 2 bài",
     }),
   );
   assert.deepEqual(
     postingDetailState.current?.tasks?.map((item) => item.code),
-    ["OPENING-FREE"],
+    ["OPENING-FREE", "OPENING-PLANNED"],
   );
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Đã có kế hoạch nhưng chưa ghi nhận đăng: 1 task",
+      name: "Chưa có lịch đăng đúng nền tảng: 4 bài",
     }),
   );
   assert.deepEqual(
     postingDetailState.current?.tasks?.map((item) => item.code),
-    ["OPENING-PLANNED"],
+    [
+      "OPENING-FREE",
+      "OPENING-PLANNED",
+      "VIDEO-NOT-POSTED",
+      "GRAPHIC-NOT-SCHEDULED",
+    ],
   );
   fireEvent.click(
     screen.getByRole("button", {
@@ -1123,7 +1135,7 @@ test("posting section shows source mix and counts multi-platform posts independe
       "Dữ liệu cần kiểm tra · Không Đăng Social",
     ),
   );
-  assert.ok(screen.getByText("Bài đăng dùng media"));
+  assert.ok(screen.getByText("Bài đã đăng dùng Media"));
   assert.ok(screen.getByText("Tình trạng lên lịch ấn phẩm"));
   assert.equal(
     screen.queryByText("TASKLIST CHƯA CÓ ĐĂNG BÀI"),
@@ -1209,7 +1221,7 @@ test("posting section shows source mix and counts multi-platform posts independe
       ".postingKpiCard",
     ),
   ).find((element) =>
-    element.textContent?.startsWith("Bài đăng dùng media"),
+    element.textContent?.startsWith("Bài đã đăng dùng Media"),
   );
   assert.ok(mediaKpi);
   fireEvent.click(mediaKpi);
