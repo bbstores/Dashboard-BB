@@ -965,6 +965,47 @@ test("caps Media KPI coverage per platform so one channel cannot hide another", 
   assert.equal(supply.mediaSupplyCoverage, 75);
 });
 
+test("counts a multi-platform task as one used asset after any platform is posted", () => {
+  const stats = calculatePublicationStats(
+    [
+      task("MULTI-ASSET", {
+        status: "Kinh Doanh Duyệt",
+        businessApprovalDate: date(8),
+        platform: "Facebook, TikTok",
+        publicationIds: ["POST-FACEBOOK"],
+      }),
+    ],
+    [
+      {
+        id: "POST-FACEBOOK",
+        scheduledAt: date(10),
+        platform: "Facebook",
+        posted: true,
+        postType: "Video",
+        title: "Facebook post",
+        bookTaskCode: "MULTI-ASSET",
+      },
+    ],
+    {
+      from: new Date(2026, 6, 10),
+      to: new Date(2026, 6, 10, 23, 59, 59, 999),
+      hasFilter: true,
+    },
+    [
+      { platform: "Facebook", target: 1, unit: "Ngày", note: "" },
+      { platform: "TikTok", target: 1, unit: "Ngày", note: "" },
+    ],
+  );
+  const supply = stats.supplyPerformance;
+
+  assert.equal(supply.supplySlots.length, 2);
+  assert.equal(supply.usedSupplySlots.length, 1);
+  assert.equal(supply.unusedSupplySlots.length, 1);
+  assert.equal(supply.availableTasks.length, 1);
+  assert.equal(supply.usedReadyTasks.length, 1);
+  assert.equal(supply.unusedReadyTasks.length, 0);
+});
+
 test("estimates excess KPI contribution from Media and Reup source mix", () => {
   const approvedTasks = ["MEDIA-1", "MEDIA-2"].map((code) =>
     task(code, {

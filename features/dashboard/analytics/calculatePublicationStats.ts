@@ -510,19 +510,37 @@ function calculatePublicationSupplyPerformance(
       ).values(),
     );
   const openingReadyTasks = tasksFromSlots(openingSupplySlots);
-  const openingFreeTasks = tasksFromSlots(
-    openingSupplySlots.filter((slot) => slot.state === "free"),
-  );
-  const openingPlannedUnpostedTasks = tasksFromSlots(
-    openingSupplySlots.filter((slot) => slot.state === "planned"),
-  );
   const openingPlannedPostedTasks = tasksFromSlots(
     openingUsedSupplySlots,
+  );
+  const openingUsedTaskCodes = new Set(
+    openingPlannedPostedTasks.map((task) => normalizedKey(task.code)),
+  );
+  const openingUnusedTasks = openingReadyTasks.filter(
+    (task) => !openingUsedTaskCodes.has(normalizedKey(task.code)),
+  );
+  const openingPlannedUnpostedTasks = openingUnusedTasks.filter((task) =>
+    openingSupplySlots.some(
+      (slot) =>
+        normalizedKey(slot.task.code) === normalizedKey(task.code) &&
+        slot.state === "planned",
+    ),
+  );
+  const openingPlannedTaskCodes = new Set(
+    openingPlannedUnpostedTasks.map((task) => normalizedKey(task.code)),
+  );
+  const openingFreeTasks = openingUnusedTasks.filter(
+    (task) => !openingPlannedTaskCodes.has(normalizedKey(task.code)),
   );
   const deliveredTasks = tasksFromSlots(deliveredSupplySlots);
   const availableTasks = tasksFromSlots(supplySlots);
   const usedReadyTasks = tasksFromSlots(usedSupplySlots);
-  const unusedReadyTasks = tasksFromSlots(unusedSupplySlots);
+  const usedReadyTaskCodes = new Set(
+    usedReadyTasks.map((task) => normalizedKey(task.code)),
+  );
+  const unusedReadyTasks = availableTasks.filter(
+    (task) => !usedReadyTaskCodes.has(normalizedKey(task.code)),
+  );
   const availableTaskCodes = new Set(
     availableTasks.map((task) => normalizedKey(task.code)),
   );

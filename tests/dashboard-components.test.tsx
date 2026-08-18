@@ -1074,17 +1074,17 @@ test("posting section shows source mix and counts multi-platform posts independe
       ?.textContent,
     "100%",
   );
-  assert.ok(screen.getByText("Nguồn Media quy đổi"));
-  assert.ok(screen.getByText("Nguồn Media đã sử dụng"));
-  assert.ok(screen.getByText("Nguồn Media còn khả dụng"));
+  assert.ok(screen.getByText("Kho ấn phẩm Media"));
+  assert.ok(screen.getByText("Ấn phẩm Media đã sử dụng"));
+  assert.ok(screen.getByText("Ấn phẩm Media còn khả dụng"));
   assert.ok(
     screen.getByRole("button", {
-      name: "Nguồn quy đổi từ kho đầu kỳ: 2 bài",
+      name: "Ấn phẩm từ kho đầu kỳ: 2 ấn phẩm",
     }),
   );
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Nguồn quy đổi từ kho đầu kỳ: 2 bài",
+      name: "Ấn phẩm từ kho đầu kỳ: 2 ấn phẩm",
     }),
   );
   assert.deepEqual(
@@ -1093,7 +1093,7 @@ test("posting section shows source mix and counts multi-platform posts independe
   );
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Chưa có lịch đăng đúng nền tảng: 4 bài",
+      name: "Ấn phẩm Media còn khả dụng: 4 ấn phẩm",
     }),
   );
   assert.deepEqual(

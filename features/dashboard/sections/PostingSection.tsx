@@ -218,13 +218,16 @@ function MediaSupplyResponseChart({
   performance: PublicationSupplyPerformance;
   onOpenDetail: (detail: DetailView) => void;
 }) {
-  const scale = Math.max(
+  const postScale = Math.max(
     1,
     performance.expectedPosts,
-    performance.supplySlots.length,
     performance.actualPosts,
   );
-  const widthFor = (value: number) => `${(value / scale) * 100}%`;
+  const assetScale = Math.max(1, performance.availableTasks.length);
+  const postWidthFor = (value: number) =>
+    `${(value / postScale) * 100}%`;
+  const assetWidthFor = (value: number) =>
+    `${(value / assetScale) * 100}%`;
   const openTasks = (title: string, subtitle: string, selectedTasks: Task[]) =>
     onOpenDetail({ title, subtitle, tasks: selectedTasks });
   const openPosts = (
@@ -248,10 +251,16 @@ function MediaSupplyResponseChart({
     );
     onOpenDetail({
       title,
-      subtitle: `${formatNumber(slots.length)} bài quy đổi từ ${formatNumber(selectedTasks.length)} task · ${subtitle}`,
+      subtitle: `${formatNumber(slots.length)} bài quy đổi từ ${formatNumber(selectedTasks.length)} ấn phẩm · ${subtitle}`,
       tasks: selectedTasks,
     });
   };
+  const openingUsedTaskCodes = new Set(
+    performance.openingPlannedPostedTasks.map((task) => task.code),
+  );
+  const deliveredUsedTasks = performance.usedReadyTasks.filter(
+    (task) => !openingUsedTaskCodes.has(task.code),
+  );
 
   return (
     <article className="postingSupplyPanel">
@@ -261,7 +270,7 @@ function MediaSupplyResponseChart({
           <h3>Khả năng đáp ứng KPI đăng bài</h3>
           <p className="postingChartNote">
             {formatNumber(performance.days)} ngày lịch · mỗi nền tảng trên
-            task final = 1 bài quy đổi · chỉ tính kênh có KPI cố định
+            task final = 1 bài quy đổi KPI · kho Media đếm theo ấn phẩm
           </p>
         </div>
         <HelpButton
@@ -272,9 +281,9 @@ function MediaSupplyResponseChart({
             objective:
               "Quy đổi task Media và KPI Kinh doanh về cùng đơn vị bài, đồng thời không để nguồn dư ở một nền tảng che phần thiếu của nền tảng khác.",
             calculation:
-              "Mỗi giá trị không trùng trong cột Nền Tảng của một task final được quy đổi thành một bài có thể đăng: Facebook + TikTok = 2 bài. Chỉ giữ nền tảng khớp kênh có định mức KPI cố định. Với từng kênh, phần Media đáp ứng bằng số nhỏ hơn giữa nguồn Media quy đổi và KPI của kênh; sau đó mới cộng các kênh để tính tỷ lệ tổng. Nguồn đã đăng trên chính nền tảng đó trước đầu kỳ không được tính lại vào kho đầu kỳ.",
+              "Kho Media đếm mỗi task final là một ấn phẩm. Khi tính khả năng đáp ứng KPI, mỗi giá trị không trùng trong cột Nền Tảng của ấn phẩm được quy đổi thành một bài có thể đăng: Facebook + TikTok = 2 bài quy đổi nhưng vẫn chỉ là 1 ấn phẩm trong kho. Chỉ giữ nền tảng khớp kênh có định mức KPI cố định. Với từng kênh, phần Media đáp ứng bằng số nhỏ hơn giữa nguồn bài quy đổi và KPI của kênh; sau đó mới cộng các kênh để tính tỷ lệ tổng.",
             example:
-              "Một task có Facebook và TikTok đóng góp 2 bài quy đổi. Nếu KPI Facebook là 60, TikTok là 40 nhưng Media có 80 bài Facebook và 20 bài TikTok thì mức đáp ứng là (60 + 20) / 100 = 80%, không phải 100%.",
+              "Một ấn phẩm có Facebook và TikTok vẫn được đếm là 1 ấn phẩm trong kho nhưng tạo 2 bài quy đổi KPI. Nếu KPI Facebook là 60 bài, TikTok là 40 bài nhưng Media có nguồn quy đổi 80 bài Facebook và 20 bài TikTok thì mức đáp ứng là (60 + 20) / 100 = 80%, không phải 100%.",
             note:
               "Task có Nền Tảng trống, Không Đăng Social hoặc chỉ thuộc kênh không có KPI cố định không đóng góp vào tỷ lệ này. Task final thiếu ngày sẵn sàng không được tự động gán vào timeline.",
           }}
@@ -288,14 +297,14 @@ function MediaSupplyResponseChart({
           <em>
             {formatNormValue(performance.mediaCoveredPosts)}/
             {formatNormValue(performance.expectedPosts)} bài KPI có nguồn
-            đúng nền tảng · tổng nguồn {formatNumber(performance.supplySlots.length)} bài quy đổi
+            đúng nền tảng · {formatNumber(performance.availableTasks.length)} ấn phẩm tạo {formatNumber(performance.supplySlots.length)} bài quy đổi
           </em>
         </span>
         <span>
           <small>Media bổ sung nguồn trong kỳ</small>
           <strong>{formatNormValue(performance.mediaDeliveryRate)}/ngày</strong>
           <em>
-            {formatNumber(performance.deliveredSupplySlots.length)} bài quy đổi từ {formatNumber(performance.deliveredTasks.length)} task
+            {formatNumber(performance.deliveredSupplySlots.length)} bài quy đổi từ {formatNumber(performance.deliveredTasks.length)} ấn phẩm
           </em>
         </span>
         <span>
@@ -318,75 +327,68 @@ function MediaSupplyResponseChart({
       <div className="postingSupplyBars" role="group" aria-label="So sánh KPI, nguồn cung Media và bài đã đăng">
         <div className="postingSupplyBarRow target">
           <span><strong>KPI cần đăng</strong><small>{formatNormValue(performance.expectedPosts)} bài</small></span>
-          <i><b style={{ width: widthFor(performance.expectedPosts) }} /></i>
+          <i><b style={{ width: postWidthFor(performance.expectedPosts) }} /></i>
         </div>
         <div className="postingSupplyBarRow supply">
           <span>
-            <strong>Nguồn Media quy đổi</strong>
-            <small>{formatNumber(performance.supplySlots.length)} bài</small>
+            <strong>Kho ấn phẩm Media</strong>
+            <small>{formatNumber(performance.availableTasks.length)} ấn phẩm</small>
           </span>
           <i>
             <button
               type="button"
               className="openingStock"
-              style={{ width: widthFor(performance.openingSupplySlots.length) }}
-              aria-label={`Nguồn quy đổi từ kho đầu kỳ: ${performance.openingSupplySlots.length} bài`}
-              onClick={() => openSlots("Nguồn quy đổi từ kho đầu kỳ", "Mỗi task–nền tảng là một bài; đã loại nền tảng từng đăng trước kỳ", performance.openingSupplySlots)}
+              style={{ width: assetWidthFor(performance.openingReadyTasks.length) }}
+              aria-label={`Ấn phẩm từ kho đầu kỳ: ${performance.openingReadyTasks.length} ấn phẩm`}
+              onClick={() => openTasks("Ấn phẩm từ kho đầu kỳ", "Mỗi task final được tính là một ấn phẩm", performance.openingReadyTasks)}
             />
             <button
               type="button"
               className="delivered"
-              style={{ width: widthFor(performance.deliveredSupplySlots.length) }}
-              aria-label={`Nguồn quy đổi Media trả trong kỳ: ${performance.deliveredSupplySlots.length} bài`}
-              onClick={() => openSlots("Nguồn Media bổ sung trong kỳ", "Task đạt trạng thái sẵn sàng trong kỳ và nền tảng khớp kênh KPI", performance.deliveredSupplySlots)}
+              style={{ width: assetWidthFor(performance.deliveredTasks.length) }}
+              aria-label={`Ấn phẩm Media trả trong kỳ: ${performance.deliveredTasks.length} ấn phẩm`}
+              onClick={() => openTasks("Ấn phẩm Media trả trong kỳ", "Task final đạt trạng thái sẵn sàng trong khoảng ngày đang lọc", performance.deliveredTasks)}
             />
           </i>
         </div>
         <div className="postingSupplyBarRow supplyUsed">
           <span>
-            <strong>Nguồn Media đã sử dụng</strong>
-            <small>{formatNumber(performance.usedSupplySlots.length)} bài</small>
+            <strong>Ấn phẩm Media đã sử dụng</strong>
+            <small>{formatNumber(performance.usedReadyTasks.length)} ấn phẩm</small>
           </span>
           <i>
-            {performance.openingUsedSupplySlots.length > 0 && (
+            {performance.openingPlannedPostedTasks.length > 0 && (
               <button
                 type="button"
                 className="openingPosted"
-                style={{ width: widthFor(performance.openingUsedSupplySlots.length) }}
-                aria-label={`Đã dùng từ kho đầu kỳ: ${performance.openingUsedSupplySlots.length} bài`}
-                onClick={() => openSlots("Đã dùng từ kho đầu kỳ", "Bài quy đổi có bài liên kết đúng nền tảng được đánh dấu Đã Đăng trong kỳ", performance.openingUsedSupplySlots)}
+                style={{ width: assetWidthFor(performance.openingPlannedPostedTasks.length) }}
+                aria-label={`Ấn phẩm đã dùng từ kho đầu kỳ: ${performance.openingPlannedPostedTasks.length} ấn phẩm`}
+                onClick={() => openTasks("Ấn phẩm đã dùng từ kho đầu kỳ", "Ấn phẩm có ít nhất một bài liên kết được đánh dấu Đã Đăng trong kỳ", performance.openingPlannedPostedTasks)}
               />
             )}
-            {performance.deliveredUsedSupplySlots.length > 0 && (
+            {deliveredUsedTasks.length > 0 && (
               <button
                 type="button"
                 className="deliveredUsed"
-                style={{ width: widthFor(performance.deliveredUsedSupplySlots.length) }}
-                aria-label={`Đã dùng từ nguồn Media mới: ${performance.deliveredUsedSupplySlots.length} bài`}
-                onClick={() => openSlots("Đã dùng từ nguồn Media mới", "Nguồn được Media bàn giao và đã đăng đúng nền tảng trong cùng kỳ", performance.deliveredUsedSupplySlots)}
+                style={{ width: assetWidthFor(deliveredUsedTasks.length) }}
+                aria-label={`Ấn phẩm mới đã sử dụng: ${deliveredUsedTasks.length} ấn phẩm`}
+                onClick={() => openTasks("Ấn phẩm mới đã sử dụng", "Ấn phẩm được Media bàn giao và có ít nhất một bài Đã Đăng trong cùng kỳ", deliveredUsedTasks)}
               />
             )}
           </i>
         </div>
         <div className="postingSupplyBarRow supplyUnused">
           <span>
-            <strong>Nguồn Media còn khả dụng</strong>
-            <small>{formatNumber(performance.unusedSupplySlots.length)} bài</small>
+            <strong>Ấn phẩm Media còn khả dụng</strong>
+            <small>{formatNumber(performance.unusedReadyTasks.length)} ấn phẩm</small>
           </span>
           <i>
             <button
               type="button"
               className="openingFree"
-              style={{ width: widthFor(performance.freeSupplySlots.length) }}
-              aria-label={`Chưa có lịch đăng đúng nền tảng: ${performance.freeSupplySlots.length} bài`}
-              onClick={() => openSlots("Nguồn chưa có lịch đăng", "Chưa có dòng 2.7 đúng nền tảng trong kỳ", performance.freeSupplySlots)}
-            />
-            <button
-              type="button"
-              className="openingPlanned"
-              style={{ width: widthFor(performance.plannedSupplySlots.length) }}
-              aria-label={`Đã lên lịch nhưng chưa đăng: ${performance.plannedSupplySlots.length} bài`}
-              onClick={() => openSlots("Nguồn đã lên lịch nhưng chưa đăng", "Có dòng 2.7 đúng nền tảng trong kỳ nhưng chưa chọn Đã Đăng", performance.plannedSupplySlots)}
+              style={{ width: assetWidthFor(performance.unusedReadyTasks.length) }}
+              aria-label={`Ấn phẩm Media còn khả dụng: ${performance.unusedReadyTasks.length} ấn phẩm`}
+              onClick={() => openTasks("Ấn phẩm Media còn khả dụng", "Ấn phẩm chưa có bài liên kết nào được đánh dấu Đã Đăng trong kỳ", performance.unusedReadyTasks)}
             />
           </i>
         </div>
@@ -396,14 +398,14 @@ function MediaSupplyResponseChart({
             <button
               type="button"
               className="media"
-              style={{ width: widthFor(performance.mediaPosts) }}
+              style={{ width: postWidthFor(performance.mediaPosts) }}
               aria-label={`Đã đăng từ Media: ${performance.mediaPosts} bài`}
               onClick={() => openPosts("Đã đăng từ ấn phẩm Media", "Bài đã đăng trên các kênh có KPI và có Book Task Video/Hình ảnh", performance.mediaPostEvidence)}
             />
             <button
               type="button"
               className="reup"
-              style={{ width: widthFor(performance.reupPosts) }}
+              style={{ width: postWidthFor(performance.reupPosts) }}
               aria-label={`Reup/Kinh doanh chủ động: ${performance.reupPosts} bài`}
               onClick={() => openPosts("Bài Reup/Kinh doanh chủ động", "Bài đã đăng trên kênh có KPI nhưng không có Book Task", performance.reupPostEvidence)}
             />
@@ -411,7 +413,7 @@ function MediaSupplyResponseChart({
               <button
                 type="button"
                 className="unknown"
-                style={{ width: widthFor(performance.unknownPosts) }}
+                style={{ width: postWidthFor(performance.unknownPosts) }}
                 aria-label={`Chưa xác định nguồn: ${performance.unknownPosts} bài`}
                 onClick={() => openPosts("Bài chưa xác định nguồn", "Book Task chưa khớp quy tắc phân loại ấn phẩm", performance.unknownPostEvidence)}
               />
@@ -419,12 +421,11 @@ function MediaSupplyResponseChart({
           </i>
         </div>
         <div className="postingSupplyLegend" aria-label="Chú thích biểu đồ">
-          <span><i className="openingStock" />Nguồn kho đầu kỳ</span>
-          <span><i className="delivered" />Nguồn Media bổ sung</span>
-          <span><i className="openingPosted" />Đã dùng từ kho đầu kỳ</span>
-          <span><i className="deliveredUsed" />Đã dùng từ nguồn mới</span>
-          <span><i className="openingFree" />Chưa có lịch đúng nền tảng</span>
-          <span><i className="openingPlanned" />Đã lên lịch, chưa đăng</span>
+          <span><i className="openingStock" />Ấn phẩm kho đầu kỳ</span>
+          <span><i className="delivered" />Ấn phẩm Media bổ sung</span>
+          <span><i className="openingPosted" />Ấn phẩm cũ đã dùng</span>
+          <span><i className="deliveredUsed" />Ấn phẩm mới đã dùng</span>
+          <span><i className="openingFree" />Ấn phẩm còn khả dụng</span>
           <span><i className="media" />Đăng từ Media</span>
           <span><i className="reup" />Reup/Kinh doanh</span>
         </div>
@@ -484,7 +485,7 @@ function MediaSupplyResponseChart({
         >
           <small>THIẾU DO CHƯA SỬ DỤNG ẤN PHẨM</small>
           <strong>{formatNormValue(performance.businessUnusedGap)} bài</strong>
-          <em>{formatNumber(performance.unusedSupplySlots.length)} bài quy đổi còn khả dụng · nhấn xem</em>
+          <em>{formatNumber(performance.unusedReadyTasks.length)} ấn phẩm còn khả dụng · tương ứng {formatNumber(performance.unusedSupplySlots.length)} bài quy đổi</em>
         </button>
         <div className="mediaGap">
           <small>THIẾU DO CHƯA CÓ ẤN PHẨM</small>
