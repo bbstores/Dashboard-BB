@@ -1062,9 +1062,18 @@ test("posting section shows source mix and counts multi-platform posts independe
   assert.ok(screen.getAllByText("Facebook").length >= 1);
   assert.ok(screen.getAllByText("TikTok").length >= 1);
   assert.ok(screen.getByText("Bài đăng theo nền tảng"));
-  assert.ok(screen.getByText("Mức độ hoàn thành theo từng kênh"));
-  assert.ok(screen.getByText("Media đáp ứng bài đăng đúng hạn"));
-  assert.ok(screen.getByText("Định mức kỳ"));
+  assert.ok(
+    screen.getByText("Hiệu quả đăng bài và mức đáp ứng Media"),
+  );
+  assert.equal(
+    screen.queryByText("Mức độ hoàn thành theo từng kênh"),
+    null,
+  );
+  assert.equal(
+    screen.queryByText("Media đáp ứng bài đăng đúng hạn"),
+    null,
+  );
+  assert.ok(screen.getByText("Kế hoạch kỳ"));
   assert.ok(
     screen.getByRole("group", {
       name: "Tỷ lệ bài Media đáp ứng đúng ngày đăng",

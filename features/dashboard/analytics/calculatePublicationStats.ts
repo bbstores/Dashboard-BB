@@ -164,8 +164,13 @@ export type MediaPostingResponseItem = {
 
 export type MediaPostingResponsePlatformRow = {
   platform: string;
+  target: number | null;
+  unit: string;
+  note: string;
   expectedPosts: number | null;
   totalPosts: number;
+  postedPosts: number;
+  postingAttainment: number | null;
   mediaPosts: number;
   onTimePosts: number;
   mediaShare: number;
@@ -174,8 +179,16 @@ export type MediaPostingResponsePlatformRow = {
 };
 
 export type MediaPostingResponsePerformance = {
+  days: number;
+  from: Date | null;
+  to: Date | null;
   expectedPosts: number;
   totalPosts: number;
+  postedPosts: number;
+  postingAttainment: number;
+  fixedChannelCount: number;
+  flexibleChannelCount: number;
+  unmappedPlatformCount: number;
   mediaPosts: number;
   onTimePosts: number;
   latePosts: number;
@@ -825,18 +838,37 @@ function calculateMediaPostingResponsePerformance(
       row,
     ]),
   );
+  for (const normRow of normPerformance.rows) {
+    const hasPlatform = Array.from(platformMap.keys()).some(
+      (platform) =>
+        comparablePlatformKey(platform) ===
+        comparablePlatformKey(normRow.platform),
+    );
+    if (!hasPlatform) {
+      platformMap.set(normRow.platform, {
+        totalPosts: 0,
+        items: [],
+      });
+    }
+  }
   const platformRows = Array.from(platformMap.entries())
     .map(([platform, row]): MediaPostingResponsePlatformRow => {
       const mediaPosts = row.items.length;
       const platformOnTimePosts = row.items.filter(
         (item) => item.status === "on-time",
       ).length;
+      const normRow = normRowByPlatform.get(
+        comparablePlatformKey(platform),
+      );
       return {
         platform,
-        expectedPosts:
-          normRowByPlatform.get(comparablePlatformKey(platform))
-            ?.expected ?? null,
+        target: normRow?.target ?? null,
+        unit: normRow?.unit ?? "",
+        note: normRow?.note ?? "Chưa có định mức",
+        expectedPosts: normRow?.expected ?? null,
         totalPosts: row.totalPosts,
+        postedPosts: normRow?.posted ?? 0,
+        postingAttainment: normRow?.attainment ?? null,
         mediaPosts,
         onTimePosts: platformOnTimePosts,
         mediaShare: row.totalPosts
@@ -855,8 +887,16 @@ function calculateMediaPostingResponsePerformance(
     );
 
   return {
+    days: normPerformance.days,
+    from: normPerformance.from,
+    to: normPerformance.to,
     expectedPosts: normPerformance.expectedTotal,
     totalPosts: posts.length,
+    postedPosts: normPerformance.postedTotal,
+    postingAttainment: normPerformance.attainment,
+    fixedChannelCount: normPerformance.fixedChannelCount,
+    flexibleChannelCount: normPerformance.flexibleChannelCount,
+    unmappedPlatformCount: normPerformance.unmappedPlatforms.length,
     mediaPosts: items.length,
     onTimePosts,
     latePosts: items.filter((item) => item.status === "late").length,

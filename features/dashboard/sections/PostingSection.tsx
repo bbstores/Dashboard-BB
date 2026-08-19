@@ -96,6 +96,8 @@ function formatNormValue(value: number) {
   }).format(value);
 }
 
+// Retained temporarily while the combined posting panel replaces this layout.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function PostingNormPanel({
   performance,
   onSelect,
@@ -245,22 +247,24 @@ function MediaPostingResponseChart({
     <article className="postingMediaResponsePanel">
       <div className="postingSubchartTitle">
         <div>
-          <span className="chartKicker">MEDIA → LỊCH ĐĂNG KINH DOANH</span>
-          <h3>Media đáp ứng bài đăng đúng hạn</h3>
+          <span className="chartKicker">KINH DOANH × MEDIA</span>
+          <h3>Hiệu quả đăng bài và mức đáp ứng Media</h3>
           <p className="postingChartNote">
-            Mỗi dòng có Book Task = 1 bài dùng ấn phẩm Media · đối chiếu
-            trạng thái hoàn tất tới hết ngày đăng
+            {performance.from && performance.to
+              ? `${formatDate(performance.from)}–${formatDate(performance.to)} · ${formatNumber(performance.days)} ngày lịch · `
+              : ""}
+            đối chiếu định mức, bài có lịch và mức sẵn sàng của Media
           </p>
         </div>
         <HelpButton
           help={{
-            title: "Media đáp ứng bài đăng đúng hạn",
+            title: "Hiệu quả đăng bài và mức đáp ứng Media",
             purpose:
-              "Đo tỷ lệ các bài Kinh doanh đã gắn Book Task mà Media hoàn tất ấn phẩm trước hoặc trong ngày đăng.",
+              "Đặt KPI đăng bài và khả năng Media đáp ứng lịch đăng trong cùng một bảng theo từng kênh.",
             objective:
-              "Tách rõ tỷ trọng bài dùng Media trên từng kênh và phần Media chưa kịp đáp ứng lịch đăng.",
+              "Nhìn đồng thời kênh có đạt định mức hay không, tỷ trọng bài dùng Media và phần Media chưa kịp đáp ứng ngày đăng.",
             calculation:
-              "Mẫu số đáp ứng là tất cả dòng Đăng Bài trong kỳ có Book Task không rỗng. Tử số là các dòng có task đạt mốc hoàn tất không muộn hơn hết ngày đăng. Ấn phẩm thuộc BST hoặc tên task có IG/Instagram dùng mốc Done và Ngày Hoàn Thành; các task còn lại dùng mốc Kinh Doanh Done và Ngày Kinh Doanh Duyệt.",
+              "KPI kỳ được quy đổi từ bảng Định Mức Đăng Bài. Bài dùng Media là dòng Đăng Bài có Book Task không rỗng. Media đáp ứng đúng ngày khi task đạt mốc hoàn tất không muộn hơn hết ngày đăng. Ấn phẩm thuộc BST hoặc tên task có IG/Instagram dùng mốc Done và Ngày Hoàn Thành; các task còn lại dùng mốc Kinh Doanh Done và Ngày Kinh Doanh Duyệt.",
             example:
               "Một kênh có 20 bài, trong đó 12 bài có Book Task; 9 task hoàn tất đúng ngày đăng. Tỷ trọng Media là 60%, mức đáp ứng đúng hạn là 75%.",
             note:
@@ -273,7 +277,17 @@ function MediaPostingResponseChart({
         <span>
           <small>ĐỊNH MỨC TRONG KỲ</small>
           <strong>{formatNormValue(performance.expectedPosts)}</strong>
-          <em>bài theo bảng định mức</em>
+          <em>{performance.fixedChannelCount} kênh có KPI cố định</em>
+        </span>
+        <span>
+          <small>BÀI CÓ LỊCH</small>
+          <strong>{formatNumber(performance.totalPosts)}</strong>
+          <em>{performance.flexibleChannelCount} kênh theo ấn phẩm</em>
+        </span>
+        <span>
+          <small>ĐÃ ĐĂNG</small>
+          <strong>{formatNumber(performance.postedPosts)}</strong>
+          <em>{formatNormValue(performance.postingAttainment)}% định mức kỳ</em>
         </span>
         <button
           type="button"
@@ -384,12 +398,12 @@ function MediaPostingResponseChart({
       <div className="postingMediaResponsePlatforms">
         <div className="postingMediaResponsePlatformHeader">
           <strong>Kênh</strong>
-          <span>Định mức kỳ</span>
-          <span>Tổng bài</span>
+          <span>Định mức</span>
+          <span>Kế hoạch kỳ</span>
+          <span>Có lịch</span>
+          <span>Đã đăng</span>
           <span>Dùng Media</span>
-          <span>Media / tổng</span>
           <span>Đúng ngày</span>
-          <span>Mức đáp ứng</span>
         </div>
         {performance.platformRows.map((row) => (
           <button
@@ -406,18 +420,48 @@ function MediaPostingResponseChart({
             }
           >
             <strong>{row.platform}</strong>
-            <span>
-              {row.expectedPosts === null
-                ? "Theo ấn phẩm"
-                : formatNormValue(row.expectedPosts)}
+            <span className="postingCombinedMetric norm">
+              <strong>
+                {row.target === null
+                  ? "Theo ấn phẩm"
+                  : `${formatNormValue(row.target)}/${row.unit.toLocaleLowerCase("vi")}`}
+              </strong>
+              <small title={row.note}>{row.note}</small>
             </span>
-            <span>{formatNumber(row.totalPosts)}</span>
-            <span>{formatNumber(row.mediaPosts)}</span>
-            <span>{formatNormValue(row.mediaShare)}%</span>
-            <span>{formatNumber(row.onTimePosts)}</span>
+            <span className="postingCombinedMetric">
+              <strong>
+                {row.expectedPosts === null
+                  ? "—"
+                  : formatNormValue(row.expectedPosts)}
+              </strong>
+              <small>mục tiêu</small>
+            </span>
+            <span className="postingCombinedMetric">
+              <strong>{formatNumber(row.totalPosts)}</strong>
+              <small>bài</small>
+            </span>
+            <span className="postingCombinedMetric">
+              <strong>{formatNumber(row.postedPosts)}</strong>
+              <small>
+                {row.postingAttainment === null
+                  ? "linh hoạt"
+                  : `${formatNormValue(row.postingAttainment)}% KPI`}
+              </small>
+            </span>
+            <span className="postingCombinedMetric">
+              <strong>
+                {formatNumber(row.mediaPosts)}/{formatNumber(row.totalPosts)}
+              </strong>
+              <small>{formatNormValue(row.mediaShare)}% tổng bài</small>
+            </span>
             <span className="postingMediaResponseProgress">
               <i><b style={{ width: `${row.responseRate}%` }} /></i>
-              <em>{formatNormValue(row.responseRate)}%</em>
+              <span>
+                <strong>
+                  {formatNumber(row.onTimePosts)}/{formatNumber(row.mediaPosts)}
+                </strong>
+                <em>{formatNormValue(row.responseRate)}%</em>
+              </span>
             </span>
           </button>
         ))}
@@ -1385,11 +1429,6 @@ export function PostingSection({
           }
         />
       </div>
-
-      <PostingNormPanel
-        performance={stats.normPerformance}
-        onSelect={openPlatformEvidence}
-      />
 
       <MediaPostingResponseChart
         performance={stats.mediaPostingResponse}

@@ -226,7 +226,7 @@
 .postingMediaResponseHeadline {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-top: 18px;
 }
 .postingMediaResponseHeadline > span,
@@ -382,11 +382,30 @@
 .postingMediaResponsePlatformHeader > span {
   text-align: right;
 }
+.postingCombinedMetric {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.postingCombinedMetric > strong {
+  font-size: 11px;
+}
+.postingCombinedMetric > small {
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.postingCombinedMetric.norm > strong {
+  color: var(--green);
+}
 .postingMediaResponseProgress {
   align-items: center;
   display: grid;
   gap: 8px;
-  grid-template-columns: minmax(55px, 1fr) 42px;
+  grid-template-columns: minmax(55px, 1fr) auto;
 }
 .postingMediaResponseProgress > i {
   background: rgba(23, 79, 61, .12);
@@ -405,6 +424,14 @@
   font-style: normal;
   font-weight: 850;
   text-align: right;
+}
+.postingMediaResponseProgress > span {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+}
+.postingMediaResponseProgress > span strong {
+  font-size: 10px;
 }
 .postingSupplyPanel {
   background:
