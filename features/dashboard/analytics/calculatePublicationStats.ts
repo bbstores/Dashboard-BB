@@ -18,6 +18,7 @@ import {
   isVideoPublication,
   normalize,
   normalizedKey,
+  publicationSkipsBusinessApproval,
   publicationReadyDate,
   publicationSupplyReadyDate,
 } from "../model/taskUtils";
@@ -144,6 +145,45 @@ export type PublicationSupplyPerformance = {
   mediaPostEvidence: ClassifiedPublication[];
   reupPostEvidence: ClassifiedPublication[];
   unknownPostEvidence: ClassifiedPublication[];
+};
+
+export type MediaPostingResponseStatus =
+  | "on-time"
+  | "late"
+  | "incomplete"
+  | "unmatched";
+
+export type MediaPostingResponseItem = {
+  post: PublicationPost;
+  task?: Task;
+  status: MediaPostingResponseStatus;
+  readyAt: Date | null;
+  rule: "done" | "business-done";
+  reason: string;
+};
+
+export type MediaPostingResponsePlatformRow = {
+  platform: string;
+  totalPosts: number;
+  mediaPosts: number;
+  onTimePosts: number;
+  mediaShare: number;
+  responseRate: number;
+  items: MediaPostingResponseItem[];
+};
+
+export type MediaPostingResponsePerformance = {
+  expectedPosts: number;
+  totalPosts: number;
+  mediaPosts: number;
+  onTimePosts: number;
+  latePosts: number;
+  incompletePosts: number;
+  unmatchedPosts: number;
+  mediaShare: number;
+  responseRate: number;
+  items: MediaPostingResponseItem[];
+  platformRows: MediaPostingResponsePlatformRow[];
 };
 
 export function publicationBelongsToPlatform(
@@ -673,6 +713,156 @@ function calculatePublicationSupplyPerformance(
   };
 }
 
+function calculateMediaPostingResponsePerformance(
+  tasks: Task[],
+  posts: PublicationPost[],
+  normPerformance: PublicationNormPerformance,
+): MediaPostingResponsePerformance {
+  const taskByCode = new Map(
+    tasks.map((task) => [normalizedKey(task.code), task]),
+  );
+  const items = posts
+    .filter((post) => Boolean(normalize(post.bookTaskCode)))
+    .map((post): MediaPostingResponseItem => {
+      const task = taskByCode.get(normalizedKey(post.bookTaskCode));
+      if (!task) {
+        return {
+          post,
+          status: "unmatched",
+          readyAt: null,
+          rule: "business-done",
+          reason: "Không tìm thấy Book Task trong Tasklist",
+        };
+      }
+
+      const usesDoneRule = publicationSkipsBusinessApproval(task);
+      const rule = usesDoneRule ? "done" : "business-done";
+      const taskStatus = normalizedKey(task.status);
+      const acceptedStatuses = usesDoneRule
+        ? ["done", "kinh doanh done", "kinh doanh duyệt"]
+        : ["kinh doanh done", "kinh doanh duyệt"];
+      const statusIsComplete = acceptedStatuses.includes(taskStatus);
+      const readyAt = usesDoneRule
+        ? task.completedDate ?? task.businessApprovalDate
+        : task.businessApprovalDate;
+      const ruleLabel = usesDoneRule
+        ? "BST/IG · Done"
+        : "Kinh doanh Done";
+
+      if (!statusIsComplete) {
+        return {
+          post,
+          task,
+          status: "incomplete",
+          readyAt,
+          rule,
+          reason: `${ruleLabel} chưa đạt · trạng thái hiện tại: ${task.status || "trống"}`,
+        };
+      }
+      if (!readyAt) {
+        return {
+          post,
+          task,
+          status: "incomplete",
+          readyAt: null,
+          rule,
+          reason: `${ruleLabel} đã đạt nhưng thiếu ngày hoàn tất để đối chiếu`,
+        };
+      }
+      if (post.scheduledAt && readyAt <= endOfDay(post.scheduledAt)) {
+        return {
+          post,
+          task,
+          status: "on-time",
+          readyAt,
+          rule,
+          reason: `${ruleLabel} hoàn tất trước hoặc trong ngày đăng`,
+        };
+      }
+      return {
+        post,
+        task,
+        status: "late",
+        readyAt,
+        rule,
+        reason: `${ruleLabel} hoàn tất sau ngày đăng`,
+      };
+    });
+
+  const itemByPost = new Map(items.map((item) => [item.post, item]));
+  const platformMap = new Map<
+    string,
+    { totalPosts: number; items: MediaPostingResponseItem[] }
+  >();
+  for (const post of posts) {
+    const baseLabel = normalize(post.platform) || "Chưa xác định";
+    const labels = [
+      baseLabel,
+      ...(publicationBelongsToPlatform(post, "Shopee") &&
+      normalizedKey(baseLabel) !== "shopee"
+        ? ["Shopee"]
+        : []),
+    ];
+    for (const platform of labels) {
+      const row = platformMap.get(platform) ?? {
+        totalPosts: 0,
+        items: [],
+      };
+      row.totalPosts += 1;
+      const item = itemByPost.get(post);
+      if (item) row.items.push(item);
+      platformMap.set(platform, row);
+    }
+  }
+
+  const onTimePosts = items.filter(
+    (item) => item.status === "on-time",
+  ).length;
+  const platformRows = Array.from(platformMap.entries())
+    .map(([platform, row]): MediaPostingResponsePlatformRow => {
+      const mediaPosts = row.items.length;
+      const platformOnTimePosts = row.items.filter(
+        (item) => item.status === "on-time",
+      ).length;
+      return {
+        platform,
+        totalPosts: row.totalPosts,
+        mediaPosts,
+        onTimePosts: platformOnTimePosts,
+        mediaShare: row.totalPosts
+          ? (mediaPosts / row.totalPosts) * 100
+          : 0,
+        responseRate: mediaPosts
+          ? (platformOnTimePosts / mediaPosts) * 100
+          : 0,
+        items: row.items,
+      };
+    })
+    .sort(
+      (left, right) =>
+        right.totalPosts - left.totalPosts ||
+        left.platform.localeCompare(right.platform, "vi"),
+    );
+
+  return {
+    expectedPosts: normPerformance.expectedTotal,
+    totalPosts: posts.length,
+    mediaPosts: items.length,
+    onTimePosts,
+    latePosts: items.filter((item) => item.status === "late").length,
+    incompletePosts: items.filter(
+      (item) => item.status === "incomplete",
+    ).length,
+    unmatchedPosts: items.filter(
+      (item) => item.status === "unmatched",
+    ).length,
+    mediaShare: posts.length ? (items.length / posts.length) * 100 : 0,
+    responseRate: items.length ? (onTimePosts / items.length) * 100 : 0,
+    items,
+    platformRows,
+  };
+}
+
 function classifyPublicationSource(
   post: PublicationPost,
   taskByCode: Map<string, Task>,
@@ -978,6 +1168,12 @@ export function calculatePublicationStats(
     postingNorms,
     dateWindow,
   );
+  const mediaPostingResponse =
+    calculateMediaPostingResponsePerformance(
+      tasks,
+      filteredPosts,
+      normPerformance,
+    );
   const supplyPerformance = calculatePublicationSupplyPerformance(
     tasks,
     publications,
@@ -1072,6 +1268,7 @@ export function calculatePublicationStats(
     unknownPostDetails,
     noSocialPostDetails,
     normPerformance,
+    mediaPostingResponse,
     supplyPerformance,
   };
 }

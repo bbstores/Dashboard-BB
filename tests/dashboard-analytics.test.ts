@@ -1006,6 +1006,139 @@ test("counts a multi-platform task as one used asset after any platform is poste
   assert.equal(supply.unusedReadyTasks.length, 0);
 });
 
+test("measures whether each Media-linked post was ready by its posting day", () => {
+  const tasks = [
+    task("BST-READY", {
+      title: "Ảnh BST",
+      collection: "BST 07.2026",
+      status: "Done",
+      completedDate: date(10, 18),
+    }),
+    task("IG-LATE", {
+      title: "IG · Lookbook",
+      status: "Done",
+      completedDate: date(12),
+    }),
+    task("BUSINESS-READY", {
+      status: "Kinh Doanh Done",
+      businessApprovalDate: date(9),
+    }),
+    task("BUSINESS-INCOMPLETE", {
+      status: "Done",
+      completedDate: date(9),
+    }),
+  ];
+  const posts: PublicationPost[] = [
+    {
+      id: "POST-BST",
+      scheduledAt: date(10),
+      platform: "Facebook",
+      posted: true,
+      postType: "Ảnh",
+      title: "BST ready",
+      bookTaskCode: "BST-READY",
+    },
+    {
+      id: "POST-IG",
+      scheduledAt: date(10),
+      platform: "TikTok",
+      posted: false,
+      postType: "Ảnh",
+      title: "IG late",
+      bookTaskCode: "IG-LATE",
+    },
+    {
+      id: "POST-BUSINESS",
+      scheduledAt: date(10),
+      platform: "Facebook",
+      posted: true,
+      postType: "Video",
+      title: "Business ready",
+      bookTaskCode: "BUSINESS-READY",
+    },
+    {
+      id: "POST-INCOMPLETE",
+      scheduledAt: date(10),
+      platform: "Facebook",
+      posted: false,
+      postType: "Video",
+      title: "Business incomplete",
+      bookTaskCode: "BUSINESS-INCOMPLETE",
+    },
+    {
+      id: "POST-MISSING",
+      scheduledAt: date(10),
+      platform: "TikTok",
+      posted: false,
+      postType: "Video",
+      title: "Missing task",
+      bookTaskCode: "MISSING-TASK",
+    },
+    {
+      id: "POST-REUP",
+      scheduledAt: date(10),
+      platform: "Facebook",
+      posted: true,
+      postType: "Reup",
+      title: "Reup",
+      bookTaskCode: "",
+    },
+  ];
+
+  const stats = calculatePublicationStats(
+    tasks,
+    posts,
+    {
+      from: new Date(2026, 6, 10),
+      to: new Date(2026, 6, 10, 23, 59, 59, 999),
+      hasFilter: true,
+    },
+    [
+      { platform: "Facebook", target: 4, unit: "Ngày", note: "" },
+      { platform: "TikTok", target: 2, unit: "Ngày", note: "" },
+    ],
+  );
+  const response = stats.mediaPostingResponse;
+
+  assert.equal(response.expectedPosts, 6);
+  assert.equal(response.totalPosts, 6);
+  assert.equal(response.mediaPosts, 5);
+  assert.equal(response.onTimePosts, 2);
+  assert.equal(response.latePosts, 1);
+  assert.equal(response.incompletePosts, 1);
+  assert.equal(response.unmatchedPosts, 1);
+  assert.ok(Math.abs(response.mediaShare - 250 / 3) < 1e-9);
+  assert.equal(response.responseRate, 40);
+  assert.deepEqual(
+    response.platformRows.map((row) => ({
+      platform: row.platform,
+      total: row.totalPosts,
+      media: row.mediaPosts,
+      onTime: row.onTimePosts,
+      mediaShare: row.mediaShare,
+      responseRate: row.responseRate,
+    })),
+    [
+      {
+        platform: "Facebook",
+        total: 4,
+        media: 3,
+        onTime: 2,
+        mediaShare: 75,
+        responseRate: (2 / 3) * 100,
+      },
+      {
+        platform: "TikTok",
+        total: 2,
+        media: 2,
+        onTime: 0,
+        mediaShare: 100,
+        responseRate: 0,
+      },
+    ],
+  );
+});
+
 test("estimates excess KPI contribution from Media and Reup source mix", () => {
   const approvedTasks = ["MEDIA-1", "MEDIA-2"].map((code) =>
     task(code, {

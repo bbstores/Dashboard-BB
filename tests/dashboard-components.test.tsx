@@ -1063,70 +1063,31 @@ test("posting section shows source mix and counts multi-platform posts independe
   assert.ok(screen.getAllByText("TikTok").length >= 1);
   assert.ok(screen.getByText("Bài đăng theo nền tảng"));
   assert.ok(screen.getByText("Mức độ hoàn thành theo từng kênh"));
-  assert.ok(screen.getByText("Khả năng đáp ứng KPI đăng bài"));
+  assert.ok(screen.getByText("Media đáp ứng bài đăng đúng hạn"));
   assert.ok(
     screen.getByRole("group", {
-      name: "So sánh KPI, nguồn cung Media và bài đã đăng",
+      name: "Tỷ lệ bài Media đáp ứng đúng ngày đăng",
     }),
   );
   assert.equal(
-    container.querySelector(".postingSupplyHeadline .primary strong")
-      ?.textContent,
+    container.querySelector(
+      ".postingMediaResponseHeadline .primary strong",
+    )?.textContent,
     "100%",
   );
-  assert.ok(screen.getByText("Kho ấn phẩm Media"));
-  assert.ok(screen.getByText("Ấn phẩm Media đã sử dụng"));
-  assert.ok(screen.getByText("Ấn phẩm Media còn khả dụng"));
-  assert.ok(
-    screen.getByRole("button", {
-      name: "Ấn phẩm từ kho đầu kỳ: 2 ấn phẩm",
-    }),
+  assert.equal(
+    screen.getByText("MEDIA ĐÁP ỨNG ĐÚNG NGÀY").closest("button")
+      ?.textContent?.includes("2/2 bài dùng Media"),
+    true,
   );
   fireEvent.click(
-    screen.getByRole("button", {
-      name: "Ấn phẩm từ kho đầu kỳ: 2 ấn phẩm",
-    }),
+    screen.getByText("MEDIA ĐÁP ỨNG ĐÚNG NGÀY").closest("button")!,
   );
   assert.deepEqual(
-    postingDetailState.current?.tasks?.map((item) => item.code),
-    ["OPENING-FREE", "OPENING-PLANNED"],
-  );
-  fireEvent.click(
-    screen.getByRole("button", {
-      name: "Ấn phẩm Media còn khả dụng: 4 ấn phẩm",
-    }),
-  );
-  assert.deepEqual(
-    postingDetailState.current?.tasks?.map((item) => item.code),
-    [
-      "OPENING-FREE",
-      "OPENING-PLANNED",
-      "VIDEO-NOT-POSTED",
-      "GRAPHIC-NOT-SCHEDULED",
-    ],
-  );
-  fireEvent.click(
-    screen.getByRole("button", {
-      name: /THIẾU DO CHƯA SỬ DỤNG ẤN PHẨM1 bài/,
-    }),
-  );
-  assert.deepEqual(
-    postingDetailState.current?.tasks?.map((item) => item.code),
-    [
-      "OPENING-FREE",
-      "OPENING-PLANNED",
-      "VIDEO-NOT-POSTED",
-      "GRAPHIC-NOT-SCHEDULED",
-    ],
-  );
-  fireEvent.click(
-    screen.getByRole("button", {
-      name: /ẤN PHẨM CŨ · KHÔNG TÍNH VÀO % ĐÁP ỨNG1 task/,
-    }),
-  );
-  assert.deepEqual(
-    postingDetailState.current?.tasks?.map((item) => item.code),
-    ["OLD-UNLINKED-ASSET"],
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-1", "POST-3"],
   );
   assert.ok(screen.getByText("Mỗi ngày một bài"));
   assert.ok(screen.getByText("Theo ấn phẩm mới"));

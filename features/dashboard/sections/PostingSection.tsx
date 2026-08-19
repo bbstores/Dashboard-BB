@@ -5,6 +5,8 @@ import {
   calculatePostingNormDailyTarget,
   publicationBelongsToPlatform,
   type ClassifiedPublication,
+  type MediaPostingResponseItem,
+  type MediaPostingResponsePerformance,
   type MediaSupplySlot,
   type PublicationDailyRow,
   type PublicationPlatformRow,
@@ -211,6 +213,215 @@ function PostingNormPanel({
   );
 }
 
+function MediaPostingResponseChart({
+  performance,
+  onOpenDetail,
+}: {
+  performance: MediaPostingResponsePerformance;
+  onOpenDetail: (detail: DetailView) => void;
+}) {
+  const notOnTimeItems = performance.items.filter(
+    (item) => item.status !== "on-time",
+  );
+  const openItems = (
+    title: string,
+    subtitle: string,
+    items: MediaPostingResponseItem[],
+  ) =>
+    onOpenDetail({
+      title,
+      subtitle,
+      publicationEvidence: items.map((item) => ({
+        post: item.post,
+        task: item.task,
+        reason: `${item.reason}${
+          item.readyAt ? ` · mốc hoàn tất ${formatDate(item.readyAt)}` : ""
+        }`,
+      })),
+      publicationEvidenceLabel: "Đánh giá đáp ứng",
+    });
+
+  return (
+    <article className="postingMediaResponsePanel">
+      <div className="postingSubchartTitle">
+        <div>
+          <span className="chartKicker">MEDIA → LỊCH ĐĂNG KINH DOANH</span>
+          <h3>Media đáp ứng bài đăng đúng hạn</h3>
+          <p className="postingChartNote">
+            Mỗi dòng có Book Task = 1 bài dùng ấn phẩm Media · đối chiếu
+            trạng thái hoàn tất tới hết ngày đăng
+          </p>
+        </div>
+        <HelpButton
+          help={{
+            title: "Media đáp ứng bài đăng đúng hạn",
+            purpose:
+              "Đo tỷ lệ các bài Kinh doanh đã gắn Book Task mà Media hoàn tất ấn phẩm trước hoặc trong ngày đăng.",
+            objective:
+              "Tách rõ tỷ trọng bài dùng Media trên từng kênh và phần Media chưa kịp đáp ứng lịch đăng.",
+            calculation:
+              "Mẫu số đáp ứng là tất cả dòng Đăng Bài trong kỳ có Book Task không rỗng. Tử số là các dòng có task đạt mốc hoàn tất không muộn hơn hết ngày đăng. Ấn phẩm thuộc BST hoặc tên task có IG/Instagram dùng mốc Done và Ngày Hoàn Thành; các task còn lại dùng mốc Kinh Doanh Done và Ngày Kinh Doanh Duyệt.",
+            example:
+              "Một kênh có 20 bài, trong đó 12 bài có Book Task; 9 task hoàn tất đúng ngày đăng. Tỷ trọng Media là 60%, mức đáp ứng đúng hạn là 75%.",
+            note:
+              "Book Task không tìm thấy trong Tasklist hoặc thiếu ngày hoàn tất vẫn nằm trong mẫu số và được tính là chưa đáp ứng.",
+          }}
+        />
+      </div>
+
+      <div className="postingMediaResponseHeadline">
+        <span>
+          <small>ĐỊNH MỨC TRONG KỲ</small>
+          <strong>{formatNormValue(performance.expectedPosts)}</strong>
+          <em>bài theo bảng định mức</em>
+        </span>
+        <button
+          type="button"
+          onClick={() =>
+            openItems(
+              "Bài đăng dùng ấn phẩm Media",
+              `${formatNumber(performance.mediaPosts)}/${formatNumber(performance.totalPosts)} bài có Book Task`,
+              performance.items,
+            )
+          }
+        >
+          <small>BÀI DÙNG ẤN PHẨM MEDIA</small>
+          <strong>
+            {formatNumber(performance.mediaPosts)}/
+            {formatNumber(performance.totalPosts)}
+          </strong>
+          <em>{formatNormValue(performance.mediaShare)}% tổng bài đăng</em>
+        </button>
+        <button
+          type="button"
+          className="primary"
+          onClick={() =>
+            openItems(
+              "Media đáp ứng đúng ngày đăng",
+              `${formatNumber(performance.onTimePosts)}/${formatNumber(performance.mediaPosts)} bài dùng Media đã sẵn sàng đúng hạn`,
+              performance.items.filter((item) => item.status === "on-time"),
+            )
+          }
+        >
+          <small>MEDIA ĐÁP ỨNG ĐÚNG NGÀY</small>
+          <strong>{formatNormValue(performance.responseRate)}%</strong>
+          <em>
+            {formatNumber(performance.onTimePosts)}/
+            {formatNumber(performance.mediaPosts)} bài dùng Media
+          </em>
+        </button>
+        <button
+          type="button"
+          className="attention"
+          onClick={() =>
+            openItems(
+              "Bài Media chưa đáp ứng đúng ngày",
+              `Trễ ${formatNumber(performance.latePosts)} · chưa hoàn tất ${formatNumber(performance.incompletePosts)} · không khớp task ${formatNumber(performance.unmatchedPosts)}`,
+              notOnTimeItems,
+            )
+          }
+        >
+          <small>CHƯA ĐÁP ỨNG ĐÚNG NGÀY</small>
+          <strong>{formatNumber(notOnTimeItems.length)}</strong>
+          <em>
+            Trễ {formatNumber(performance.latePosts)} · chưa xong/thiếu dữ liệu{" "}
+            {formatNumber(
+              performance.incompletePosts + performance.unmatchedPosts,
+            )}
+          </em>
+        </button>
+      </div>
+
+      <div
+        className="postingMediaResponseBar"
+        role="group"
+        aria-label="Tỷ lệ bài Media đáp ứng đúng ngày đăng"
+      >
+        {performance.mediaPosts > 0 ? (
+          <>
+            <button
+              type="button"
+              className="onTime"
+              style={{
+                width: `${performance.responseRate}%`,
+              }}
+              aria-label={`Đúng ngày: ${performance.onTimePosts} bài`}
+              onClick={() =>
+                openItems(
+                  "Media đáp ứng đúng ngày đăng",
+                  "Task đã đạt mốc hoàn tất trước hoặc trong ngày đăng",
+                  performance.items.filter(
+                    (item) => item.status === "on-time",
+                  ),
+                )
+              }
+            />
+            <button
+              type="button"
+              className="notOnTime"
+              style={{
+                width: `${100 - performance.responseRate}%`,
+              }}
+              aria-label={`Chưa đúng ngày: ${notOnTimeItems.length} bài`}
+              onClick={() =>
+                openItems(
+                  "Bài Media chưa đáp ứng đúng ngày",
+                  "Task hoàn tất trễ, chưa hoàn tất hoặc không khớp Tasklist",
+                  notOnTimeItems,
+                )
+              }
+            />
+          </>
+        ) : (
+          <span>Không có bài đăng gắn Book Task trong kỳ</span>
+        )}
+      </div>
+      <div className="postingMediaResponseLegend">
+        <span><i className="onTime" />Đáp ứng đúng ngày</span>
+        <span><i className="notOnTime" />Chưa đáp ứng đúng ngày</span>
+      </div>
+
+      <div className="postingMediaResponsePlatforms">
+        <div className="postingMediaResponsePlatformHeader">
+          <strong>Kênh</strong>
+          <span>Tổng bài</span>
+          <span>Dùng Media</span>
+          <span>Media / tổng</span>
+          <span>Đúng ngày</span>
+          <span>Mức đáp ứng</span>
+        </div>
+        {performance.platformRows.map((row) => (
+          <button
+            type="button"
+            className="postingMediaResponsePlatformRow"
+            key={row.platform}
+            disabled={!row.mediaPosts}
+            onClick={() =>
+              openItems(
+                `Bài dùng Media · ${row.platform}`,
+                `${formatNumber(row.mediaPosts)}/${formatNumber(row.totalPosts)} bài · ${formatNormValue(row.responseRate)}% đáp ứng đúng ngày`,
+                row.items,
+              )
+            }
+          >
+            <strong>{row.platform}</strong>
+            <span>{formatNumber(row.totalPosts)}</span>
+            <span>{formatNumber(row.mediaPosts)}</span>
+            <span>{formatNormValue(row.mediaShare)}%</span>
+            <span>{formatNumber(row.onTimePosts)}</span>
+            <span className="postingMediaResponseProgress">
+              <i><b style={{ width: `${row.responseRate}%` }} /></i>
+              <em>{formatNormValue(row.responseRate)}%</em>
+            </span>
+          </button>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+// Kept temporarily for the replacement business logic requested for this area.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function MediaSupplyResponseChart({
   performance,
   onOpenDetail,
@@ -1169,14 +1380,14 @@ export function PostingSection({
         />
       </div>
 
-      <MediaSupplyResponseChart
-        performance={stats.supplyPerformance}
-        onOpenDetail={onOpenDetail}
-      />
-
       <PostingNormPanel
         performance={stats.normPerformance}
         onSelect={openPlatformEvidence}
+      />
+
+      <MediaPostingResponseChart
+        performance={stats.mediaPostingResponse}
+        onOpenDetail={onOpenDetail}
       />
 
       <div className="postingOverviewGrid">
