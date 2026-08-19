@@ -384,6 +384,7 @@ function MediaPostingResponseChart({
       <div className="postingMediaResponsePlatforms">
         <div className="postingMediaResponsePlatformHeader">
           <strong>Kênh</strong>
+          <span>Định mức kỳ</span>
           <span>Tổng bài</span>
           <span>Dùng Media</span>
           <span>Media / tổng</span>
@@ -405,6 +406,11 @@ function MediaPostingResponseChart({
             }
           >
             <strong>{row.platform}</strong>
+            <span>
+              {row.expectedPosts === null
+                ? "Theo ấn phẩm"
+                : formatNormValue(row.expectedPosts)}
+            </span>
             <span>{formatNumber(row.totalPosts)}</span>
             <span>{formatNumber(row.mediaPosts)}</span>
             <span>{formatNormValue(row.mediaShare)}%</span>

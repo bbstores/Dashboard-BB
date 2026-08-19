@@ -1064,6 +1064,7 @@ test("posting section shows source mix and counts multi-platform posts independe
   assert.ok(screen.getByText("Bài đăng theo nền tảng"));
   assert.ok(screen.getByText("Mức độ hoàn thành theo từng kênh"));
   assert.ok(screen.getByText("Media đáp ứng bài đăng đúng hạn"));
+  assert.ok(screen.getByText("Định mức kỳ"));
   assert.ok(
     screen.getByRole("group", {
       name: "Tỷ lệ bài Media đáp ứng đúng ngày đăng",

@@ -1112,6 +1112,7 @@ test("measures whether each Media-linked post was ready by its posting day", () 
   assert.deepEqual(
     response.platformRows.map((row) => ({
       platform: row.platform,
+      expected: row.expectedPosts,
       total: row.totalPosts,
       media: row.mediaPosts,
       onTime: row.onTimePosts,
@@ -1121,6 +1122,7 @@ test("measures whether each Media-linked post was ready by its posting day", () 
     [
       {
         platform: "Facebook",
+        expected: 4,
         total: 4,
         media: 3,
         onTime: 2,
@@ -1129,6 +1131,7 @@ test("measures whether each Media-linked post was ready by its posting day", () 
       },
       {
         platform: "TikTok",
+        expected: 2,
         total: 2,
         media: 2,
         onTime: 0,

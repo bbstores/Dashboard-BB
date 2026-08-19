@@ -349,7 +349,7 @@
   align-items: center;
   display: grid;
   gap: 10px;
-  grid-template-columns: minmax(130px, 1.35fr) repeat(4, minmax(70px, .7fr)) minmax(120px, 1fr);
+  grid-template-columns: minmax(130px, 1.35fr) repeat(5, minmax(70px, .7fr)) minmax(120px, 1fr);
   padding: 11px 14px;
 }
 .postingMediaResponsePlatformHeader {
@@ -1226,7 +1226,7 @@
   }
   .postingMediaResponsePlatformHeader,
   .postingMediaResponsePlatformRow {
-    min-width: 720px;
+    min-width: 810px;
   }
   .postingSupplyDiagnosis {
     grid-template-columns: 1fr;

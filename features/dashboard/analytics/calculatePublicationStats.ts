@@ -164,6 +164,7 @@ export type MediaPostingResponseItem = {
 
 export type MediaPostingResponsePlatformRow = {
   platform: string;
+  expectedPosts: number | null;
   totalPosts: number;
   mediaPosts: number;
   onTimePosts: number;
@@ -818,6 +819,12 @@ function calculateMediaPostingResponsePerformance(
   const onTimePosts = items.filter(
     (item) => item.status === "on-time",
   ).length;
+  const normRowByPlatform = new Map(
+    normPerformance.rows.map((row) => [
+      comparablePlatformKey(row.platform),
+      row,
+    ]),
+  );
   const platformRows = Array.from(platformMap.entries())
     .map(([platform, row]): MediaPostingResponsePlatformRow => {
       const mediaPosts = row.items.length;
@@ -826,6 +833,9 @@ function calculateMediaPostingResponsePerformance(
       ).length;
       return {
         platform,
+        expectedPosts:
+          normRowByPlatform.get(comparablePlatformKey(platform))
+            ?.expected ?? null,
         totalPosts: row.totalPosts,
         mediaPosts,
         onTimePosts: platformOnTimePosts,
