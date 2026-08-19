@@ -175,6 +175,7 @@ export type MediaPostingResponsePlatformRow = {
   onTimePosts: number;
   mediaShare: number;
   responseRate: number;
+  posts: PublicationPost[];
   items: MediaPostingResponseItem[];
 };
 
@@ -806,7 +807,11 @@ function calculateMediaPostingResponsePerformance(
   const itemByPost = new Map(items.map((item) => [item.post, item]));
   const platformMap = new Map<
     string,
-    { totalPosts: number; items: MediaPostingResponseItem[] }
+    {
+      totalPosts: number;
+      posts: PublicationPost[];
+      items: MediaPostingResponseItem[];
+    }
   >();
   for (const post of posts) {
     const baseLabel = normalize(post.platform) || "Chưa xác định";
@@ -820,9 +825,11 @@ function calculateMediaPostingResponsePerformance(
     for (const platform of labels) {
       const row = platformMap.get(platform) ?? {
         totalPosts: 0,
+        posts: [],
         items: [],
       };
       row.totalPosts += 1;
+      row.posts.push(post);
       const item = itemByPost.get(post);
       if (item) row.items.push(item);
       platformMap.set(platform, row);
@@ -847,6 +854,7 @@ function calculateMediaPostingResponsePerformance(
     if (!hasPlatform) {
       platformMap.set(normRow.platform, {
         totalPosts: 0,
+        posts: [],
         items: [],
       });
     }
@@ -867,7 +875,7 @@ function calculateMediaPostingResponsePerformance(
         note: normRow?.note ?? "Chưa có định mức",
         expectedPosts: normRow?.expected ?? null,
         totalPosts: row.totalPosts,
-        postedPosts: normRow?.posted ?? 0,
+        postedPosts: row.posts.filter((post) => post.posted).length,
         postingAttainment: normRow?.attainment ?? null,
         mediaPosts,
         onTimePosts: platformOnTimePosts,
@@ -877,6 +885,7 @@ function calculateMediaPostingResponsePerformance(
         responseRate: mediaPosts
           ? (platformOnTimePosts / mediaPosts) * 100
           : 0,
+        posts: row.posts,
         items: row.items,
       };
     })

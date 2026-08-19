@@ -225,6 +225,9 @@ function MediaPostingResponseChart({
   const notOnTimeItems = performance.items.filter(
     (item) => item.status !== "on-time",
   );
+  const responseByPost = new Map(
+    performance.items.map((item) => [item.post, item]),
+  );
   const openItems = (
     title: string,
     subtitle: string,
@@ -241,6 +244,22 @@ function MediaPostingResponseChart({
         }`,
       })),
       publicationEvidenceLabel: "Đánh giá đáp ứng",
+    });
+  const openPosts = (
+    title: string,
+    subtitle: string,
+    posts: PublicationPost[],
+    reason: string,
+  ) =>
+    onOpenDetail({
+      title,
+      subtitle,
+      publicationEvidence: posts.map((post) => ({
+        post,
+        task: responseByPost.get(post)?.task,
+        reason,
+      })),
+      publicationEvidenceLabel: "Dẫn chứng",
     });
 
   return (
@@ -405,19 +424,15 @@ function MediaPostingResponseChart({
           <span>Dùng Media</span>
           <span>Đúng ngày</span>
         </div>
-        {performance.platformRows.map((row) => (
-          <button
-            type="button"
+        {performance.platformRows.map((row) => {
+          const unpostedPosts = row.posts.filter((post) => !post.posted);
+          const notOnTimeRowItems = row.items.filter(
+            (item) => item.status !== "on-time",
+          );
+          return (
+          <div
             className="postingMediaResponsePlatformRow"
             key={row.platform}
-            disabled={!row.mediaPosts}
-            onClick={() =>
-              openItems(
-                `Bài dùng Media · ${row.platform}`,
-                `${formatNumber(row.mediaPosts)}/${formatNumber(row.totalPosts)} bài · ${formatNormValue(row.responseRate)}% đáp ứng đúng ngày`,
-                row.items,
-              )
-            }
           >
             <strong>{row.platform}</strong>
             <span className="postingCombinedMetric norm">
@@ -436,25 +451,71 @@ function MediaPostingResponseChart({
               </strong>
               <small>mục tiêu</small>
             </span>
-            <span className="postingCombinedMetric">
+            <button
+              type="button"
+              className="postingCombinedMetric postingMediaResponseMetricButton"
+              aria-label={`Có lịch · ${row.platform}: ${formatNumber(row.totalPosts)} bài`}
+              onClick={() =>
+                openPosts(
+                  `Bài có lịch · ${row.platform}`,
+                  `${formatNumber(row.totalPosts)} bài có lịch trong kỳ đang lọc`,
+                  row.posts,
+                  "Có lịch trong kỳ",
+                )
+              }
+            >
               <strong>{formatNumber(row.totalPosts)}</strong>
               <small>bài</small>
-            </span>
-            <span className="postingCombinedMetric">
+            </button>
+            <button
+              type="button"
+              className="postingCombinedMetric postingMediaResponseMetricButton"
+              aria-label={`Đã đăng · ${row.platform}: ${formatNumber(row.postedPosts)} bài; mở ${formatNumber(unpostedPosts.length)} bài chưa đăng`}
+              onClick={() =>
+                openPosts(
+                  `Bài chưa đăng · ${row.platform}`,
+                  `${formatNumber(row.postedPosts)} bài đã đăng; còn ${formatNumber(unpostedPosts.length)} bài chưa đăng trong kỳ`,
+                  unpostedPosts,
+                  "Chưa đăng",
+                )
+              }
+            >
               <strong>{formatNumber(row.postedPosts)}</strong>
               <small>
                 {row.postingAttainment === null
                   ? "linh hoạt"
                   : `${formatNormValue(row.postingAttainment)}% KPI`}
               </small>
-            </span>
-            <span className="postingCombinedMetric">
+            </button>
+            <button
+              type="button"
+              className="postingCombinedMetric postingMediaResponseMetricButton"
+              aria-label={`Dùng Media · ${row.platform}: ${formatNumber(row.mediaPosts)} task`}
+              onClick={() =>
+                openItems(
+                  `Task Media · ${row.platform}`,
+                  `${formatNumber(row.mediaPosts)} bài có Book Task Media trong kỳ`,
+                  row.items,
+                )
+              }
+            >
               <strong>
                 {formatNumber(row.mediaPosts)}/{formatNumber(row.totalPosts)}
               </strong>
               <small>{formatNormValue(row.mediaShare)}% tổng bài</small>
-            </span>
-            <span className="postingMediaResponseProgress">
+            </button>
+            <button
+              type="button"
+              className="postingMediaResponseProgress postingMediaResponseMetricButton"
+              aria-label={`Đúng ngày · ${row.platform}: ${formatNumber(row.onTimePosts)}/${formatNumber(row.mediaPosts)} task; mở ${formatNumber(notOnTimeRowItems.length)} task trễ hạn`}
+              onClick={() =>
+                openItems(
+                  `Task Media trễ hạn · ${row.platform}`,
+                  `${formatNumber(row.onTimePosts)}/${formatNumber(row.mediaPosts)} task đúng ngày; còn ${formatNumber(notOnTimeRowItems.length)} task chưa đáp ứng đúng ngày`,
+                  notOnTimeRowItems,
+                )
+              }
+            >
               <i><b style={{ width: `${row.responseRate}%` }} /></i>
               <span>
                 <strong>
@@ -462,9 +523,10 @@ function MediaPostingResponseChart({
                 </strong>
                 <em>{formatNormValue(row.responseRate)}%</em>
               </span>
-            </span>
-          </button>
-        ))}
+            </button>
+          </div>
+          );
+        })}
       </div>
     </article>
   );

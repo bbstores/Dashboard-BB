@@ -365,18 +365,25 @@
   border: 0;
   border-top: 1px solid rgba(23, 79, 61, .09);
   color: inherit;
-  cursor: pointer;
   font-size: 11px;
   text-align: left;
   width: 100%;
 }
-.postingMediaResponsePlatformRow:not(:disabled):hover,
-.postingMediaResponsePlatformRow:not(:disabled):focus-visible {
-  background: rgba(217, 255, 114, .18);
+.postingMediaResponseMetricButton {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: inherit;
+  cursor: pointer;
+  padding: 6px 7px;
+  text-align: right;
+  width: 100%;
 }
-.postingMediaResponsePlatformRow:disabled {
-  cursor: default;
-  opacity: .65;
+.postingMediaResponseMetricButton:hover,
+.postingMediaResponseMetricButton:focus-visible {
+  background: rgba(217, 255, 114, .18);
+  border-color: rgba(23, 79, 61, .2);
+  outline: none;
 }
 .postingMediaResponsePlatformRow > span:not(:last-child),
 .postingMediaResponsePlatformHeader > span {

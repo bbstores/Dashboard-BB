@@ -1099,6 +1099,45 @@ test("posting section shows source mix and counts multi-platform posts independe
     ),
     ["POST-1", "POST-3"],
   );
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Có lịch · Facebook: 2 bài",
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-1", "POST-2"],
+  );
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Đã đăng · Facebook: 1 bài; mở 1 bài chưa đăng",
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-2"],
+  );
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Dùng Media · Facebook: 1 task",
+    }),
+  );
+  assert.deepEqual(
+    postingDetailState.current?.publicationEvidence?.map(
+      (item) => item.post.id,
+    ),
+    ["POST-1"],
+  );
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Đúng ngày · Facebook: 1/1 task; mở 0 task trễ hạn",
+    }),
+  );
+  assert.deepEqual(postingDetailState.current?.publicationEvidence, []);
   assert.ok(screen.getByText("Mỗi ngày một bài"));
   assert.ok(screen.getByText("Theo ấn phẩm mới"));
   assert.ok(
