@@ -53,7 +53,10 @@ export type Feedback = {
   taskCode: string;
   at: Date | null;
   assignee: string;
+  rejectedBy?: string;
 };
+
+export type FeedbackReturnSource = "business" | "internal";
 
 export type PublicationPost = {
   id: string;

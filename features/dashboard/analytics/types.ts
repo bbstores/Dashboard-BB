@@ -57,6 +57,8 @@ type StaffRow = {
   completionCarry: number;
   completionCarryTasks: Task[];
   feedback: number;
+  feedbackInternal: number;
+  feedbackBusiness: number;
 };
 
 export type StaffStats = {

@@ -159,10 +159,14 @@ test("parses validated task and feedback sheets", () => {
     DASHBOARD_SHEETS.tasks,
     TASK_REQUIRED_HEADERS,
   );
+  const feedbackHeaders = [
+    ...FEEDBACK_REQUIRED_HEADERS,
+    FEEDBACK_COLUMNS.rejectedBy,
+  ];
   const feedbackSheet = addSheet(
     workbook,
     DASHBOARD_SHEETS.feedback,
-    FEEDBACK_REQUIRED_HEADERS,
+    feedbackHeaders,
   );
 
   const taskValues: Record<string, string | number> = {
@@ -186,9 +190,10 @@ test("parses validated task and feedback sheets", () => {
     [FEEDBACK_COLUMNS.taskCode]: "TSK-001",
     [FEEDBACK_COLUMNS.at]: "2026/05/11 15:45",
     [FEEDBACK_COLUMNS.assignee]: "An",
+    [FEEDBACK_COLUMNS.rejectedBy]: "Thúy Sang - OM SOCIAL",
   };
   feedbackSheet.addRow(
-    FEEDBACK_REQUIRED_HEADERS.map((header) => feedbackValues[header] ?? ""),
+    feedbackHeaders.map((header) => feedbackValues[header] ?? ""),
   );
 
   const worksheets = validateDashboardWorkbook(workbook);
@@ -213,6 +218,7 @@ test("parses validated task and feedback sheets", () => {
   assert.equal(feedback.length, 1);
   assert.equal(feedback[0].taskCode, "TSK-001");
   assert.equal(feedback[0].assignee, "An");
+  assert.equal(feedback[0].rejectedBy, "Thúy Sang - OM SOCIAL");
   assert.equal(feedback[0].at?.getMonth(), 4);
   assert.equal(feedback[0].at?.getDate(), 11);
   assert.equal(feedback[0].at?.getHours(), 15);

@@ -214,13 +214,14 @@
 .c3 { background: var(--orange); }
 .c4 { background: #79a7a0; }
 .c5 { background: var(--red); }
+.c6 { background: #7659a8; }
 .columnScroller { overflow-x: auto; padding: 16px 4px 2px; }
 .columnChart {
   height: 280px; display: flex; align-items: flex-end; gap: 32px;
   border-bottom: 1px solid var(--line);
 }
 .columnGroup {
-  width: auto; min-width: 92px; height: 100%; display: flex; flex-direction: column;
+  width: auto; min-width: 108px; height: 100%; display: flex; flex-direction: column;
   justify-content: flex-end; align-items: stretch;
 }
 .columns { height: 230px; display: flex; align-items: flex-end; justify-content: center; gap: 4px; }

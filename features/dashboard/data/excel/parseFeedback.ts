@@ -27,6 +27,9 @@ export function parseFeedback(
       assignee: normalize(
         valueAt(row, headers, FEEDBACK_COLUMNS.assignee),
       ),
+      rejectedBy: normalize(
+        valueAt(row, headers, FEEDBACK_COLUMNS.rejectedBy),
+      ),
     });
   }
   return feedback;

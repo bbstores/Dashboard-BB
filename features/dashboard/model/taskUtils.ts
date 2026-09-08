@@ -1,6 +1,13 @@
 // ─── Task Classification & Grouping Utilities ──────────────────────────────
 
-import type { Task, WorkNorm, DateWindow, PieDatum } from "./types";
+import type {
+  DateWindow,
+  Feedback,
+  FeedbackReturnSource,
+  PieDatum,
+  Task,
+  WorkNorm,
+} from "./types";
 
 export function normalize(value: unknown) {
   return String(value ?? "")
@@ -11,6 +18,15 @@ export function normalize(value: unknown) {
 
 export function normalizedKey(value: unknown) {
   return normalize(value).toLocaleLowerCase("vi");
+}
+
+export function feedbackReturnSource(
+  feedback: Pick<Feedback, "rejectedBy">,
+): FeedbackReturnSource {
+  const rejectedBy = normalizedKey(feedback.rejectedBy)
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+  return rejectedBy.includes("thuy sang") ? "business" : "internal";
 }
 
 export function numberValue(value: unknown) {

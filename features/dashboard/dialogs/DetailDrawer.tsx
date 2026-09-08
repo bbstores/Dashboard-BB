@@ -422,6 +422,14 @@ function detailColumns(detail: DetailView): DetailColumn[] {
             : "",
       },
       {
+        key: "rejectedBy",
+        label: "Người trả về",
+        value: (record) =>
+          record.kind === "feedback"
+            ? record.value.rejectedBy ?? ""
+            : "",
+      },
+      {
         key: "at",
         label: "Thời điểm",
         value: (record) =>
@@ -1193,6 +1201,7 @@ export function DetailDrawer({
                   <th>Task</th>
                   <th>Tên task</th>
                   <th>Người làm</th>
+                  <th>Người trả về</th>
                   <th>Thời điểm</th>
                   <th>Trạng thái</th>
                 </tr>
@@ -1208,6 +1217,7 @@ export function DetailDrawer({
                       {item.task?.title || "—"}
                     </td>
                     <td data-label="Người làm">{item.assignee || item.task?.assignee || "—"}</td>
+                    <td data-label="Người trả về">{item.rejectedBy || "—"}</td>
                     <td data-label="Thời điểm">{formatDateTime(item.at)}</td>
                     <td data-label="Trạng thái">
                       <span className="statusPill">

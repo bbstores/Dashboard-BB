@@ -6,6 +6,7 @@ import { DashboardFilters } from "../features/dashboard/components/DashboardFilt
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { DashboardKpis } from "../features/dashboard/components/DashboardKpis";
 import { DailyTaskChart } from "../features/dashboard/components/DailyTaskChart";
+import { StaffColumns } from "../features/dashboard/components/StaffColumns";
 import { ComparisonDashboard } from "../features/dashboard/components/ComparisonDashboard";
 import { DetailDrawer } from "../features/dashboard/dialogs/DetailDrawer";
 import { PercentileDialog } from "../features/dashboard/dialogs/PercentileDialog";
@@ -43,6 +44,37 @@ const { cleanup, fireEvent, render, screen } = await import(
 );
 
 afterEach(cleanup);
+
+test("StaffColumns separates internal and business returns", () => {
+  const selections: string[] = [];
+
+  render(
+    <StaffColumns
+      rows={[
+        {
+          name: "Nhân sự A",
+          total: 12,
+          started: 8,
+          inspectionCarry: 2,
+          completionCarry: 1,
+          feedback: 5,
+          feedbackInternal: 3,
+          feedbackBusiness: 2,
+        },
+      ]}
+      onSelect={(name, metric) => selections.push(`${name}:${metric}`)}
+    />,
+  );
+
+  assert.ok(screen.getByText("Nội Bộ Trả Về"));
+  assert.ok(screen.getByText("Team Kinh Doanh Trả Về"));
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Team Kinh Doanh Trả Về của Nhân sự A: 2",
+    }),
+  );
+  assert.deepEqual(selections, ["Nhân sự A:feedbackBusiness"]);
+});
 
 function task(): Task {
   return {

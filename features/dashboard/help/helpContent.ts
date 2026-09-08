@@ -77,8 +77,8 @@ export function dashboardHelp(title: string): DashboardHelp {
     },
     "Số task thực hiện & số lần trả về": {
       purpose: "So sánh khối lượng thực hiện và phản hồi theo từng nhân sự.",
-      calculation: "Tổng task là hợp khử trùng của task bắt đầu, carry-in bàn giao theo Ngày Kiểm Duyệt và carry-in hoàn thành theo Ngày Hoàn Thành. Hai cột carry-in là các mốc riêng nên có thể cùng ghi nhận một task. Task nhiều assignee được tính cho từng người.",
-      example: "Task cũ của An kiểm duyệt và hoàn thành cùng trong kỳ: Tổng task của An tăng 1, cột Carry-in bàn giao tăng 1 và Carry-in hoàn thành tăng 1.",
+      calculation: "Tổng task là hợp khử trùng của task bắt đầu, carry-in bàn giao theo Ngày Kiểm Duyệt và carry-in hoàn thành theo Ngày Hoàn Thành. Phản hồi có Reject By là Thúy Sang được xếp vào Team Kinh Doanh Trả Về; tất cả trường hợp còn lại, kể cả Reject By trống, được xếp vào Nội Bộ Trả Về. Task nhiều assignee được tính cho từng người.",
+      example: "Một task của An có hai phản hồi trong kỳ: một phản hồi do Thúy Sang trả và một phản hồi do Hiếu trả → An có 1 Team Kinh Doanh Trả Về và 1 Nội Bộ Trả Về.",
     },
     "Tình trạng task": {
       purpose: "Biểu đồ cơ cấu task theo trạng thái hiện tại như In Progress, Checking, Reviewing hoặc Done.",

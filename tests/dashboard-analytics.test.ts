@@ -152,6 +152,7 @@ const dashboardData: DashboardData = {
       taskCode: "T1",
       at: date(14),
       assignee: "",
+      rejectedBy: "Hiếu - Producer",
     },
   ],
   norms: [
@@ -258,10 +259,24 @@ test("calculates dashboard cohorts, people, collections and backlog", () => {
       name: row.name,
       total: row.total,
       feedback: row.feedback,
+      feedbackInternal: row.feedbackInternal,
+      feedbackBusiness: row.feedbackBusiness,
     })),
     [
-      { name: "An", total: 2, feedback: 1 },
-      { name: "Binh", total: 2, feedback: 0 },
+      {
+        name: "An",
+        total: 2,
+        feedback: 1,
+        feedbackInternal: 1,
+        feedbackBusiness: 0,
+      },
+      {
+        name: "Binh",
+        total: 2,
+        feedback: 0,
+        feedbackInternal: 0,
+        feedbackBusiness: 0,
+      },
     ],
   );
 
@@ -280,6 +295,46 @@ test("calculates dashboard cohorts, people, collections and backlog", () => {
       stats.missingBoth +
       stats.untitledTaskCount,
   );
+});
+
+test("splits feedback returned by Thúy Sang from internal feedback", () => {
+  const data: DashboardData = {
+    fileName: "feedback-source-fixture.xlsx",
+    publications: [],
+    norms: [],
+    tasks: [task("T1", { assignee: "An" })],
+    feedback: [
+      {
+        taskCode: "T1",
+        at: date(14),
+        assignee: "An",
+        rejectedBy: "Thúy Sang - OM SOCIAL",
+      },
+      {
+        taskCode: "T1",
+        at: date(15),
+        assignee: "An",
+        rejectedBy: "Hiếu - Producer",
+      },
+      {
+        taskCode: "T1",
+        at: date(16),
+        assignee: "An",
+        rejectedBy: "",
+      },
+    ],
+  };
+
+  const stats = calculateDashboardStats(data, {
+    dateWindow,
+    collectionMonth: "",
+    backlogDate: "2026-07-20",
+  });
+  const row = stats.staffRows.find((item) => item.name === "An");
+
+  assert.equal(row?.feedback, 3);
+  assert.equal(row?.feedbackBusiness, 1);
+  assert.equal(row?.feedbackInternal, 2);
 });
 
 test("calculates SLA and norm metrics without React", () => {

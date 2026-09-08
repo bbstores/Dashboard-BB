@@ -74,6 +74,7 @@ export const FEEDBACK_COLUMNS = {
   taskCode: "Task",
   at: "Thời Điểm",
   assignee: "Người Làm Task",
+  rejectedBy: "Reject By",
 } as const;
 
 export const PUBLICATION_COLUMNS = {
@@ -107,7 +108,9 @@ export const TASK_REQUIRED_HEADERS = Object.values(TASK_COLUMNS).filter(
     header !== TASK_COLUMNS.receivedStartDate &&
     header !== TASK_COLUMNS.shootSession,
 );
-export const FEEDBACK_REQUIRED_HEADERS = Object.values(FEEDBACK_COLUMNS);
+export const FEEDBACK_REQUIRED_HEADERS = Object.values(
+  FEEDBACK_COLUMNS,
+).filter((header) => header !== FEEDBACK_COLUMNS.rejectedBy);
 export const PUBLICATION_REQUIRED_HEADERS = Object.values(
   PUBLICATION_COLUMNS,
 ).filter((header) => header !== PUBLICATION_COLUMNS.shopee);

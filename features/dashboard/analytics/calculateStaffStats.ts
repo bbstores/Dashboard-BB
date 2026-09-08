@@ -1,5 +1,6 @@
 import {
   assigneeNames,
+  feedbackReturnSource,
   inWindow,
 } from "../model/taskUtils";
 import type {
@@ -21,11 +22,18 @@ export function calculateStaffStats(
     inWindow(item.at, dateWindow),
   );
   const feedbackCount = new Map<string, number>();
+  const internalFeedbackCount = new Map<string, number>();
+  const businessFeedbackCount = new Map<string, number>();
   for (const item of selectedFeedback) {
     const rawNames = item.assignee || taskByCode.get(item.taskCode)?.assignee;
     if (!rawNames) continue;
+    const sourceCount =
+      feedbackReturnSource(item) === "business"
+        ? businessFeedbackCount
+        : internalFeedbackCount;
     for (const name of assigneeNames(rawNames)) {
       feedbackCount.set(name, (feedbackCount.get(name) ?? 0) + 1);
+      sourceCount.set(name, (sourceCount.get(name) ?? 0) + 1);
     }
   }
 
@@ -62,6 +70,8 @@ export function calculateStaffStats(
         completionCarry: completionCarryRows.length,
         completionCarryTasks: completionCarryRows.map((row) => row.task),
         feedback: feedbackCount.get(name) ?? 0,
+        feedbackInternal: internalFeedbackCount.get(name) ?? 0,
+        feedbackBusiness: businessFeedbackCount.get(name) ?? 0,
       };
     })
     .sort((a, b) => b.total - a.total);

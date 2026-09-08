@@ -10,7 +10,10 @@ import { DailyTaskChart } from "../components/DailyTaskChart";
 import { AssigneeStageRadar } from "../components/AssigneeStageRadar";
 import { HorizontalBars } from "../components/HorizontalBars";
 import { StaffColumns } from "../components/StaffColumns";
-import { assigneeNames } from "../model/taskUtils";
+import {
+  assigneeNames,
+  feedbackReturnSource,
+} from "../model/taskUtils";
 import type {
   DetailView,
   LeaderboardUnit,
@@ -148,13 +151,23 @@ export function PeopleSection({
         rows={viewModel.staffRows}
         className="groupPeople"
         onSelect={(name, metric) => {
-          if (metric === "feedback") {
+          if (
+            metric === "feedbackInternal" ||
+            metric === "feedbackBusiness"
+          ) {
+            const source =
+              metric === "feedbackBusiness" ? "business" : "internal";
+            const sourceLabel =
+              source === "business"
+                ? "Team Kinh Doanh Trả Về"
+                : "Nội Bộ Trả Về";
             onOpenDetail({
-              title: `Lần trả về · ${name}`,
+              title: `${sourceLabel} · ${name}`,
               subtitle:
                 "Dữ liệu từ sheet 2.9 Lịch sử phản hồi Task trong bộ lọc",
               feedback: viewModel.selectedFeedback
                 .filter((item) =>
+                  feedbackReturnSource(item) === source &&
                   assigneeNames(
                     item.assignee ||
                       viewModel.taskByCode.get(item.taskCode)?.assignee ||
