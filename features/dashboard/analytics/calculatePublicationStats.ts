@@ -229,7 +229,8 @@ const MEDIA_RESPONSE_EXCLUDED_PLATFORMS = new Set([
 ]);
 
 function isMediaResponseExcludedPlatform(value: string) {
-  return MEDIA_RESPONSE_EXCLUDED_PLATFORMS.has(normalizedKey(value));
+  const platform = normalizedKey(value).replace(/[’‘`´]/g, "'");
+  return MEDIA_RESPONSE_EXCLUDED_PLATFORMS.has(platform);
 }
 
 export function taskPlatformNames(task: Task) {

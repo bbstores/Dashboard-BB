@@ -1351,6 +1351,7 @@ test("excludes only the requested channels from the Media response chart", () =>
     "Không Đăng Social",
     "Cửa Hàng",
     "TikTok BBstore's",
+    "TikTok BBStore’s",
     "TikTok BB Store",
     "Facebook",
   ];
@@ -1387,8 +1388,8 @@ test("excludes only the requested channels from the Media response chart", () =>
     })),
   );
 
-  assert.equal(stats.total, 5);
-  assert.equal(stats.normPerformance.expectedTotal, 5);
+  assert.equal(stats.total, 6);
+  assert.equal(stats.normPerformance.expectedTotal, 6);
   assert.equal(stats.mediaPostingResponse.totalPosts, 2);
   assert.equal(stats.mediaPostingResponse.expectedPosts, 2);
   assert.deepEqual(

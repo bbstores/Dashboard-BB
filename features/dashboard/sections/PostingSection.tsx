@@ -273,7 +273,7 @@ function MediaPostingResponseChart({
               ? `${formatDate(performance.from)}–${formatDate(performance.to)} · ${formatNumber(performance.days)} ngày lịch · `
               : ""}
             đối chiếu định mức, bài có lịch và mức sẵn sàng của Media ·
-            không gồm Không Đăng Social, Cửa Hàng và TikTok BBstore&apos;s
+            không gồm Không Đăng Social, Cửa Hàng và TikTok BBStore’s
           </p>
         </div>
         <HelpButton
@@ -284,7 +284,7 @@ function MediaPostingResponseChart({
             objective:
               "Nhìn đồng thời kênh có đạt định mức hay không, tỷ trọng bài dùng Media và phần Media chưa kịp đáp ứng ngày đăng.",
             calculation:
-              "Task Pending / Cancel và các dòng Đăng Bài liên kết được loại trước khi tính. Riêng chart này tiếp tục loại các kênh Không Đăng Social, Cửa Hàng và TikTok BBstore's; TikTok BB Store vẫn được giữ. KPI kỳ được quy đổi từ bảng Định Mức Đăng Bài. Bài dùng Media là dòng Đăng Bài có Book Task không rỗng. Media đáp ứng đúng ngày khi task đạt mốc hoàn tất không muộn hơn hết ngày đăng. Ấn phẩm thuộc BST hoặc tên task có IG/Instagram dùng mốc Done và Ngày Hoàn Thành; các task còn lại dùng mốc Kinh Doanh Done và Ngày Kinh Doanh Duyệt.",
+              "Task Pending / Cancel và các dòng Đăng Bài liên kết được loại trước khi tính. Riêng chart này tiếp tục loại các kênh Không Đăng Social, Cửa Hàng và TikTok BBStore’s (nhận cả dấu nháy thẳng và dấu nháy cong); TikTok BB Store vẫn được giữ. KPI kỳ được quy đổi từ bảng Định Mức Đăng Bài. Bài dùng Media là dòng Đăng Bài có Book Task không rỗng. Media đáp ứng đúng ngày khi task đạt mốc hoàn tất không muộn hơn hết ngày đăng. Ấn phẩm thuộc BST hoặc tên task có IG/Instagram dùng mốc Done và Ngày Hoàn Thành; các task còn lại dùng mốc Kinh Doanh Done và Ngày Kinh Doanh Duyệt.",
             example:
               "Một kênh có 20 bài, trong đó 12 bài có Book Task; 9 task hoàn tất đúng ngày đăng. Tỷ trọng Media là 60%, mức đáp ứng đúng hạn là 75%.",
             note:
