@@ -77,6 +77,15 @@ export function isNoSocialPublicationTask(task: Task) {
   return normalizedKey(task.platform) === "không đăng social";
 }
 
+export function isPendingCancelTask(
+  task: Pick<Task, "status">,
+) {
+  return (
+    normalizedKey(task.status).replace(/\s*\/\s*/g, "/") ===
+    "pending/cancel"
+  );
+}
+
 export function publicationSkipsBusinessApproval(task: Task) {
   const title = normalizedKey(task.title);
   const isInstagramTask =

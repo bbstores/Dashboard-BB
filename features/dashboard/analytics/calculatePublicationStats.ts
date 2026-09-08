@@ -14,6 +14,7 @@ import {
   isFinalPublicationTask,
   isGraphicPublication,
   isNoSocialPublicationTask,
+  isPendingCancelTask,
   isPublicationReady,
   isVideoPublication,
   normalize,
@@ -219,6 +220,16 @@ export function publicationBelongsToPlatform(
 
 function comparablePlatformKey(value: string) {
   return normalizedKey(value).replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+const MEDIA_RESPONSE_EXCLUDED_PLATFORMS = new Set([
+  "không đăng social",
+  "cửa hàng",
+  "tiktok bbstore's",
+]);
+
+function isMediaResponseExcludedPlatform(value: string) {
+  return MEDIA_RESPONSE_EXCLUDED_PLATFORMS.has(normalizedKey(value));
 }
 
 export function taskPlatformNames(task: Task) {
@@ -1041,15 +1052,32 @@ export function calculatePublicationStats(
   dateWindow: DateWindow,
   postingNorms: PostingNorm[] = [],
 ) {
+  const pendingCancelTasks = tasks.filter(isPendingCancelTask);
+  const pendingCancelTaskCodes = new Set(
+    pendingCancelTasks.map((task) => normalizedKey(task.code)),
+  );
+  const pendingCancelPublicationIds = new Set(
+    pendingCancelTasks.flatMap((task) =>
+      (task.publicationIds ?? []).map(normalizedKey),
+    ),
+  );
+  const eligibleBusinessTasks = tasks.filter(
+    (task) => !isPendingCancelTask(task),
+  );
+  const eligiblePublications = publications.filter(
+    (post) =>
+      !pendingCancelTaskCodes.has(normalizedKey(post.bookTaskCode)) &&
+      !pendingCancelPublicationIds.has(normalizedKey(post.id)),
+  );
   const taskByCode = new Map(
-    tasks.map((task) => [normalize(task.code), task]),
+    eligibleBusinessTasks.map((task) => [normalize(task.code), task]),
   );
   const noSocialTaskCodes = new Set(
-    tasks
+    eligibleBusinessTasks
       .filter(isNoSocialPublicationTask)
       .map((task) => normalize(task.code)),
   );
-  const postsInWindow = publications.filter(
+  const postsInWindow = eligiblePublications.filter(
     (post) =>
       post.scheduledAt &&
       inWindow(post.scheduledAt, dateWindow),
@@ -1100,7 +1128,7 @@ export function calculatePublicationStats(
     }
   }
 
-  const eligibleTasks = tasks.filter(
+  const eligibleTasks = eligibleBusinessTasks.filter(
     (task) =>
       isFinalPublicationTask(task) &&
       !isNoSocialPublicationTask(task),
@@ -1144,9 +1172,9 @@ export function calculatePublicationStats(
   );
   const postsByTaskCode = new Map<string, PublicationPost[]>();
   const postById = new Map(
-    publications.map((post) => [normalize(post.id), post]),
+    eligiblePublications.map((post) => [normalize(post.id), post]),
   );
-  for (const post of publications) {
+  for (const post of eligiblePublications) {
     const taskCode = normalize(post.bookTaskCode);
     if (!taskCode) continue;
     const linkedPosts = postsByTaskCode.get(taskCode) ?? [];
@@ -1227,15 +1255,25 @@ export function calculatePublicationStats(
     postingNorms,
     dateWindow,
   );
+  const mediaResponsePosts = filteredPosts.filter(
+    (post) => !isMediaResponseExcludedPlatform(post.platform),
+  );
+  const mediaResponseNormPerformance = calculatePostingNormPerformance(
+    mediaResponsePosts,
+    postingNorms.filter(
+      (norm) => !isMediaResponseExcludedPlatform(norm.platform),
+    ),
+    dateWindow,
+  );
   const mediaPostingResponse =
     calculateMediaPostingResponsePerformance(
-      tasks,
-      filteredPosts,
-      normPerformance,
+      eligibleBusinessTasks,
+      mediaResponsePosts,
+      mediaResponseNormPerformance,
     );
   const supplyPerformance = calculatePublicationSupplyPerformance(
-    tasks,
-    publications,
+    eligibleBusinessTasks,
+    eligiblePublications,
     classifiedPosts,
     normPerformance,
   );

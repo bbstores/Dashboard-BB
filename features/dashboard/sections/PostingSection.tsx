@@ -272,7 +272,8 @@ function MediaPostingResponseChart({
             {performance.from && performance.to
               ? `${formatDate(performance.from)}–${formatDate(performance.to)} · ${formatNumber(performance.days)} ngày lịch · `
               : ""}
-            đối chiếu định mức, bài có lịch và mức sẵn sàng của Media
+            đối chiếu định mức, bài có lịch và mức sẵn sàng của Media ·
+            không gồm Không Đăng Social, Cửa Hàng và TikTok BBstore&apos;s
           </p>
         </div>
         <HelpButton
@@ -283,7 +284,7 @@ function MediaPostingResponseChart({
             objective:
               "Nhìn đồng thời kênh có đạt định mức hay không, tỷ trọng bài dùng Media và phần Media chưa kịp đáp ứng ngày đăng.",
             calculation:
-              "KPI kỳ được quy đổi từ bảng Định Mức Đăng Bài. Bài dùng Media là dòng Đăng Bài có Book Task không rỗng. Media đáp ứng đúng ngày khi task đạt mốc hoàn tất không muộn hơn hết ngày đăng. Ấn phẩm thuộc BST hoặc tên task có IG/Instagram dùng mốc Done và Ngày Hoàn Thành; các task còn lại dùng mốc Kinh Doanh Done và Ngày Kinh Doanh Duyệt.",
+              "Task Pending / Cancel và các dòng Đăng Bài liên kết được loại trước khi tính. Riêng chart này tiếp tục loại các kênh Không Đăng Social, Cửa Hàng và TikTok BBstore's; TikTok BB Store vẫn được giữ. KPI kỳ được quy đổi từ bảng Định Mức Đăng Bài. Bài dùng Media là dòng Đăng Bài có Book Task không rỗng. Media đáp ứng đúng ngày khi task đạt mốc hoàn tất không muộn hơn hết ngày đăng. Ấn phẩm thuộc BST hoặc tên task có IG/Instagram dùng mốc Done và Ngày Hoàn Thành; các task còn lại dùng mốc Kinh Doanh Done và Ngày Kinh Doanh Duyệt.",
             example:
               "Một kênh có 20 bài, trong đó 12 bài có Book Task; 9 task hoàn tất đúng ngày đăng. Tỷ trọng Media là 60%, mức đáp ứng đúng hạn là 75%.",
             note:
@@ -604,7 +605,7 @@ function MediaSupplyResponseChart({
             objective:
               "Quy đổi task Media và KPI Kinh doanh về cùng đơn vị bài, đồng thời không để nguồn dư ở một nền tảng che phần thiếu của nền tảng khác.",
             calculation:
-              "Kho Media đếm mỗi task final là một ấn phẩm. Khi tính khả năng đáp ứng KPI, mỗi giá trị không trùng trong cột Nền Tảng của ấn phẩm được quy đổi thành một bài có thể đăng: Facebook + TikTok = 2 bài quy đổi nhưng vẫn chỉ là 1 ấn phẩm trong kho. Chỉ giữ nền tảng khớp kênh có định mức KPI cố định. Với từng kênh, phần Media đáp ứng bằng số nhỏ hơn giữa nguồn bài quy đổi và KPI của kênh; sau đó mới cộng các kênh để tính tỷ lệ tổng.",
+              "Task Pending / Cancel và các dòng Đăng Bài liên kết được loại trước khi tính. Kho Media đếm mỗi task final là một ấn phẩm. Khi tính khả năng đáp ứng KPI, mỗi giá trị không trùng trong cột Nền Tảng của ấn phẩm được quy đổi thành một bài có thể đăng: Facebook + TikTok = 2 bài quy đổi nhưng vẫn chỉ là 1 ấn phẩm trong kho. Chỉ giữ nền tảng khớp kênh có định mức KPI cố định. Với từng kênh, phần Media đáp ứng bằng số nhỏ hơn giữa nguồn bài quy đổi và KPI của kênh; sau đó mới cộng các kênh để tính tỷ lệ tổng.",
             example:
               "Một ấn phẩm có Facebook và TikTok vẫn được đếm là 1 ấn phẩm trong kho nhưng tạo 2 bài quy đổi KPI. Nếu KPI Facebook là 60 bài, TikTok là 40 bài nhưng Media có nguồn quy đổi 80 bài Facebook và 20 bài TikTok thì mức đáp ứng là (60 + 20) / 100 = 80%, không phải 100%.",
             note:
@@ -896,9 +897,10 @@ function PlatformMixChart({
         </div>
       </div>
       <p className="postingChartNote">
-        Mỗi dòng trong bảng Đăng Bài được tính là một bài. Một task đăng
-        Facebook và TikTok sẽ được tính thành hai bài ở hai nền tảng.
-        Bài chưa xác định được xem tại cảnh báo dữ liệu riêng.
+        Sau khi loại các dòng liên kết với task Pending / Cancel, mỗi dòng
+        trong bảng Đăng Bài được tính là một bài. Một task đăng Facebook
+        và TikTok sẽ được tính thành hai bài ở hai nền tảng. Bài chưa xác
+        định được xem tại cảnh báo dữ liệu riêng.
       </p>
       <div className="postingPlatformScroller">
         <div
@@ -1379,7 +1381,8 @@ export function PostingSection({
           <p>
             Bài đăng đếm theo từng dòng và từng nền tảng; ấn phẩm chưa
             lên lịch đếm theo task thành phẩm cuối, trừ task có Nền Tảng
-            là Không Đăng Social.
+            là Không Đăng Social. Toàn bộ task Pending / Cancel và các
+            dòng Đăng Bài liên kết đều được loại khỏi báo cáo.
           </p>
         </div>
       </div>
@@ -1467,7 +1470,7 @@ export function PostingSection({
             objective:
               "Tách rõ tồn cũ, ấn phẩm mới, ấn phẩm chuyển tiếp và task thiếu mốc ngày.",
             calculation:
-              "Đầu tiên lấy task Video/Xào Source–Edit hoặc Hình ảnh–Graphic Design, loại Nền Tảng = Không Đăng Social và chỉ giữ task chưa có liên kết 2.7 Đăng Bài. Ấn phẩm cũ có ngày sẵn sàng trước 01/07; Bắt đầu từ 01/07 dùng Ngày Bắt Đầu; Chuyển tiếp bắt đầu trước mốc nhưng sẵn sàng từ mốc; phần còn lại là Chưa đủ mốc ngày.",
+              "Đầu tiên loại task Pending / Cancel. Sau đó lấy task Video/Xào Source–Edit hoặc Hình ảnh–Graphic Design, loại Nền Tảng = Không Đăng Social và chỉ giữ task chưa có liên kết 2.7 Đăng Bài. Ấn phẩm cũ có ngày sẵn sàng trước 01/07; Bắt đầu từ 01/07 dùng Ngày Bắt Đầu; Chuyển tiếp bắt đầu trước mốc nhưng sẵn sàng từ mốc; phần còn lại là Chưa đủ mốc ngày.",
             example:
               "703 task được tách thành 508 cũ + 43 bắt đầu mới + 3 chuyển tiếp + 149 thiếu mốc ngày.",
             note:
@@ -1520,7 +1523,7 @@ export function PostingSection({
             objective:
               "Cho biết tỷ trọng nội dung tái sử dụng so với sản xuất mới, đồng thời tách media video và hình ảnh.",
             calculation:
-              "Book Task trống là Reup. Book Task nối tới task Edit có Format Type chứa Video hoặc Xào Source là Media Video; nối tới task Graphic Design không thuộc hai nhóm trên là Media Hình ảnh. Mỗi dòng đăng ở một nền tảng được tính là một bài.",
+              "Loại task Pending / Cancel và dòng Đăng Bài liên kết với chúng trước khi tính. Book Task trống là Reup. Book Task nối tới task Edit có Format Type chứa Video hoặc Xào Source là Media Video; nối tới task Graphic Design không thuộc hai nhóm trên là Media Hình ảnh. Mỗi dòng đăng ở một nền tảng được tính là một bài.",
             example:
               "Một video có hai dòng Facebook và TikTok sẽ đóng góp hai bài Media Video.",
             note:
@@ -1543,7 +1546,7 @@ export function PostingSection({
             objective:
               "Giúp so sánh nhanh khối lượng phân phối nội dung giữa các kênh.",
             calculation:
-              "Mỗi dòng ở bảng 2.7 Đăng Bài được tính là một bài cho Nền Tảng của dòng đó. Các nền tảng có tên giống nhau được cộng lại.",
+              "Sau khi loại các dòng liên kết với task Pending / Cancel, mỗi dòng ở bảng 2.7 Đăng Bài được tính là một bài cho Nền Tảng của dòng đó. Các nền tảng có tên giống nhau được cộng lại.",
             example:
               "Một task có hai dòng Facebook và TikTok sẽ đóng góp một bài cho mỗi lát nền tảng.",
             note:
@@ -1605,7 +1608,7 @@ export function PostingSection({
             objective:
               "Cho biết bao nhiêu ấn phẩm đã được book lịch và bao nhiêu ấn phẩm vẫn chưa có lịch đăng.",
             calculation:
-              "Đầu tiên lọc task theo Ngày Bắt Đầu. Ấn phẩm Video là task Edit có Format Type chứa Video hoặc Xào Source; ấn phẩm Hình ảnh là task Graphic Design không thuộc hai nhóm trên. Task có Nền Tảng = Không Đăng Social được loại khỏi thống kê đăng bài. Với các task còn lại, cột 2.7 Đăng Bài có mã là Đã lên lịch, để trống là Chưa lên lịch. Khi rê vào Đã lên lịch, task được tính Đã đăng nếu có ít nhất một bài liên kết có Đã Đăng = 1.",
+              "Đầu tiên loại task Pending / Cancel rồi lọc theo Ngày Bắt Đầu. Ấn phẩm Video là task Edit có Format Type chứa Video hoặc Xào Source; ấn phẩm Hình ảnh là task Graphic Design không thuộc hai nhóm trên. Task có Nền Tảng = Không Đăng Social được loại khỏi thống kê đăng bài. Với các task còn lại, cột 2.7 Đăng Bài có mã là Đã lên lịch, để trống là Chưa lên lịch. Khi rê vào Đã lên lịch, task được tính Đã đăng nếu có ít nhất một bài liên kết có Đã Đăng = 1.",
             example:
               "Một task video có lịch Facebook và TikTok vẫn chỉ là một ấn phẩm; nếu Facebook đã đăng thì task đó được xếp vào Đã đăng.",
             note:

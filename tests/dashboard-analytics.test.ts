@@ -826,6 +826,155 @@ test("calculates publication source mix, multi-platform rows and unscheduled ass
   );
 });
 
+test("excludes Pending / Cancel tasks and their linked posts from every business posting chart", () => {
+  const publicationTasks = [
+    task("ACTIVE-POSTED", {
+      status: "Kinh Doanh Done",
+      businessApprovalDate: date(9),
+      publicationIds: ["POST-ACTIVE"],
+      platform: "Facebook",
+    }),
+    task("ACTIVE-UNSCHEDULED", {
+      stage: "Graphic Design",
+      formatType: "Ảnh Post",
+      status: "In Progress",
+      publicationIds: [],
+      platform: "Facebook",
+    }),
+    task("PENDING-BY-ID", {
+      status: "Pending / Cancel",
+      publicationIds: ["POST-PENDING-BY-ID"],
+      platform: "Facebook",
+    }),
+    task("PENDING-BY-CODE", {
+      status: "Pending/Cancel",
+      publicationIds: ["POST-PENDING-BY-CODE"],
+      platform: "TikTok",
+    }),
+    task("PENDING-UNSCHEDULED", {
+      stage: "Graphic Design",
+      formatType: "Ảnh Post",
+      status: "Pending / Cancel",
+      publicationIds: [],
+      platform: "Facebook",
+    }),
+  ];
+  const publications: PublicationPost[] = [
+    {
+      id: "POST-ACTIVE",
+      scheduledAt: date(10),
+      platform: "Facebook",
+      posted: true,
+      postType: "Video",
+      title: "Active",
+      bookTaskCode: "ACTIVE-POSTED",
+    },
+    {
+      id: "POST-PENDING-BY-ID",
+      scheduledAt: date(10),
+      platform: "Facebook",
+      posted: true,
+      postType: "Video",
+      title: "Pending linked by publication id",
+      bookTaskCode: "",
+    },
+    {
+      id: "POST-PENDING-BY-CODE",
+      scheduledAt: date(11),
+      platform: "TikTok",
+      posted: true,
+      postType: "Video",
+      title: "Pending linked by Book Task",
+      bookTaskCode: "PENDING-BY-CODE",
+    },
+    {
+      id: "POST-REUP",
+      scheduledAt: date(12),
+      platform: "Facebook",
+      posted: true,
+      postType: "Reup",
+      title: "Independent reup",
+      bookTaskCode: "",
+    },
+  ];
+
+  const stats = calculatePublicationStats(
+    publicationTasks,
+    publications,
+    dateWindow,
+    [
+      {
+        platform: "Facebook",
+        target: 1,
+        unit: "Ngày",
+        note: "",
+      },
+      {
+        platform: "TikTok",
+        target: 1,
+        unit: "Ngày",
+        note: "",
+      },
+    ],
+  );
+
+  assert.equal(stats.total, 2);
+  assert.equal(stats.posted, 2);
+  assert.equal(stats.video, 1);
+  assert.equal(stats.reup, 1);
+  assert.deepEqual(
+    stats.classifiedPosts.map((item) => item.post.id),
+    ["POST-ACTIVE", "POST-REUP"],
+  );
+  assert.deepEqual(stats.platformRows, [
+    {
+      label: "Facebook",
+      total: 2,
+      reup: 1,
+      video: 1,
+      graphic: 0,
+      unknown: 0,
+    },
+  ]);
+  assert.equal(
+    stats.dailyRows.reduce((sum, row) => sum + row.total, 0),
+    2,
+  );
+  assert.deepEqual(
+    stats.eligibleTasks.map((item) => item.code),
+    ["ACTIVE-POSTED", "ACTIVE-UNSCHEDULED"],
+  );
+  assert.deepEqual(
+    stats.assetStatusTasks.map((item) => item.code),
+    ["ACTIVE-POSTED", "ACTIVE-UNSCHEDULED"],
+  );
+  assert.deepEqual(
+    stats.mediaPostingResponse.items.map((item) => item.post.id),
+    ["POST-ACTIVE"],
+  );
+  assert.deepEqual(
+    stats.normPerformance.rows.map((row) => [
+      row.platform,
+      row.scheduled,
+      row.posted,
+    ]),
+    [
+      ["Facebook", 2, 2],
+      ["TikTok", 0, 0],
+    ],
+  );
+  assert.ok(
+    stats.supplyPerformance.availableTasks.every(
+      (item) => !item.code.startsWith("PENDING-"),
+    ),
+  );
+  assert.ok(
+    stats.supplyPerformance.mediaPostEvidence.every(
+      (item) => !item.post.id.startsWith("POST-PENDING-"),
+    ),
+  );
+});
+
 test("attributes posting KPI gaps to unused ready assets before Media shortage", () => {
   const tasks = [
     task("OPENING-BST", {
@@ -1194,6 +1343,61 @@ test("measures whether each Media-linked post was ready by its posting day", () 
         responseRate: 0,
       },
     ],
+  );
+});
+
+test("excludes only the requested channels from the Media response chart", () => {
+  const platforms = [
+    "Không Đăng Social",
+    "Cửa Hàng",
+    "TikTok BBstore's",
+    "TikTok BB Store",
+    "Facebook",
+  ];
+  const tasks = platforms.map((_, index) =>
+    task(`CHANNEL-${index}`, {
+      status: "Kinh Doanh Done",
+      businessApprovalDate: date(9),
+      platform: "Facebook",
+    }),
+  );
+  const posts: PublicationPost[] = platforms.map((platform, index) => ({
+    id: `CHANNEL-POST-${index}`,
+    scheduledAt: date(10),
+    platform,
+    posted: true,
+    postType: "Video",
+    title: platform,
+    bookTaskCode: `CHANNEL-${index}`,
+  }));
+
+  const stats = calculatePublicationStats(
+    tasks,
+    posts,
+    {
+      from: date(10, 0),
+      to: date(10, 23),
+      hasFilter: true,
+    },
+    platforms.map((platform) => ({
+      platform,
+      target: 1,
+      unit: "Ngày",
+      note: "",
+    })),
+  );
+
+  assert.equal(stats.total, 5);
+  assert.equal(stats.normPerformance.expectedTotal, 5);
+  assert.equal(stats.mediaPostingResponse.totalPosts, 2);
+  assert.equal(stats.mediaPostingResponse.expectedPosts, 2);
+  assert.deepEqual(
+    stats.mediaPostingResponse.platformRows.map((row) => row.platform),
+    ["Facebook", "TikTok BB Store"],
+  );
+  assert.deepEqual(
+    stats.mediaPostingResponse.items.map((item) => item.post.platform),
+    ["TikTok BB Store", "Facebook"],
   );
 });
 
