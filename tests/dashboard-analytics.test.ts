@@ -10,6 +10,7 @@ import {
   calculateShootTaskMinutesByStaff,
   calculateShootTypeBaselinePlan,
   calculateShootTypeBaselines,
+  reconcileShootSessionTaskCounts,
 } from "../features/dashboard/analytics/calculateMediaCapacity";
 import {
   calculatePostingNormDailyTarget,
@@ -1688,6 +1689,63 @@ test("allocates shoot participation by time, tasks and products", () => {
   );
   assert.ok(
     Math.abs((chi?.timePercentage ?? 0) - 100 / 6) < 1e-9,
+  );
+});
+
+test("counts photo and video mannequin tasks for the same product once per shoot session", () => {
+  const tasks = [
+    task("MANO-PHOTO", {
+      stage: "Chụp",
+      formatType: "Ảnh Manocanh",
+      productCode: "ABC",
+      shootSession: "CA-11-01",
+    }),
+    task("MANO-VIDEO", {
+      stage: "Quay",
+      formatType: "Video Manocanh",
+      productCode: "abc",
+      shootSession: "CA-11-01",
+    }),
+    ...Array.from({ length: 4 }, (_, index) =>
+      task(`OTHER-${index + 1}`, {
+        stage: index % 2 ? "Chụp" : "Quay",
+        formatType: index % 2 ? "Ảnh sản phẩm" : "Video sản phẩm",
+        productCode: `SP-${index + 1}`,
+        shootSession: "CA-11-01",
+      }),
+    ),
+  ];
+  const [session] = reconcileShootSessionTaskCounts(
+    [
+      {
+        id: "CA-11-01",
+        date: date(11),
+        duration: "Một buổi",
+        sessionUnits: 1,
+        taskCount: 6,
+        productCount: 5,
+        productCodes: ["ABC", "SP-1", "SP-2", "SP-3", "SP-4"],
+        taskCodes: tasks.map((item) => item.code),
+        type: "Manocanh",
+        timeWindow: "",
+        model: "",
+        status: "Đóng",
+      },
+    ],
+    tasks,
+  );
+
+  assert.equal(session.rawTaskCount, 6);
+  assert.equal(session.taskCount, 5);
+  assert.equal(session.mannequinPairCount, 1);
+  assert.equal(session.taskGroups?.length, 5);
+  const mannequinGroup = session.taskGroups?.find(
+    (group) => group.isMannequinPair,
+  );
+  assert.equal(mannequinGroup?.countedTaskCount, 1);
+  assert.deepEqual(
+    mannequinGroup?.tasks.map((item) => item.code),
+    ["MANO-PHOTO", "MANO-VIDEO"],
   );
 });
 

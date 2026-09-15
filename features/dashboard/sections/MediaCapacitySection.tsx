@@ -66,7 +66,7 @@ const capacityHelp: Record<
     objective:
       "Trả lời trong khoảng đang chọn team thực hiện bao nhiêu buổi quay, bao nhiêu task và bao nhiêu mã sản phẩm.",
     calculation:
-      "Một buổi được quy đổi 4 giờ; Một ngày bằng 2 buổi. Nhân sự là số tên không trùng lặp trong các ca của kỳ; một người tham gia nhiều ca vẫn chỉ tính một lần. Số task lấy Tổng Số Task; số mã là hợp không trùng của Danh Sách Mã SP. Baseline tháng lấy P25/P50/P75 của 12 tuần hoàn chỉnh trước tháng báo cáo, yêu cầu tối thiểu 8 tuần có dữ liệu tương ứng và được khóa suốt tháng.",
+      "Một buổi được quy đổi 4 giờ; Một ngày bằng 2 buổi. Nhân sự là số tên không trùng lặp trong các ca của kỳ; một người tham gia nhiều ca vẫn chỉ tính một lần. Số task lấy Tổng Số Task, sau đó mỗi cặp Ảnh Manocanh + Video Manocanh cùng mã sản phẩm trong cùng ca được gộp thành 1 task. Hai dòng gốc vẫn hiện trong bảng dẫn chứng. Số mã là hợp không trùng của Danh Sách Mã SP. Baseline tháng lấy P25/P50/P75 của 12 tuần hoàn chỉnh trước tháng báo cáo, yêu cầu tối thiểu 8 tuần có dữ liệu tương ứng và được khóa suốt tháng.",
     example:
       "5 buổi, 49 task và 16 mã; nếu P50 lần lượt là 5, 49 và 16 thì tuần đạt đúng nhịp trung vị lịch sử.",
     note:
@@ -155,7 +155,7 @@ const capacityHelp: Record<
     objective:
       "Tách khác biệt giữa các loại ca nhưng vẫn có một mốc chung để đánh giá tuần đang vượt hay dưới năng lực thực nghiệm.",
     calculation:
-      "P50 chung và P50 từng loại được tính theo đơn vị buổi 4 giờ: ca một ngày có trọng số 2 buổi, số task và mã của ca được chia cho 2 trước khi lấy P50. Năng suất đầu người chia tiếp cho số nhân sự tham gia ca. Ca thiếu nhân sự vẫn tính sản lượng ca nhưng bị loại khỏi P50 task/người và mã/người. Baseline theo cơ cấu = P50 buổi/tuần × tỷ trọng loại × năng suất loại.",
+      "P50 chung và P50 từng loại được tính theo đơn vị buổi 4 giờ: ca một ngày có trọng số 2 buổi, số task và mã của ca được chia cho 2 trước khi lấy P50. Trước bước này, mỗi cặp Ảnh Manocanh + Video Manocanh cùng mã trong cùng ca được tính là 1 task. Năng suất đầu người chia tiếp cho số nhân sự tham gia ca. Ca thiếu nhân sự vẫn tính sản lượng ca nhưng bị loại khỏi P50 task/người và mã/người. Baseline theo cơ cấu = P50 buổi/tuần × tỷ trọng loại × năng suất loại.",
     example:
       "Nếu P50 là 5 buổi/tuần, cơ cấu Bộ Sưu Tập chiếm 40% và đạt 8 task/buổi thì phần đóng góp dự kiến là 5 × 40% × 8 = 16 task.",
     note:
@@ -1899,7 +1899,7 @@ export function MediaCapacitySection({
                 onOpenDetail({
                   title: `Task đã xếp ca · ${focusWeek.label}`,
                   subtitle:
-                    "Các ca quay trong kỳ; Tổng Số Task được lấy từ Lịch Quay",
+                    "Các ca quay trong kỳ; ảnh và video manocanh cùng mã trong cùng ca được tính chung 1 task, bảng vẫn giữ đủ hai dòng dẫn chứng",
                   shootSessions: focusFullWeek.shootSessions,
                 })
               }

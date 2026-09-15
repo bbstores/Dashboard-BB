@@ -140,6 +140,24 @@ function detailColumns(detail: DetailView): DetailColumn[] {
           record.kind === "shootSession" ? record.value.taskCount : 0,
       },
       {
+        key: "taskEvidence",
+        label: "Task dẫn chứng",
+        value: (record) =>
+          record.kind === "shootSession"
+            ? (record.value.taskGroups ?? [])
+                .flatMap((group) => [
+                  group.label,
+                  ...group.tasks.flatMap((task) => [
+                    task.code,
+                    task.title,
+                    task.formatType,
+                    task.productCode,
+                  ]),
+                ])
+                .join(" ") || record.value.taskCodes.join(" ")
+            : "",
+      },
+      {
         key: "productCount",
         label: "Số mã",
         value: (record) =>
@@ -915,6 +933,7 @@ export function DetailDrawer({
                   <th>Thời lượng</th>
                   <th>Buổi 4 giờ</th>
                   <th>Số task</th>
+                  <th>Task dẫn chứng</th>
                   <th>Mã sản phẩm</th>
                   <th>Nhân sự</th>
                   {detail.shootContribution ? (
@@ -952,6 +971,56 @@ export function DetailDrawer({
                     </td>
                     <td data-label="Số task">
                       <strong>{formatNumber(row.taskCount)}</strong>
+                      {(row.mannequinPairCount ?? 0) > 0 ? (
+                        <small className="shootTaskCountNote">
+                          {formatNumber(row.rawTaskCount ?? row.taskCount)} dòng
+                          task, gộp {formatNumber(row.mannequinPairCount ?? 0)}
+                          {" "}cặp manocanh
+                        </small>
+                      ) : null}
+                    </td>
+                    <td
+                      data-label="Task dẫn chứng"
+                      className="shootTaskEvidenceCell"
+                    >
+                      {(row.taskGroups ?? []).length ? (
+                        <div className="shootTaskEvidenceGroups">
+                          {row.taskGroups?.map((group) => (
+                            <div
+                              className={
+                                group.isMannequinPair
+                                  ? "shootTaskEvidenceGroup mannequinPair"
+                                  : "shootTaskEvidenceGroup"
+                              }
+                              key={group.id}
+                            >
+                              <div className="shootTaskEvidenceGroupHeader">
+                                <strong>{group.label}</strong>
+                                <span>
+                                  {group.isMannequinPair
+                                    ? `${formatNumber(group.tasks.length)} dòng · tính 1`
+                                    : "tính 1"}
+                                </span>
+                              </div>
+                              {group.tasks.map((task) => (
+                                <div
+                                  className="shootTaskEvidenceItem"
+                                  key={task.code}
+                                >
+                                  <b>{task.code}</b>
+                                  <span>
+                                    {task.formatType || task.stage || "Chưa có định dạng"}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <small>
+                          {row.taskCodes.join(", ") || "Chưa liên kết task"}
+                        </small>
+                      )}
                     </td>
                     <td data-label="Mã sản phẩm" className="detailTitleCell">
                       <strong>{formatNumber(row.productCount)} mã</strong>

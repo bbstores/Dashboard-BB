@@ -747,6 +747,22 @@ test("large evidence tables render one hundred rows per page", () => {
 });
 
 test("shooting-session evidence exposes units, task counts and product codes", () => {
+  const photoTask = {
+    ...task(),
+    code: "MANO-PHOTO",
+    title: "Ảnh mannequin ABC",
+    stage: "Chụp",
+    formatType: "Ảnh Manocanh",
+    productCode: "ABC",
+  };
+  const videoTask = {
+    ...task(),
+    code: "MANO-VIDEO",
+    title: "Video mannequin ABC",
+    stage: "Quay",
+    formatType: "Video Manocanh",
+    productCode: "ABC",
+  };
   render(
     <DetailDrawer
       detail={{
@@ -768,6 +784,18 @@ test("shooting-session evidence exposes units, task counts and product codes", (
             staffNames: ["An", "Bình", "Chi"],
             staffCount: 3,
             status: "Đóng",
+            rawTaskCount: 13,
+            mannequinPairCount: 1,
+            taskGroups: [
+              {
+                id: "mannequin-abc-1",
+                label: "Manocanh · ABC",
+                productCode: "ABC",
+                countedTaskCount: 1,
+                isMannequinPair: true,
+                tasks: [photoTask, videoTask],
+              },
+            ],
           },
         ],
         shootContribution: {
@@ -784,6 +812,11 @@ test("shooting-session evidence exposes units, task counts and product codes", (
   assert.ok(screen.getByText("12"));
   assert.ok(screen.getByText("SP01, SP02, SP03"));
   assert.ok(screen.getByText("An, Bình, Chi"));
+  assert.ok(screen.getByText("Manocanh · ABC"));
+  assert.ok(screen.getByText("2 dòng · tính 1"));
+  assert.ok(screen.getByText("MANO-PHOTO"));
+  assert.ok(screen.getByText("MANO-VIDEO"));
+  assert.match(screen.getByText(/13 dòng task/).textContent ?? "", /gộp 1 cặp/);
   assert.ok(screen.getAllByText("Tỷ trọng trong ca").length >= 1);
   assert.ok(screen.getByText("33,3%"));
   assert.equal(

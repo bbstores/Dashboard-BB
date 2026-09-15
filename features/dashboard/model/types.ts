@@ -39,6 +39,21 @@ export type ShootSession = {
   staffNames?: string[];
   staffCount?: number;
   status: string;
+  /** Giá trị gốc từ cột Tổng Số Task trước khi gộp cặp mannequin. */
+  rawTaskCount?: number;
+  /** Số cặp ảnh + video mannequin cùng mã được tính chung thành một task. */
+  mannequinPairCount?: number;
+  /** Task thực tế liên kết với ca, đã gom để trình bày trong bảng dẫn chứng. */
+  taskGroups?: ShootSessionTaskGroup[];
+};
+
+export type ShootSessionTaskGroup = {
+  id: string;
+  label: string;
+  productCode: string;
+  countedTaskCount: number;
+  isMannequinPair: boolean;
+  tasks: Task[];
 };
 
 export type WorkNorm = {
