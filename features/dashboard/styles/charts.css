@@ -222,12 +222,6 @@
 .c5 { background: var(--red); }
 .c6 { background: #7659a8; }
 .c7 { background: #cd7da4; }
-/* Nhóm cột trả về dùng thang đo riêng nên tách khỏi nhóm task bằng vạch phân cách. */
-.column.c5 { margin-left: 11px; }
-.column.c5::before {
-  content: ""; position: absolute; left: -7px; bottom: 0;
-  height: 230px; border-left: 1px dashed var(--line);
-}
 .columnScroller { overflow-x: auto; padding: 16px 4px 2px; }
 .columnChart {
   height: 280px; display: flex; align-items: flex-end; gap: 32px;

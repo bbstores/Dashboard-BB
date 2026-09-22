@@ -86,36 +86,41 @@ test("StaffColumns separates lead, BOD and business returns", () => {
   ]);
 });
 
-test("StaffColumns scales return columns independently of task columns", () => {
+test("StaffColumns never draws a return column taller than the task column", () => {
   render(
     <StaffColumns
       rows={[
         {
           name: "Nhân sự A",
-          total: 120,
-          started: 100,
-          inspectionCarry: 15,
-          completionCarry: 5,
-          feedback: 3,
-          feedbackInternal: 2,
-          feedbackBod: 1,
+          total: 88,
+          started: 68,
+          inspectionCarry: 1,
+          completionCarry: 20,
+          feedback: 68,
+          feedbackInternal: 41,
+          feedbackBod: 27,
           feedbackBusiness: 0,
         },
       ]}
     />,
   );
 
-  // Với thang chung, cột trả về = 2 trên nền 120 chỉ cao ~4px và bị kẹp về 8px.
-  // Thang riêng đưa nó lên đúng tỷ lệ so với mức trả về cao nhất (2).
-  const leadColumn = screen.getByRole("button", {
-    name: "Lead Trả Về của Nhân sự A: 2",
-  });
-  assert.equal(leadColumn.style.height, "220px");
-  const totalColumn = screen.getByRole("button", {
-    name: "Tổng task của Nhân sự A: 120",
-  });
-  assert.equal(totalColumn.style.height, "220px");
+  const heightOf = (name: string) =>
+    Number.parseFloat(
+      screen.getByRole("button", { name }).style.height.replace("px", ""),
+    );
+  const total = heightOf("Tổng task của Nhân sự A: 88");
+  const lead = heightOf("Lead Trả Về của Nhân sự A: 41");
+  const bod = heightOf("BOD Không Duyệt của Nhân sự A: 27");
+
+  // Thang riêng cho nhóm trả về từng vẽ 41 và 27 cao hơn cột tổng 88, khiến
+  // người lướt qua hiểu nhầm nhân sự bị trả về nhiều hơn số task đã làm.
+  assert.ok(lead < total, `${lead} phải thấp hơn ${total}`);
+  assert.ok(bod < lead, `${bod} phải thấp hơn ${lead}`);
+  assert.equal(total, 220, "giá trị lớn nhất chiếm trọn chiều cao");
+  assert.ok(Math.abs(lead - (41 / 88) * 220) < 0.5, "đúng tỷ lệ 41/88");
 });
+
 
 function task(): Task {
   return {

@@ -35,19 +35,15 @@ export function StaffColumns({
   ) => void;
   className?: string;
 }) {
-  // Hai nhóm chỉ số có đơn vị khác nhau nên dùng hai thang riêng, nếu dùng
-  // chung thì cột trả về luôn bị nén thành vạch không đọc được.
-  const taskMax = Math.max(
+  // Một thang đo duy nhất cho cả bảy cột. Thang riêng cho nhóm trả về từng làm
+  // cột trả về vẽ cao hơn cột tổng task, khiến người lướt qua hiểu nhầm là
+  // nhân sự bị trả về nhiều hơn số task đã làm.
+  const max = Math.max(
     ...rows.flatMap((row) => [
       row.total,
       row.started,
       row.inspectionCarry,
       row.completionCarry,
-    ]),
-    1,
-  );
-  const feedbackMax = Math.max(
-    ...rows.flatMap((row) => [
       row.feedbackInternal,
       row.feedbackBod,
       row.feedbackBusiness,
@@ -78,25 +74,22 @@ export function StaffColumns({
             <div className="columnGroup" key={row.name}>
               <div className="columns">
                 {([
-                  ["total", row.total, "Tổng task", "task"],
-                  ["started", row.started, "Bắt đầu trong kỳ", "task"],
-                  ["inspectionCarry", row.inspectionCarry, "Carry-in bàn giao", "task"],
-                  ["completionCarry", row.completionCarry, "Carry-in hoàn thành", "task"],
-                  ["feedbackInternal", row.feedbackInternal, "Lead Trả Về", "feedback"],
-                  ["feedbackBod", row.feedbackBod, "BOD Không Duyệt", "feedback"],
-                  ["feedbackBusiness", row.feedbackBusiness, "Kinh Doanh Reject", "feedback"],
-                ] as const).map(([metric, value, label, scale], index) => (
+                  ["total", row.total, "Tổng task"],
+                  ["started", row.started, "Bắt đầu trong kỳ"],
+                  ["inspectionCarry", row.inspectionCarry, "Carry-in bàn giao"],
+                  ["completionCarry", row.completionCarry, "Carry-in hoàn thành"],
+                  ["feedbackInternal", row.feedbackInternal, "Lead Trả Về"],
+                  ["feedbackBod", row.feedbackBod, "BOD Không Duyệt"],
+                  ["feedbackBusiness", row.feedbackBusiness, "Kinh Doanh Reject"],
+                ] as const).map(([metric, value, label], index) => (
                   <button
                     type="button"
                     key={metric}
                     className={`column c${index + 1}`}
                     style={{
-                      height: `${Math.max(
-                        value ? 8 : 0,
-                        (value / (scale === "task" ? taskMax : feedbackMax)) * 220,
-                      )}px`,
+                      height: `${Math.max(value ? 4 : 0, (value / max) * 220)}px`,
                     }}
-                    title={`${label}: ${value}${scale === "feedback" ? ` · thang riêng, cao nhất ${feedbackMax}` : ""}`}
+                    title={`${label}: ${value}`}
                     aria-label={`${label} của ${row.name}: ${value}`}
                     onClick={() => onSelect?.(row.name, metric)}
                   >
