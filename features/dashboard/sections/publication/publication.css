@@ -1503,6 +1503,17 @@
   font-weight: 700;
   gap: 6px;
 }
+.postingCollectionEmpty {
+  background: rgba(23, 79, 61, .05);
+  border: 1px dashed var(--line);
+  border-radius: 9px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+  margin: 0 0 12px;
+  padding: 11px 13px;
+}
+.postingCollectionEmpty strong { color: var(--ink); }
 .postingCollectionOverdue {
   color: #d46b5f !important;
   font-weight: 800 !important;

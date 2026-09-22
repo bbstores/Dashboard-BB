@@ -82,6 +82,8 @@ export type CollectionPostingFulfillment = {
   uncategorized: PublicationPost[];
   /** Ấn phẩm BST không nối được về task nên không lọc được theo tháng. */
   unlinked: PublicationPost[];
+  /** Task thuộc BST đang chọn — để phân biệt "chưa lên lịch" với "không có BST". */
+  collectionTaskCount: number;
   rows: CollectionPostingRow[];
 };
 
@@ -124,8 +126,12 @@ export function calculateCollectionPosting(
     return task ? collectionMonths(task) : [];
   };
 
+  // Danh sách tháng lấy từ cột Bộ Sưu Tập của toàn bộ Tasklist, không bó theo
+  // bộ lọc ngày và không suy ra từ ấn phẩm đã lên lịch. Suy từ ấn phẩm sẽ giấu
+  // mất đúng trường hợp đáng lo nhất: bộ sưu tập Media đã làm nhưng chưa có
+  // bài nào được lên lịch đăng.
   const months = Array.from(
-    new Set(posts.filter(isCollectionPost).flatMap(monthsFor)),
+    new Set(tasks.flatMap(collectionMonths)),
   ).sort((left, right) => {
     const [leftMonth, leftYear] = left.split(".").map(Number);
     const [rightMonth, rightYear] = right.split(".").map(Number);
@@ -191,6 +197,11 @@ export function calculateCollectionPosting(
       (post) => !post.posted && !isOverdue(post),
     ),
     asOf: dueCutoff,
+    collectionTaskCount: collectionMonth
+      ? tasks.filter((task) =>
+          collectionMonths(task).includes(collectionMonth),
+        ).length
+      : 0,
     uncategorized: posts.filter(
       (post) => inScope(post, scope) && !normalize(post.postCategory),
     ),

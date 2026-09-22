@@ -105,6 +105,46 @@ test("keeps TikTok in the picture by counting Video as the reel equivalent", () 
   assert.equal(reelsOnly.buckets.videos.length, 3);
 });
 
+test("offers every collection month from the Tasklist, not just scheduled ones", () => {
+  const tasks = [
+    task({ code: "T6", collection: "BST 06.2026" }),
+    task({ code: "T9", collection: "BST 09.2026" }),
+    task({ code: "T11", collection: "BST 11.2026" }),
+  ];
+  // Chỉ tháng 9 có ấn phẩm lên lịch.
+  const posts = [post({ id: "S1", bookTaskCode: "T9", posted: true })];
+
+  const windowed = calculateCollectionPosting(
+    tasks,
+    posts,
+    {
+      from: new Date(2026, 8, 1),
+      to: new Date(2026, 8, 30),
+      hasFilter: true,
+    },
+    "video",
+  );
+
+  // Suy danh sách từ ấn phẩm sẽ chỉ ra 09.2026 và giấu mất hai bộ sưu tập
+  // chưa có bài nào — đúng trường hợp cần nhìn thấy nhất.
+  assert.deepEqual(windowed.months, ["11.2026", "09.2026", "06.2026"]);
+
+  // Bộ lọc ngày không được thu hẹp danh sách lựa chọn.
+  const june = calculateCollectionPosting(
+    tasks,
+    posts,
+    {
+      from: new Date(2026, 8, 1),
+      to: new Date(2026, 8, 30),
+      hasFilter: true,
+    },
+    "video",
+    "06.2026",
+  );
+  assert.equal(june.produced.length, 0);
+  assert.equal(june.collectionTaskCount, 1, "vẫn biết BST đó có task");
+});
+
 test("narrows only the numerator when filtering by collection month", () => {
   const tasks = [
     task({ code: "T9", collection: "BST 09.2026" }),
@@ -174,7 +214,8 @@ test("leaves an empty denominator empty instead of reporting zero", () => {
   assert.deepEqual(result.produced, []);
   assert.deepEqual(result.buckets.postedVideos, []);
   assert.deepEqual(result.rows, []);
-  assert.deepEqual(result.months, []);
+  // Tháng vẫn liệt kê được từ Tasklist dù chưa có ấn phẩm nào lên lịch.
+  assert.deepEqual(result.months, ["07.2026"]);
 });
 
 test("keeps numerator and denominator on the same content class", () => {

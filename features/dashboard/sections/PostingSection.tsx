@@ -1249,6 +1249,15 @@ function CollectionPostingPanel({
         </div>
       </div>
 
+      {collectionMonth && !performance.produced.length ? (
+        <p className="postingCollectionEmpty">
+          <strong>BST {collectionMonth} chưa có ấn phẩm nào lên lịch đăng.</strong>{" "}
+          {performance.collectionTaskCount > 0
+            ? `Tasklist có ${formatNumber(performance.collectionTaskCount)} task thuộc bộ sưu tập này nhưng không task nào được nối sang bảng Đăng Bài, nên không đo được phần Digital đã đăng.`
+            : "Không có task nào thuộc bộ sưu tập này trong Tasklist."}
+        </p>
+      ) : null}
+
       <div
         className="postingCollectionTable"
         role="table"
@@ -1263,7 +1272,9 @@ function CollectionPostingPanel({
           <span>{BASE_LABEL[collectionBase]}</span>
           <span>BST chiếm</span>
         </div>
-        {performance.rows.map((row) => (
+        {performance.rows
+          .filter((row) => !collectionMonth || row.produced.length > 0)
+          .map((row) => (
           <CollectionPostingTableRow
             key={row.platform}
             row={row}
