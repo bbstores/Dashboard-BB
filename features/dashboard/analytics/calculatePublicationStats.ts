@@ -1047,6 +1047,52 @@ export function calculatePostingNormDailyTarget(
   }, 0);
 }
 
+/**
+ * Tập dòng đăng bài dùng cho mọi chỉ số nghiệp vụ: đã loại task Pending/Cancel,
+ * loại task Không Đăng Social, và giới hạn theo Ngày Đăng trong bộ lọc.
+ */
+export function selectEligiblePosts(
+  tasks: Task[],
+  publications: PublicationPost[],
+  dateWindow: DateWindow,
+) {
+  const pendingCancelTasks = tasks.filter(isPendingCancelTask);
+  const pendingCancelTaskCodes = new Set(
+    pendingCancelTasks.map((task) => normalizedKey(task.code)),
+  );
+  const pendingCancelPublicationIds = new Set(
+    pendingCancelTasks.flatMap((task) =>
+      (task.publicationIds ?? []).map(normalizedKey),
+    ),
+  );
+  const eligibleTasks = tasks.filter((task) => !isPendingCancelTask(task));
+  const taskByCode = new Map(
+    eligibleTasks.map((task) => [normalize(task.code), task]),
+  );
+  const noSocialTaskCodes = new Set(
+    eligibleTasks
+      .filter(isNoSocialPublicationTask)
+      .map((task) => normalize(task.code)),
+  );
+  const postsInWindow = publications.filter(
+    (post) =>
+      !pendingCancelTaskCodes.has(normalizedKey(post.bookTaskCode)) &&
+      !pendingCancelPublicationIds.has(normalizedKey(post.id)) &&
+      post.scheduledAt &&
+      inWindow(post.scheduledAt, dateWindow),
+  );
+  return {
+    taskByCode,
+    postsInWindow,
+    posts: postsInWindow.filter(
+      (post) => !noSocialTaskCodes.has(normalize(post.bookTaskCode)),
+    ),
+    noSocialPosts: postsInWindow.filter((post) =>
+      noSocialTaskCodes.has(normalize(post.bookTaskCode)),
+    ),
+  };
+}
+
 export function calculatePublicationStats(
   tasks: Task[],
   publications: PublicationPost[],

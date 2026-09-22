@@ -44,6 +44,9 @@ export function parsePublications(
       postType: normalize(
         valueAt(row, headers, PUBLICATION_COLUMNS.postType),
       ),
+      postCategory: normalize(
+        valueAt(row, headers, PUBLICATION_COLUMNS.postCategory),
+      ),
       title: normalize(
         valueAt(row, headers, PUBLICATION_COLUMNS.title),
       ),

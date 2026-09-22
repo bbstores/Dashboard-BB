@@ -86,6 +86,7 @@ export const PUBLICATION_COLUMNS = {
   shopee: "Shopee",
   posted: "Đã Đăng",
   postType: "Loại Bài Đăng",
+  postCategory: "Loại Post",
   title: "Tên Bài Đăng",
   bookTaskCode: "Book Task",
 } as const;
@@ -120,7 +121,11 @@ export const FEEDBACK_REQUIRED_HEADERS = Object.values(
 ).filter((header) => header !== FEEDBACK_COLUMNS.rejectedBy);
 export const PUBLICATION_REQUIRED_HEADERS = Object.values(
   PUBLICATION_COLUMNS,
-).filter((header) => header !== PUBLICATION_COLUMNS.shopee);
+).filter(
+  (header) =>
+    header !== PUBLICATION_COLUMNS.shopee &&
+    header !== PUBLICATION_COLUMNS.postCategory,
+);
 export const POSTING_NORM_REQUIRED_HEADERS = Object.values(
   POSTING_NORM_COLUMNS,
 );

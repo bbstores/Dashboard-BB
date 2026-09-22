@@ -12,6 +12,14 @@ import {
   type PublicationNormPerformance,
   type PublicationSource,
 } from "../analytics/calculatePublicationStats";
+import {
+  calculateCollectionPosting,
+  isReelPost,
+  type CollectionPostingFulfillment,
+  type CollectionPostingRow,
+  type CollectionPostingScope,
+  type PostingBuckets,
+} from "../analytics/calculateCollectionPosting";
 import { PieChart } from "../components/PieChart";
 import { HelpButton } from "../components/HelpButton";
 import type {
@@ -954,6 +962,461 @@ function PostingDailyLineChart({
   );
 }
 
+function formatRate(value: number | null) {
+  return value === null ? "—" : `${value.toFixed(1)}%`;
+}
+
+function rate(part: number, whole: number) {
+  return whole ? (part / whole) * 100 : null;
+}
+
+/** Mẫu số của chỉ số cơ cấu: sản lượng đã đăng, hoặc toàn bộ Reels đã lên lịch. */
+type ShareBase = "postedVideo" | "allReels";
+
+function baseOf(buckets: PostingBuckets, base: ShareBase) {
+  return base === "allReels" ? buckets.reels : buckets.postedVideos;
+}
+
+const BASE_LABEL: Record<ShareBase, string> = {
+  postedVideo: "tổng video đã đăng",
+  allReels: "tổng Reels",
+};
+
+/**
+ * Media sản xuất bao nhiêu ấn phẩm Bộ Sưu Tập thì Digital phải đăng bấy nhiêu.
+ * Panel đo phần đã đăng so với phần Media trả ra, tách theo nền tảng.
+ */
+function CollectionPostingPanel({
+  performance,
+  scope,
+  onScopeChange,
+  collectionMonth,
+  onCollectionMonthChange,
+  onOpenDetail,
+}: {
+  performance: CollectionPostingFulfillment;
+  scope: CollectionPostingScope;
+  onScopeChange: (scope: CollectionPostingScope) => void;
+  collectionMonth: string;
+  onCollectionMonthChange: (month: string) => void;
+  onOpenDetail: (detail: DetailView) => void;
+}) {
+  const [reelBase, setReelBase] = useState<ShareBase>("postedVideo");
+  const [collectionBase, setCollectionBase] =
+    useState<ShareBase>("postedVideo");
+  const scopeNoun = scope === "reels" ? "Reels" : "Reels + Video";
+  const monthNote = collectionMonth
+    ? ` · BST ${collectionMonth}`
+    : "";
+
+  const openPosts = (
+    title: string,
+    subtitle: string,
+    posts: PublicationPost[],
+  ) =>
+    onOpenDetail({
+      title,
+      subtitle,
+      publicationEvidence: posts.map((post) => ({
+        post,
+        reason: post.posted ? "Đã đăng" : "Chưa đăng",
+      })),
+      publicationEvidenceLabel: "Tình trạng",
+    });
+
+  const reelDenominator = baseOf(performance.buckets, reelBase);
+  const reelNumerator = performance.buckets.postedReels;
+  const collectionDenominator = baseOf(
+    performance.buckets,
+    collectionBase,
+  );
+  // Mẫu số "tổng Reels" chỉ có dữ liệu Facebook, nên tử số phải cùng thu về
+  // Reels — nếu để nguyên BST toàn kênh thì tỷ lệ trộn hai gốc và có thể vượt
+  // 100%.
+  const collectionNumerator =
+    collectionBase === "allReels"
+      ? performance.posted.filter(isReelPost)
+      : performance.posted;
+  const collectionProduced =
+    collectionBase === "allReels"
+      ? performance.produced.filter(isReelPost)
+      : performance.produced;
+
+  return (
+    <article className="postingSubchart postingCollectionPanel">
+      <div className="postingSubchartTitle">
+        <div>
+          <span className="chartKicker">MEDIA TRẢ RA → DIGITAL ĐĂNG</span>
+          <h3>Ấn phẩm Bộ Sưu Tập đã được đăng tới đâu</h3>
+        </div>
+        <div className="postingCollectionTools">
+          <label className="postingCollectionMonth">
+            <span>Bộ Sưu Tập</span>
+            <select
+              value={collectionMonth}
+              onChange={(event) =>
+                onCollectionMonthChange(event.target.value)
+              }
+              aria-label="Lọc theo tháng Bộ Sưu Tập"
+            >
+              <option value="">Tất cả BST</option>
+              {performance.months.map((month) => (
+                <option value={month} key={month}>
+                  BST {month}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div
+            className="postingScopeSwitch"
+            role="group"
+            aria-label="Phạm vi loại bài đăng"
+          >
+            <button
+              type="button"
+              className={scope === "video" ? "active" : ""}
+              onClick={() => onScopeChange("video")}
+            >
+              Reels + Video
+            </button>
+            <button
+              type="button"
+              className={scope === "reels" ? "active" : ""}
+              onClick={() => onScopeChange("reels")}
+            >
+              Chỉ Reels
+            </button>
+          </div>
+          <HelpButton
+            help={{
+              title: "Ấn phẩm Bộ Sưu Tập đã được đăng tới đâu",
+              purpose:
+                "Đo phần ấn phẩm Bộ Sưu Tập mà Digital đã đăng so với số Media trả ra, tách theo nền tảng.",
+              objective:
+                "Task BST Media sản xuất ra là phải đăng, nên tỷ lệ dưới 100% ở một kênh nghĩa là còn tồn ấn phẩm chưa lên bài ở kênh đó.",
+              calculation:
+                "Ấn phẩm BST là dòng ở 2.7 Đăng Bài có Loại Post = Bộ Sưu Tập; đã loại dòng gắn task Pending / Cancel và task Không Đăng Social, giới hạn theo Ngày Đăng trong bộ lọc. Lọc BST chỉ thu hẹp tử số, mẫu số giữ toàn bộ sản lượng của kênh. Mỗi card in công thức đang dùng ngay dưới con số.",
+              example:
+                "Một kênh có 231 ấn phẩm BST, đã đăng 184 → tỷ lệ đăng 79,7%; nếu kênh đó đăng tổng 392 video thì BST chiếm 46,9%.",
+              note:
+                "Facebook ghi loại bài là Reels còn TikTok ghi là Video cho cùng loại nội dung, nên phạm vi mặc định gộp cả hai. Chọn Chỉ Reels, hoặc đổi mẫu số sang tổng Reels, sẽ cho ra con số chỉ của nhóm Facebook.",
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="postingCollectionSummary">
+        <div className="postingCollectionMetric">
+          <button
+            type="button"
+            onClick={() =>
+              openPosts(
+                "Reels đã đăng",
+                `Trên ${formatNumber(reelDenominator.length)} bài ${BASE_LABEL[reelBase]}`,
+                reelNumerator,
+              )
+            }
+          >
+            <small>Reels trên sản lượng</small>
+            <strong>
+              {formatRate(
+                rate(reelNumerator.length, reelDenominator.length),
+              )}
+            </strong>
+            <em>
+              {formatNumber(reelNumerator.length)} /{" "}
+              {formatNumber(reelDenominator.length)} bài
+            </em>
+          </button>
+          <p className="postingCollectionFormula">
+            Reels đã đăng ÷ {BASE_LABEL[reelBase]}
+            {reelBase === "postedVideo"
+              ? " — gồm toàn bộ Reels và Video đã đăng của mọi kênh, mọi loại nội dung"
+              : " — chỉ Reels nên là con số của riêng nhóm Facebook"}
+          </p>
+          <label className="checkboxLabel">
+            <input
+              type="checkbox"
+              checked={reelBase === "allReels"}
+              onChange={(event) =>
+                setReelBase(
+                  event.target.checked ? "allReels" : "postedVideo",
+                )
+              }
+            />
+            Mẫu số là tổng Reels (thành tỷ lệ đã đăng)
+          </label>
+        </div>
+
+        <div className="postingCollectionMetric">
+          <button
+            type="button"
+            className={performance.overdue.length ? "below" : "met"}
+            onClick={() =>
+              openPosts(
+                "Ấn phẩm BST quá hạn đăng",
+                `${formatNumber(performance.overdue.length)} ấn phẩm đã qua Ngày Đăng mà chưa lên bài · ${scopeNoun}${monthNote}`,
+                performance.overdue,
+              )
+            }
+          >
+            <small>BST đã đăng trên BST đã tới lịch</small>
+            <strong>
+              {formatRate(
+                rate(
+                  performance.posted.length,
+                  performance.posted.length + performance.overdue.length,
+                ),
+              )}
+            </strong>
+            <em>
+              {formatNumber(performance.posted.length)} đã đăng ·{" "}
+              {formatNumber(performance.overdue.length)} quá hạn
+            </em>
+          </button>
+          <p className="postingCollectionFormula">
+            BST đã đăng ÷ (đã đăng + quá hạn) — {scopeNoun}
+            {monthNote}. Tính tới {formatDate(performance.asOf)}, còn{" "}
+            {formatNumber(performance.notYetDue.length)} ấn phẩm chưa tới lịch
+            đăng nên không nằm trong mẫu số.
+          </p>
+          <button
+            type="button"
+            className="postingCollectionSubLink"
+            onClick={() =>
+              openPosts(
+                "Toàn bộ ấn phẩm BST chưa đăng",
+                `${formatNumber(performance.overdue.length)} quá hạn và ${formatNumber(performance.notYetDue.length)} chưa tới lịch · ${scopeNoun}${monthNote}`,
+                performance.pending,
+              )
+            }
+          >
+            Xem cả {formatNumber(performance.pending.length)} ấn phẩm chưa đăng
+            · tỷ lệ trên tổng Media trả ra{" "}
+            {formatRate(
+              rate(performance.posted.length, performance.produced.length),
+            )}
+          </button>
+        </div>
+
+        <div className="postingCollectionMetric">
+          <button
+            type="button"
+            onClick={() =>
+              openPosts(
+                "Ấn phẩm BST đã đăng",
+                `Trên ${formatNumber(collectionDenominator.length)} bài ${BASE_LABEL[collectionBase]} · ${scopeNoun}${monthNote}`,
+                collectionNumerator,
+              )
+            }
+          >
+            <small>BST chiếm bao nhiêu sản lượng</small>
+            <strong>
+              {formatRate(
+                rate(
+                  collectionNumerator.length,
+                  collectionDenominator.length,
+                ),
+              )}
+            </strong>
+            <em>
+              {formatRate(
+                rate(
+                  collectionProduced.length,
+                  collectionDenominator.length,
+                ),
+              )}{" "}
+              nếu tính cả BST chưa đăng
+            </em>
+          </button>
+          <p className="postingCollectionFormula">
+            {collectionBase === "postedVideo"
+              ? "BST đã đăng ÷ tổng video đã đăng — gồm toàn bộ Reels và Video đã đăng của mọi kênh, mọi loại nội dung"
+              : "BST Reels đã đăng ÷ tổng Reels — cả tử và mẫu đều thu về Reels nên là con số của riêng nhóm Facebook"}
+          </p>
+          <label className="checkboxLabel">
+            <input
+              type="checkbox"
+              checked={collectionBase === "allReels"}
+              onChange={(event) =>
+                setCollectionBase(
+                  event.target.checked ? "allReels" : "postedVideo",
+                )
+              }
+            />
+            Mẫu số là tổng Reels
+          </label>
+        </div>
+      </div>
+
+      <div
+        className="postingCollectionTable"
+        role="table"
+        aria-label="Ấn phẩm Bộ Sưu Tập theo nền tảng"
+      >
+        <div className="postingCollectionHeader" role="row">
+          <span>Nền tảng</span>
+          <span>Media trả ra</span>
+          <span>Đã đăng</span>
+          <span>Quá hạn</span>
+          <span>Tỷ lệ đăng</span>
+          <span>{BASE_LABEL[collectionBase]}</span>
+          <span>BST chiếm</span>
+        </div>
+        {performance.rows.map((row) => (
+          <CollectionPostingTableRow
+            key={row.platform}
+            row={row}
+            base={collectionBase}
+            scopeNoun={`${scopeNoun}${monthNote}`}
+            onOpenPosts={openPosts}
+          />
+        ))}
+        {!performance.rows.length && (
+          <p className="emptyText">
+            Không có dòng đăng bài nào trong khoảng lọc.
+          </p>
+        )}
+      </div>
+
+      {(performance.uncategorized.length > 0 ||
+        performance.unlinked.length > 0) && (
+        <div className="postingCollectionWarnings">
+          {performance.uncategorized.length > 0 && (
+            <button
+              type="button"
+              className="postingCollectionWarning"
+              onClick={() =>
+                openPosts(
+                  "Bài đăng chưa điền Loại Post",
+                  "Không quy được về Bộ Sưu Tập nên không nằm trong tử số lẫn mẫu số của tỷ lệ đăng",
+                  performance.uncategorized,
+                )
+              }
+            >
+              {formatNumber(performance.uncategorized.length)} bài {scopeNoun}{" "}
+              chưa điền Loại Post nên chưa tính được là BST hay không.
+            </button>
+          )}
+          {performance.unlinked.length > 0 && (
+            <button
+              type="button"
+              className="postingCollectionWarning"
+              onClick={() =>
+                openPosts(
+                  "Ấn phẩm BST chưa nối được về task",
+                  "Cột Book Task trống nên không tra được BST thuộc tháng nào; các ấn phẩm này biến mất khi lọc theo tháng",
+                  performance.unlinked,
+                )
+              }
+            >
+              {formatNumber(performance.unlinked.length)} ấn phẩm BST không có
+              Book Task nên không lọc được theo tháng.
+            </button>
+          )}
+        </div>
+      )}
+    </article>
+  );
+}
+
+function CollectionPostingTableRow({
+  row,
+  base,
+  scopeNoun,
+  onOpenPosts,
+}: {
+  row: CollectionPostingRow;
+  base: ShareBase;
+  scopeNoun: string;
+  onOpenPosts: (
+    title: string,
+    subtitle: string,
+    posts: PublicationPost[],
+  ) => void;
+}) {
+  const fulfillment = rate(
+    row.posted.length,
+    row.posted.length + row.overdue.length,
+  );
+  const denominator = baseOf(row.buckets, base);
+  const shareNumerator =
+    base === "allReels" ? row.posted.filter(isReelPost) : row.posted;
+  const status =
+    fulfillment === null
+      ? "flexible"
+      : fulfillment >= 100
+        ? "met"
+        : fulfillment >= 80
+          ? "near"
+          : "below";
+  return (
+    <div className={`postingCollectionRow ${status}`} role="row">
+      <strong className="postingCollectionPlatform">{row.platform}</strong>
+      <button
+        type="button"
+        onClick={() =>
+          onOpenPosts(
+            `${row.platform} · ấn phẩm BST Media trả ra`,
+            `${scopeNoun} có Loại Post = Bộ Sưu Tập`,
+            row.produced,
+          )
+        }
+      >
+        {formatNumber(row.produced.length)}
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onOpenPosts(
+            `${row.platform} · ấn phẩm BST đã đăng`,
+            `${scopeNoun} · Đã Đăng = 1`,
+            row.posted,
+          )
+        }
+      >
+        {formatNumber(row.posted.length)}
+      </button>
+      <button
+        type="button"
+        className={row.overdue.length ? "postingCollectionOverdue" : undefined}
+        onClick={() =>
+          onOpenPosts(
+            `${row.platform} · ấn phẩm BST quá hạn đăng`,
+            `${scopeNoun} · đã qua Ngày Đăng mà chưa lên bài`,
+            row.overdue,
+          )
+        }
+      >
+        {formatNumber(row.overdue.length)}
+      </button>
+      <span className="postingCollectionRate">
+        <i>
+          <b style={{ width: `${Math.min(100, fulfillment ?? 0)}%` }} />
+        </i>
+        <em>{formatRate(fulfillment)}</em>
+      </span>
+      <button
+        type="button"
+        onClick={() =>
+          onOpenPosts(
+            `${row.platform} · ${BASE_LABEL[base]}`,
+            base === "allReels"
+              ? "Toàn bộ dòng Reels của kênh, gồm cả chưa đăng"
+              : "Toàn bộ dòng Reels + Video có Đã Đăng = 1 của kênh",
+            denominator,
+          )
+        }
+      >
+        {formatNumber(denominator.length)}
+      </button>
+      <span className="postingCollectionShare">
+        {formatRate(rate(shareNumerator.length, denominator.length))}
+      </span>
+    </div>
+  );
+}
+
 export function PostingSection({
   tasks,
   publications,
@@ -976,6 +1439,20 @@ export function PostingSection({
         postingNorms,
       ),
     [tasks, publications, dateWindow, postingNorms],
+  );
+  const [collectionScope, setCollectionScope] =
+    useState<CollectionPostingScope>("video");
+  const [collectionMonth, setCollectionMonth] = useState("");
+  const collectionPosting = useMemo(
+    () =>
+      calculateCollectionPosting(
+        tasks,
+        publications,
+        dateWindow,
+        collectionScope,
+        collectionMonth,
+      ),
+    [tasks, publications, dateWindow, collectionScope, collectionMonth],
   );
   const [selectedDailyPlatforms, setSelectedDailyPlatforms] =
     useState<string[]>([]);
@@ -1235,6 +1712,15 @@ export function PostingSection({
       <PlatformMixChart
         rows={stats.platformRows}
         onSelect={openPlatformEvidence}
+      />
+
+      <CollectionPostingPanel
+        performance={collectionPosting}
+        scope={collectionScope}
+        onScopeChange={setCollectionScope}
+        collectionMonth={collectionMonth}
+        onCollectionMonthChange={setCollectionMonth}
+        onOpenDetail={onOpenDetail}
       />
 
       <div className="postingAssetStatusGrid">

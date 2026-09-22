@@ -80,7 +80,10 @@ export type PublicationPost = {
   platform: string;
   shopeeSelected?: boolean;
   posted: boolean;
+  /** Loại Bài Đăng: Reels / Video / Ảnh Post / Ảnh Lướt. */
   postType: string;
+  /** Loại Post: Bộ Sưu Tập / Marketing Plan / Order Lại / Khác. */
+  postCategory?: string;
   title: string;
   bookTaskCode?: string;
 };
