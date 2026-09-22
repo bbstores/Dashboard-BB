@@ -1,6 +1,10 @@
 import { endOfDay } from "@/shared/date/dateUtils";
 import {
   collectionMonths,
+  inWindow,
+  isNoSocialPublicationTask,
+  isPendingCancelTask,
+  isVideoPublication,
   normalize,
   normalizedKey,
 } from "../model/taskUtils";
@@ -9,17 +13,41 @@ import type {
   PublicationPost,
   Task,
 } from "../model/types";
-import { selectEligiblePosts } from "./calculatePublicationStats";
+import {
+  selectEligiblePosts,
+  taskPlatformNames,
+} from "./calculatePublicationStats";
 
 /**
- * Mức độ team Digital đăng hết số ấn phẩm Bộ Sưu Tập mà Media đã trả ra.
+ * Media giao bao nhiêu ấn phẩm Bộ Sưu Tập thì Digital phải đăng bấy nhiêu.
+ *
+ * Đơn vị của phần "Media trả ra" là TASK ấn phẩm, không phải dòng đăng bài:
+ * một task đăng nhiều kênh sinh nhiều dòng, và task chưa được lên lịch thì
+ * chưa có dòng nào — đếm theo dòng sẽ vừa nhân đôi vừa bỏ sót.
+ *
+ * Ngược lại, phần "BST chiếm bao nhiêu sản lượng" vẫn đếm theo dòng, vì nó so
+ * với tổng bài kênh đã đăng, trong đó có cả nội dung Digital tự có nguồn
+ * (Book Task trống).
  *
  * Quy ước nhãn khác nhau giữa các kênh: Facebook ghi `Reels`, TikTok ghi
- * `Video` cho cùng loại nội dung. Vì vậy phạm vi mặc định gộp cả hai để so
- * sánh được giữa các kênh; phạm vi `reels` giữ đúng nghĩa đen của cột Loại Bài
- * Đăng và trên thực tế chỉ có dữ liệu ở nhóm Facebook.
+ * `Video` cho cùng loại nội dung, nên phạm vi mặc định gộp cả hai.
  */
 export type CollectionPostingScope = "reels" | "video";
+
+/** Ba trạng thái của một ấn phẩm trong phễu Media → Digital. */
+export type CollectionAssetState =
+  | "posted"
+  | "scheduled"
+  | "notScheduled";
+
+export type CollectionAsset = {
+  task: Task;
+  /** Dòng đăng bài nối về task này. */
+  posts: PublicationPost[];
+  /** Kênh phải đăng, lấy từ cột Nền Tảng trên task. */
+  platforms: string[];
+  state: CollectionAssetState;
+};
 
 const REEL_TYPES = new Set(["reels"]);
 const VIDEO_TYPES = new Set(["reels", "video"]);
@@ -36,57 +64,47 @@ export function isCollectionPost(post: PublicationPost) {
   return normalizedKey(post.postCategory) === "bộ sưu tập";
 }
 
-function inScope(post: PublicationPost, scope: CollectionPostingScope) {
-  return scope === "reels" ? isReelPost(post) : isVideoPost(post);
-}
-
-/** Bốn tập dùng làm tử số và mẫu số, giữ nguyên post để drill-down. */
+/** Bốn tập dòng đăng bài dùng làm mẫu số của chỉ số cơ cấu. */
 export type PostingBuckets = {
-  /** Reels, gồm cả chưa đăng. */
   reels: PublicationPost[];
-  /** Reels đã đăng. */
   postedReels: PublicationPost[];
-  /** Reels + Video, gồm cả chưa đăng. */
   videos: PublicationPost[];
-  /** Reels + Video đã đăng. */
   postedVideos: PublicationPost[];
 };
 
 export type CollectionPostingRow = {
   platform: string;
-  /** Ấn phẩm BST trong phạm vi mà Media đã trả ra. */
-  produced: PublicationPost[];
-  posted: PublicationPost[];
-  pending: PublicationPost[];
-  /** Chưa đăng và đã qua Ngày Đăng — phần Digital đang nợ. */
-  overdue: PublicationPost[];
-  /** Chưa đăng nhưng lịch đăng còn ở tương lai. */
-  notYetDue: PublicationPost[];
+  /** Ấn phẩm phải đăng ở kênh này. */
+  owed: CollectionAsset[];
+  scheduled: CollectionAsset[];
+  posted: CollectionAsset[];
+  /** Đã lên lịch, chưa đăng, và đã qua Ngày Đăng. */
+  overdue: CollectionAsset[];
+  /** Chưa có dòng đăng bài nào cho kênh này. */
+  notScheduled: CollectionAsset[];
   buckets: PostingBuckets;
 };
 
 export type CollectionPostingFulfillment = {
   scope: CollectionPostingScope;
-  /** Các tháng BST có mặt trong kỳ, mới nhất trước. */
   months: string[];
   collectionMonth: string;
-  buckets: PostingBuckets;
-  produced: PublicationPost[];
-  posted: PublicationPost[];
-  pending: PublicationPost[];
-  overdue: PublicationPost[];
-  notYetDue: PublicationPost[];
-  /** Mốc dùng để chia quá hạn và chưa tới lịch. */
   asOf: Date;
-  /**
-   * Dòng đăng bài có Book Task trống: Digital reup hoặc tự có source.
-   * Đây không phải dữ liệu thiếu — nó là nội dung không do Media giao.
-   */
-  uncategorized: PublicationPost[];
-  /** Ấn phẩm BST không nối được về task nên không lọc được theo tháng. */
-  unlinked: PublicationPost[];
-  /** Task thuộc BST đang chọn — để phân biệt "chưa lên lịch" với "không có BST". */
-  collectionTaskCount: number;
+  /** Toàn bộ ấn phẩm BST Media trả ra trong kỳ. */
+  produced: CollectionAsset[];
+  posted: CollectionAsset[];
+  scheduled: CollectionAsset[];
+  notScheduled: CollectionAsset[];
+  overdue: CollectionAsset[];
+  /** Mẫu số cơ cấu, đếm theo dòng đăng bài (gồm cả nguồn của Digital). */
+  buckets: PostingBuckets;
+  /** Dòng đăng bài BST đã đăng của chính các ấn phẩm đang xét — tử số cơ cấu. */
+  postedCollectionPosts: PublicationPost[];
+  /** Dòng đăng bài Book Task trống: Digital reup hoặc tự có source. */
+  digitalSourced: PublicationPost[];
+  /** Lỗi vận hành cần team bổ sung, không tham gia phép tính theo kênh. */
+  missingPlatform: CollectionAsset[];
+  missingPlannedDate: number;
   rows: CollectionPostingRow[];
 };
 
@@ -109,30 +127,25 @@ export function calculateCollectionPosting(
   collectionMonth = "",
   asOf: Date = new Date(),
 ): CollectionPostingFulfillment {
-  // Ấn phẩm có lịch đăng ở tương lai chưa phải là việc trễ; nếu gộp chung thì
-  // tỷ lệ đăng của cả kỳ bị kéo xuống bởi bộ sưu tập chưa tới lượt.
+  const { posts } = selectEligiblePosts(tasks, publications, dateWindow);
   const dueCutoff = endOfDay(asOf);
-  const isOverdue = (post: PublicationPost) =>
-    !post.posted &&
-    Boolean(post.scheduledAt) &&
-    post.scheduledAt! <= dueCutoff;
-  const { posts, taskByCode } = selectEligiblePosts(
-    tasks,
-    publications,
-    dateWindow,
+
+  const postsByTask = new Map<string, PublicationPost[]>();
+  for (const post of publications) {
+    const code = normalize(post.bookTaskCode);
+    if (!code) continue;
+    postsByTask.set(code, [...(postsByTask.get(code) ?? []), post]);
+  }
+
+  // Ấn phẩm cuối là task video/reel đã qua Edit và có ô Bộ Sưu Tập.
+  const collectionTasks = tasks.filter(
+    (task) =>
+      !isPendingCancelTask(task) &&
+      !isNoSocialPublicationTask(task) &&
+      isVideoPublication(task) &&
+      Boolean(normalize(task.collection)),
   );
 
-  const taskFor = (post: PublicationPost) =>
-    taskByCode.get(normalize(post.bookTaskCode));
-  const monthsFor = (post: PublicationPost) => {
-    const task = taskFor(post);
-    return task ? collectionMonths(task) : [];
-  };
-
-  // Danh sách tháng lấy từ cột Bộ Sưu Tập của toàn bộ Tasklist, không bó theo
-  // bộ lọc ngày và không suy ra từ ấn phẩm đã lên lịch. Suy từ ấn phẩm sẽ giấu
-  // mất đúng trường hợp đáng lo nhất: bộ sưu tập Media đã làm nhưng chưa có
-  // bài nào được lên lịch đăng.
   const months = Array.from(
     new Set(tasks.flatMap(collectionMonths)),
   ).sort((left, right) => {
@@ -141,49 +154,99 @@ export function calculateCollectionPosting(
     return rightYear - leftYear || rightMonth - leftMonth;
   });
 
-  // Lọc BST chỉ thu hẹp tử số (ấn phẩm BST). Mẫu số giữ toàn bộ sản lượng của
-  // kênh, vì câu hỏi là "BST chiếm bao nhiêu trong những gì kênh đã đăng".
-  const matchesMonth = (post: PublicationPost) =>
-    !collectionMonth || monthsFor(post).includes(collectionMonth);
+  const missingPlannedDate = collectionTasks.filter(
+    (task) => !task.plannedPublishDate,
+  ).length;
 
-  const selected = posts.filter(
-    (post) =>
-      isCollectionPost(post) && inScope(post, scope) && matchesMonth(post),
-  );
+  const assets: CollectionAsset[] = collectionTasks
+    .filter(
+      (task) =>
+        // Không lọc ngày thì lấy hết; có lọc thì xếp theo Ngày Đăng Dự Kiến.
+        (!dateWindow.hasFilter ||
+          inWindow(task.plannedPublishDate ?? null, dateWindow)) &&
+        (!collectionMonth ||
+          collectionMonths(task).includes(collectionMonth)),
+    )
+    .map((task) => {
+      // Lấy mọi dòng đăng bài của task, không lọc theo loại bài: một task đã
+      // được lên lịch thì vẫn là đã lên lịch kể cả khi ô Loại Bài Đăng bỏ
+      // trống (Shopee, Website, Cửa hàng đều như vậy). Phạm vi Reels/Video
+      // chỉ dùng cho các chỉ số cơ cấu đếm theo dòng.
+      const taskPosts = postsByTask.get(normalize(task.code)) ?? [];
+      return {
+        task,
+        posts: taskPosts,
+        platforms: taskPlatformNames(task),
+        state: !taskPosts.length
+          ? ("notScheduled" as const)
+          : taskPosts.some((post) => post.posted)
+            ? ("posted" as const)
+            : ("scheduled" as const),
+      };
+    });
+
+  const isOverduePost = (post: PublicationPost) =>
+    !post.posted &&
+    Boolean(post.scheduledAt) &&
+    post.scheduledAt! <= dueCutoff;
 
   const platforms = Array.from(
-    new Map(
-      posts
+    new Map([
+      ...assets.flatMap((asset) =>
+        asset.platforms.map(
+          (platform) =>
+            [normalizedKey(platform), platform] as [string, string],
+        ),
+      ),
+      ...posts
         .filter(isVideoPost)
-        .map((post) => [
-          normalizedKey(post.platform),
-          normalize(post.platform) || "Chưa xác định",
-        ]),
-    ).values(),
+        .map(
+          (post) =>
+            [
+              normalizedKey(post.platform),
+              normalize(post.platform) || "Chưa xác định",
+            ] as [string, string],
+        ),
+    ]).values(),
   );
 
   const rows = platforms
     .map((platform): CollectionPostingRow => {
-      const onPlatform = (post: PublicationPost) =>
-        (normalize(post.platform) || "Chưa xác định") === platform;
-      const produced = selected.filter(onPlatform);
-      const pending = produced.filter((post) => !post.posted);
+      const key = normalizedKey(platform);
+      const owed = assets.filter((asset) =>
+        asset.platforms.some((name) => normalizedKey(name) === key),
+      );
+      const postsFor = (asset: CollectionAsset) =>
+        asset.posts.filter(
+          (post) => normalizedKey(post.platform) === key,
+        );
+      const scheduled = owed.filter((asset) => postsFor(asset).length);
       return {
         platform,
-        produced,
-        posted: produced.filter((post) => post.posted),
-        pending,
-        overdue: pending.filter(isOverdue),
-        notYetDue: pending.filter((post) => !isOverdue(post)),
-        buckets: bucketsOf(posts.filter(onPlatform)),
+        owed,
+        scheduled,
+        posted: scheduled.filter((asset) =>
+          postsFor(asset).some((post) => post.posted),
+        ),
+        overdue: scheduled.filter(
+          (asset) =>
+            !postsFor(asset).some((post) => post.posted) &&
+            postsFor(asset).some(isOverduePost),
+        ),
+        notScheduled: owed.filter((asset) => !postsFor(asset).length),
+        buckets: bucketsOf(
+          posts.filter(
+            (post) => normalizedKey(post.platform) === key,
+          ),
+        ),
       };
     })
     .filter(
-      (row) => row.produced.length > 0 || row.buckets.postedVideos.length > 0,
+      (row) => row.owed.length > 0 || row.buckets.postedVideos.length > 0,
     )
     .sort(
       (left, right) =>
-        right.produced.length - left.produced.length ||
+        right.owed.length - left.owed.length ||
         right.buckets.postedVideos.length - left.buckets.postedVideos.length,
     );
 
@@ -191,27 +254,34 @@ export function calculateCollectionPosting(
     scope,
     months,
     collectionMonth,
-    buckets: bucketsOf(posts),
-    produced: selected,
-    posted: selected.filter((post) => post.posted),
-    pending: selected.filter((post) => !post.posted),
-    overdue: selected.filter(isOverdue),
-    notYetDue: selected.filter(
-      (post) => !post.posted && !isOverdue(post),
-    ),
     asOf: dueCutoff,
-    collectionTaskCount: collectionMonth
-      ? tasks.filter((task) =>
-          collectionMonths(task).includes(collectionMonth),
-        ).length
-      : 0,
-    uncategorized: posts.filter(
-      (post) => inScope(post, scope) && !normalize(post.bookTaskCode),
+    produced: assets,
+    posted: assets.filter((asset) => asset.state === "posted"),
+    scheduled: assets.filter((asset) => asset.state === "scheduled"),
+    notScheduled: assets.filter((asset) => asset.state === "notScheduled"),
+    overdue: assets.filter(
+      (asset) =>
+        asset.state === "scheduled" && asset.posts.some(isOverduePost),
     ),
-    unlinked: posts.filter(
+    buckets: bucketsOf(posts),
+    postedCollectionPosts: (() => {
+      const codes = new Set(
+        assets.map((asset) => normalize(asset.task.code)),
+      );
+      return posts.filter(
+        (post) =>
+          post.posted &&
+          (scope === "reels" ? isReelPost(post) : isVideoPost(post)) &&
+          codes.has(normalize(post.bookTaskCode)),
+      );
+    })(),
+    digitalSourced: posts.filter(
       (post) =>
-        isCollectionPost(post) && inScope(post, scope) && !taskFor(post),
+        (scope === "reels" ? isReelPost(post) : isVideoPost(post)) &&
+        !normalize(post.bookTaskCode),
     ),
+    missingPlatform: assets.filter((asset) => !asset.platforms.length),
+    missingPlannedDate,
     rows,
   };
 }
