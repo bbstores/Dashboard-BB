@@ -54,6 +54,7 @@ export const TASK_COLUMNS = {
   publicationIds: "2.7 Đăng Bài",
   platform: "Nền Tảng",
   bodApproval: "BOD DUYỆT",
+  plannedPublishDate: "Ngày Đăng Dự Kiến",
 } as const;
 
 export const SHOOT_SESSION_COLUMNS = {
@@ -114,7 +115,8 @@ export const TASK_REQUIRED_HEADERS = Object.values(TASK_COLUMNS).filter(
   (header) =>
     header !== TASK_COLUMNS.receivedStartDate &&
     header !== TASK_COLUMNS.shootSession &&
-    header !== TASK_COLUMNS.bodApproval,
+    header !== TASK_COLUMNS.bodApproval &&
+    header !== TASK_COLUMNS.plannedPublishDate,
 );
 export const FEEDBACK_REQUIRED_HEADERS = Object.values(
   FEEDBACK_COLUMNS,

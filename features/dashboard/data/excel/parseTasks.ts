@@ -75,6 +75,9 @@ export function parseTasks(sheet: import("exceljs").Worksheet): Task[] {
       bodApproval: normalize(
         valueAt(row, headers, TASK_COLUMNS.bodApproval),
       ),
+      plannedPublishDate: excelDate(
+        temporalValueAt(row, headers, TASK_COLUMNS.plannedPublishDate),
+      ),
     });
   }
   return tasks;

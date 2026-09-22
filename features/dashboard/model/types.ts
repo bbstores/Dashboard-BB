@@ -23,6 +23,8 @@ export type Task = {
   publicationIds?: string[];
   platform?: string;
   bodApproval?: string;
+  /** Ngày Đăng Dự Kiến — mốc để xếp ấn phẩm vào kỳ báo cáo. */
+  plannedPublishDate?: Date | null;
 };
 
 export type ShootSession = {
