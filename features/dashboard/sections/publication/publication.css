@@ -1531,6 +1531,25 @@
 .postingCollectionSubLink:hover {
   text-decoration: underline;
 }
+.postingScopeChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.postingScopeChips i {
+  background: rgba(23, 79, 61, .08);
+  border-radius: 99px;
+  color: var(--green);
+  font-size: 7.5px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: .02em;
+  padding: 3px 7px;
+}
+.postingScopeChips i.muted {
+  background: rgba(212, 107, 95, .12);
+  color: #b3554a;
+}
 .postingCollectionWarnings {
   display: grid;
   gap: 6px;

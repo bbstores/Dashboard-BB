@@ -970,6 +970,32 @@ function rate(part: number, whole: number) {
   return whole ? (part / whole) * 100 : null;
 }
 
+/** Ghi rõ card đang chịu bộ lọc nào — ba card trong panel không giống nhau. */
+function ScopeChips({
+  month,
+  collectionScope,
+}: {
+  month: string;
+  collectionScope: "none" | "numerator" | "full";
+}) {
+  const collectionLabel =
+    collectionScope === "none"
+      ? "Không theo bộ lọc BST"
+      : !month
+        ? "Tất cả BST"
+        : collectionScope === "numerator"
+          ? `BST ${month} · chỉ tử số`
+          : `BST ${month}`;
+  return (
+    <span className="postingScopeChips">
+      <i>Theo khoảng ngày đang lọc</i>
+      <i className={collectionScope === "none" ? "muted" : ""}>
+        {collectionLabel}
+      </i>
+    </span>
+  );
+}
+
 /** Mẫu số của chỉ số cơ cấu: sản lượng đã đăng, hoặc toàn bộ Reels đã lên lịch. */
 type ShareBase = "postedVideo" | "allReels";
 
@@ -992,6 +1018,7 @@ function CollectionPostingPanel({
   onScopeChange,
   collectionMonth,
   onCollectionMonthChange,
+  dateWindow,
   onOpenDetail,
 }: {
   performance: CollectionPostingFulfillment;
@@ -999,6 +1026,7 @@ function CollectionPostingPanel({
   onScopeChange: (scope: CollectionPostingScope) => void;
   collectionMonth: string;
   onCollectionMonthChange: (month: string) => void;
+  dateWindow: DateWindow;
   onOpenDetail: (detail: DetailView) => void;
 }) {
   const [reelBase, setReelBase] = useState<ShareBase>("postedVideo");
@@ -1048,6 +1076,12 @@ function CollectionPostingPanel({
         <div>
           <span className="chartKicker">MEDIA TRẢ RA → DIGITAL ĐĂNG</span>
           <h3>Ấn phẩm Bộ Sưu Tập đã được đăng tới đâu</h3>
+          <p className="postingChartNote">
+            {dateWindow.hasFilter
+              ? `Chỉ tính bài có Ngày Đăng từ ${formatDate(dateWindow.from)} đến ${formatDate(dateWindow.to)}.`
+              : "Không lọc ngày — tính toàn bộ bài đăng trong workbook."}{" "}
+            Mỗi card ghi rõ phạm vi của riêng nó ở dòng cuối.
+          </p>
         </div>
         <div className="postingCollectionTools">
           <label className="postingCollectionMonth">
@@ -1134,6 +1168,7 @@ function CollectionPostingPanel({
               ? " — gồm toàn bộ Reels và Video đã đăng của mọi kênh, mọi loại nội dung"
               : " — chỉ Reels nên là con số của riêng nhóm Facebook"}
           </p>
+          <ScopeChips month={collectionMonth} collectionScope="none" />
           <label className="checkboxLabel">
             <input
               type="checkbox"
@@ -1197,6 +1232,7 @@ function CollectionPostingPanel({
               rate(performance.posted.length, performance.produced.length),
             )}
           </button>
+          <ScopeChips month={collectionMonth} collectionScope="full" />
         </div>
 
         <div className="postingCollectionMetric">
@@ -1234,6 +1270,7 @@ function CollectionPostingPanel({
               ? "BST đã đăng ÷ tổng video đã đăng — gồm toàn bộ Reels và Video đã đăng của mọi kênh, mọi loại nội dung"
               : "BST Reels đã đăng ÷ tổng Reels — cả tử và mẫu đều thu về Reels nên là con số của riêng nhóm Facebook"}
           </p>
+          <ScopeChips month={collectionMonth} collectionScope="numerator" />
           <label className="checkboxLabel">
             <input
               type="checkbox"
@@ -1731,6 +1768,7 @@ export function PostingSection({
         onScopeChange={setCollectionScope}
         collectionMonth={collectionMonth}
         onCollectionMonthChange={setCollectionMonth}
+        dateWindow={dateWindow}
         onOpenDetail={onOpenDetail}
       />
 

@@ -315,3 +315,66 @@ test("does not count not-yet-scheduled collections as missed posts", () => {
   );
   assert.equal(result.posted.length / result.produced.length, 0.25);
 });
+
+test("date filter bounds every card, collection filter only the BST numerator", () => {
+  const asOf = new Date(2026, 8, 22);
+  const tasks = [
+    task({ code: "T9", collection: "BST 09.2026" }),
+    task({ code: "T7", collection: "BST 07.2026" }),
+  ];
+  const posts = [
+    // Trong khoảng lọc.
+    post({
+      id: "IN-BST9",
+      bookTaskCode: "T9",
+      posted: true,
+      scheduledAt: new Date(2026, 8, 10),
+    }),
+    post({
+      id: "IN-OTHER",
+      bookTaskCode: "T9",
+      posted: true,
+      postCategory: "Khác",
+      scheduledAt: new Date(2026, 8, 11),
+    }),
+    // Ngoài khoảng lọc — phải biến mất khỏi mọi card.
+    post({
+      id: "OUT",
+      bookTaskCode: "T7",
+      posted: true,
+      scheduledAt: new Date(2026, 6, 10),
+    }),
+  ];
+  const september = {
+    from: new Date(2026, 8, 1),
+    to: new Date(2026, 8, 30),
+    hasFilter: true,
+  };
+
+  const all = calculateCollectionPosting(tasks, posts, september, "video", "", asOf);
+  // Bộ lọc ngày cắt bài tháng 7 khỏi cả tử lẫn mẫu.
+  assert.equal(all.buckets.postedVideos.length, 2);
+  assert.equal(all.produced.length, 1);
+
+  const july = calculateCollectionPosting(
+    tasks,
+    posts,
+    september,
+    "video",
+    "07.2026",
+    asOf,
+  );
+  // Lọc BST chỉ thu hẹp tử số; mẫu số sản lượng giữ nguyên để câu hỏi
+  // "BST chiếm bao nhiêu trong sản lượng kênh" còn có nghĩa.
+  assert.equal(july.produced.length, 0, "không có ấn phẩm BST 07 trong kỳ");
+  assert.equal(
+    july.buckets.postedVideos.length,
+    2,
+    "mẫu số không đổi theo bộ lọc BST",
+  );
+  assert.equal(
+    july.buckets.postedReels.length,
+    all.buckets.postedReels.length,
+    "card Reels trên sản lượng không chịu bộ lọc BST",
+  );
+});
