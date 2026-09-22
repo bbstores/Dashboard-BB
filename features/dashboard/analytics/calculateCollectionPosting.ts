@@ -95,6 +95,8 @@ export type CollectionPostingFulfillment = {
   posted: CollectionAsset[];
   scheduled: CollectionAsset[];
   notScheduled: CollectionAsset[];
+  /** Tất cả ấn phẩm chưa lên sóng — đây là danh sách việc còn nợ. */
+  pending: CollectionAsset[];
   overdue: CollectionAsset[];
   /** Mẫu số cơ cấu, đếm theo dòng đăng bài (gồm cả nguồn của Digital). */
   buckets: PostingBuckets;
@@ -259,6 +261,7 @@ export function calculateCollectionPosting(
     posted: assets.filter((asset) => asset.state === "posted"),
     scheduled: assets.filter((asset) => asset.state === "scheduled"),
     notScheduled: assets.filter((asset) => asset.state === "notScheduled"),
+    pending: assets.filter((asset) => asset.state !== "posted"),
     overdue: assets.filter(
       (asset) =>
         asset.state === "scheduled" && asset.posts.some(isOverduePost),

@@ -320,3 +320,33 @@ test("treats a task as scheduled even when the row has no post type", () => {
     ["T-SHOPEE"],
   );
 });
+
+test("groups every unposted asset into one actionable pending list", () => {
+  const tasks = [
+    asset({ code: "T-POSTED" }),
+    asset({ code: "T-SCHEDULED" }),
+    asset({ code: "T-NONE" }),
+  ];
+  const posts = [
+    post({ id: "P1", bookTaskCode: "T-POSTED", posted: true }),
+    post({ id: "P2", bookTaskCode: "T-SCHEDULED", posted: false }),
+  ];
+  const result = calculateCollectionPosting(
+    tasks,
+    posts,
+    WINDOW,
+    "video",
+    "",
+    AS_OF,
+  );
+
+  assert.deepEqual(
+    result.pending.map((item) => item.task.code).sort(),
+    ["T-NONE", "T-SCHEDULED"],
+    "gồm cả đã lên lịch chưa đăng lẫn chưa lên lịch",
+  );
+  assert.equal(
+    result.pending.length + result.posted.length,
+    result.produced.length,
+  );
+});

@@ -1199,9 +1199,9 @@ function CollectionPostingPanel({
             }
             onClick={() =>
               openAssets(
-                "Ấn phẩm BST đã đăng",
-                `${scopeNoun}${monthNote} · trên tổng ${formatNumber(performance.produced.length)} ấn phẩm Media trả ra`,
-                performance.posted,
+                "Ấn phẩm BST chưa đăng",
+                `${formatNumber(performance.pending.length)} ấn phẩm Media đã trả ra nhưng chưa lên sóng · ${formatNumber(performance.scheduled.length)} đã lên lịch, ${formatNumber(performance.notScheduled.length)} chưa lên lịch · ${scopeNoun}${monthNote}`,
+                performance.pending,
               )
             }
           >
@@ -1216,7 +1216,10 @@ function CollectionPostingPanel({
             </strong>
             <em>
               {formatNumber(performance.posted.length)} /{" "}
-              {formatNumber(performance.produced.length)} ấn phẩm
+              {formatNumber(performance.produced.length)} ấn phẩm ·{" "}
+              {performance.pending.length
+                ? `bấm để xem ${formatNumber(performance.pending.length)} ấn phẩm chưa đăng`
+                : "không còn ấn phẩm nào chưa đăng"}
             </em>
           </button>
           <p className="postingCollectionFormula">
