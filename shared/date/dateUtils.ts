@@ -1,6 +1,6 @@
 // ─── Date & Time Utilities ──────────────────────────────────────────────────
 
-import { VIETNAM_HOLIDAYS_2026 } from "./constants";
+import { isHolidayKey } from "./constants";
 
 export function startOfDay(value: Date) {
   const date = new Date(value);
@@ -38,7 +38,7 @@ export function businessMinutesBetween(start: Date | null, end: Date | null) {
     const weekday = day.getDay();
     if (
       weekday !== 0 &&
-      !VIETNAM_HOLIDAYS_2026.has(dateKey(day))
+      !isHolidayKey(dateKey(day))
     ) {
       const intervals = [
         [8, 30, 12, 0],
@@ -80,6 +80,12 @@ export function calendarDaysBetween(start: Date | null, end: Date | null) {
 
 export function percentile(values: number[], ratio: number) {
   if (!values.length) return 0;
+  return percentileOf(values, ratio)!;
+}
+
+/** Như `percentile` nhưng trả null khi không có mẫu, để UI hiển thị "—". */
+export function percentileOf(values: number[], ratio: number) {
+  if (!values.length) return null;
   const sorted = Array.from(values).sort((a, b) => a - b);
   const index = Math.min(
     sorted.length - 1,
@@ -112,9 +118,9 @@ export function operationalDayLag(start: Date | null, end: Date | null) {
   );
 }
 
-function isWorkingDay(date: Date) {
+export function isWorkingDay(date: Date) {
   return (
-    date.getDay() !== 0 && !VIETNAM_HOLIDAYS_2026.has(dateKey(date))
+    date.getDay() !== 0 && !isHolidayKey(dateKey(date))
   );
 }
 

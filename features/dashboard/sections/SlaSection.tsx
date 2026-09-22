@@ -1,14 +1,20 @@
 import { inputDate } from "@/shared/date/dateUtils";
 import {
+  holidayYears,
+  registeredHolidayCount,
+} from "@/shared/date/constants";
+import {
   formatDate,
   formatNumber,
   formatSlaMinutes,
 } from "@/shared/formatting/format";
+
 import type { DashboardStats } from "../analytics/calculateDashboardStats";
 import { HelpButton } from "../components/HelpButton";
 import { HorizontalBars } from "../components/HorizontalBars";
 import { PieChart } from "../components/PieChart";
 import { SlaMetricCard } from "../components/SlaMetricCard";
+import { StaffTimeOfDayChart } from "../components/StaffTimeOfDayChart";
 import { dashboardHelp } from "../help/helpContent";
 import {
   handoffLateMinutes,
@@ -24,6 +30,13 @@ import type {
   DetailView,
   PercentileDetail,
 } from "../model/types";
+
+/** Phân vị không có mẫu phải hiện "—", không được hiện 0 như một thành tích. */
+const NO_SAMPLE = "—";
+const slaMinutes = (value: number | null) =>
+  value === null ? NO_SAMPLE : formatSlaMinutes(value);
+const slaDays = (value: number | null) =>
+  value === null ? NO_SAMPLE : `${formatNumber(value)} ngày`;
 
 type SlaViewModel = {
   sla: DashboardStats["sla"];
@@ -63,8 +76,10 @@ export function SlaSection({
             <span className="chartKicker">SLA · KHÁM PHÁ DỮ LIỆU</span>
             <h2>Nhịp xử lý &amp; định mức</h2>
             <p>
-              Giờ làm việc: Thứ Hai–Thứ Bảy, 08:30–12:00 và
-              13:00–17:30; đã loại lịch nghỉ lễ Việt Nam 2026.
+              Giờ làm việc: Thứ Hai–Thứ Bảy, 08:30–12:00 và 13:00–17:30.{" "}
+              {registeredHolidayCount()
+                ? `Ngày nghỉ lấy từ sheet Table của workbook: ${registeredHolidayCount()} ngày, phủ ${holidayYears().join(", ")}.`
+                : "Workbook không có sheet Table nên đang dùng danh sách ngày nghỉ mặc định của 2026."}
             </p>
           </div>
           <span className="slaMode">CHƯA GẮN NGƯỠNG ĐẠT / VI PHẠM</span>
@@ -76,8 +91,8 @@ export function SlaSection({
               <span className="chartKicker">TUÂN THỦ MỐC BÀN GIAO</span>
               <h3>Bàn giao đúng hạn &amp; mức độ trễ</h3>
               <p>
-                Quay/Chụp có hạn 13:00 ngày thứ hai sau ngày bắt đầu; các
-                công đoạn khác giữ hạn trong ngày bắt đầu.
+                Quay/Chụp có hạn 14:00 của ngày thứ hai sau ngày bắt đầu; các
+                công đoạn khác giữ hạn trong chính ngày bắt đầu.
               </p>
             </div>
             <HelpButton help={dashboardHelp("Tuân thủ ngày bàn giao")} />
@@ -87,7 +102,7 @@ export function SlaSection({
               kicker="TỶ LỆ ĐÚNG HẠN"
               title="Task đã bàn giao đủ dữ liệu"
               value={`${Math.round(sla.handoffOnTimeRate)}%`}
-              note={`${formatNumber(sla.onTimeHandoffs.length)} / ${formatNumber(sla.handedForKpi.length)} task bàn giao đúng hạn`}
+              note={`${formatNumber(sla.onTimeHandoffs.length)} / ${formatNumber(sla.handedForKpi.length)} task đã bàn giao · chưa gồm ${formatNumber(sla.overdueHandoffs.length)} task quá hạn chưa bàn giao`}
               help={dashboardHelp("Tuân thủ ngày bàn giao")}
               onClick={() =>
                 onOpenDetail({
@@ -115,7 +130,7 @@ export function SlaSection({
             <SlaMetricCard
               kicker="MỨC TRỄ ĐIỂN HÌNH"
               title="P50 của task bàn giao trễ hạn"
-              value={formatSlaMinutes(sla.handoffLateP50)}
+              value={slaMinutes(sla.handoffLateP50)}
               note={`${formatNumber(sla.lateHandoffs.length)} task trễ hạn · chỉ tính giờ làm việc`}
               help={{
                 title: "P50 phút trễ bàn giao",
@@ -124,7 +139,7 @@ export function SlaSection({
                 objective:
                   "Phân biệt task chỉ trễ qua ngày nhưng bàn giao trước ca với task chiếm nhiều giờ làm việc của ngày kế tiếp.",
                 calculation:
-                  "Công đoạn thường tính từ 08:30 ngày làm việc kế tiếp. Quay/Chụp tính từ hạn 13:00; loại ngoài giờ, nghỉ trưa, Chủ nhật và ngày lễ. P50 là trung vị.",
+                  "Công đoạn thường tính từ 08:30 ngày làm việc kế tiếp. Quay/Chụp tính từ hạn 14:00; loại ngoài giờ, nghỉ trưa, Chủ nhật và ngày lễ. P50 là trung vị.",
                 example:
                   "Bàn giao 07:00 hôm sau → 0 phút làm việc. Bàn giao 09:30 → 60 phút.",
               }}
@@ -197,8 +212,8 @@ export function SlaSection({
           <SlaMetricCard
             kicker="CYCLE TIME"
             title="P50 hoàn thành"
-            value={`${sla.cycleP50} ngày`}
-            note={`P90: ${sla.cycleP90} ngày · ${formatNumber(sla.cycleRows.length)} task đủ ngày`}
+            value={slaDays(sla.cycleP50)}
+            note={`P90: ${slaDays(sla.cycleP90)} · ${formatNumber(sla.cycleRows.length)} task đủ ngày`}
             onExpand={() =>
               onOpenPercentile({
                 title: "Cycle time hoàn thành",
@@ -324,8 +339,8 @@ export function SlaSection({
             <SlaMetricCard
               kicker="TOÀN BỘ THỜI GIAN KIỂM DUYỆT"
               title="Từ chuyển Checking đến hoàn thành"
-              value={formatSlaMinutes(sla.checkingToDoneP50)}
-              note={`50% task không vượt quá mức trên · 90% không vượt quá ${formatSlaMinutes(sla.checkingToDoneP90)} · Mẫu ${formatNumber(sla.checkingToDoneRows.length)} task`}
+              value={slaMinutes(sla.checkingToDoneP50)}
+              note={`50% task không vượt quá mức trên · 90% không vượt quá ${slaMinutes(sla.checkingToDoneP90)} · Mẫu ${formatNumber(sla.checkingToDoneRows.length)} / ${formatNumber(sla.checkingToDoneEligible)} task có đủ hai mốc`}
               help={dashboardHelp("Checking → Done · P50")}
               onExpand={() =>
                 onOpenPercentile({
@@ -351,6 +366,16 @@ export function SlaSection({
           </div>
         </article>
 
+        <StaffTimeOfDayChart
+          rows={sla.staffTimeOfDayRows}
+          onSelect={(row, metric, tasks, context) =>
+            onOpenDetail({
+              title: `${metric === "inspection" ? "Giờ bàn giao" : "Giờ hoàn thành"} · ${row.name}`,
+              subtitle: `${context} · ${formatNumber(tasks.length)} task trong mẫu phân vị`,
+              tasks,
+            })
+          }
+        />
       </section>
     </>
   );

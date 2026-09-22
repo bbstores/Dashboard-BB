@@ -45,12 +45,11 @@ export function DailyTaskChart({
     ]),
   );
   const flowMax = Math.max(1, Math.ceil(rawFlowMax * 1.15));
-  const backlogValues = rows.map((row) => row.backlog);
-  const rawBacklogMin = Math.min(...backlogValues);
-  const rawBacklogMax = Math.max(...backlogValues);
-  const backlogPadding = Math.max(2, Math.ceil((rawBacklogMax - rawBacklogMin) * 0.2));
-  const backlogMin = Math.max(0, rawBacklogMin - backlogPadding);
-  const backlogMax = Math.max(backlogMin + 1, rawBacklogMax + backlogPadding);
+  // Tồn là chỉ số mức, trục phải neo về 0 — nếu cắt gốc thì biến động vài task
+  // trông như biến động gấp đôi.
+  const backlogMin = 0;
+  const rawBacklogMax = Math.max(...rows.map((row) => row.backlog));
+  const backlogMax = Math.max(1, Math.ceil((rawBacklogMax * 1.15) / 5) * 5);
   const xFor = (index: number) =>
     left + plotPadding +
     (rows.length <= 1 ? plotWidth / 2 : (index / (rows.length - 1)) * plotWidth);
@@ -103,8 +102,9 @@ export function DailyTaskChart({
               title: "Task theo ngày",
               purpose: "Theo dõi đồng thời lượng việc đi vào, lượng việc thoát ra và backlog cuối từng ngày.",
               objective: "Nếu đường tồn tăng liên tục trong khi số bàn giao thấp hơn số được giao, nhóm đang tích lũy quá tải.",
-              calculation: "Toàn bộ chart loại task có cột Outsource chứa giá trị. Được giao theo Ngày Bắt Đầu; bàn giao theo Ngày Kiểm Duyệt. Tồn cuối ngày được tính đến 23:59 và gồm task bắt đầu trước hoặc trong chính ngày đó nếu tại thời điểm đang xét chưa được kiểm duyệt; hoặc đã kiểm duyệt nhưng trạng thái hiện tại vẫn In Progress. Riêng task tồn còn loại công đoạn Trainning, Pending/Cancel và Archived.",
+              calculation: "Toàn bộ chart loại task có cột Outsource chứa giá trị. Được giao theo Ngày Bắt Đầu; bàn giao theo Ngày Kiểm Duyệt. Tồn cuối ngày được tính đến 23:59 và gồm task bắt đầu trước hoặc trong chính ngày đó nếu tại thời điểm đang xét chưa được kiểm duyệt; hoặc đã kiểm duyệt nhưng hiện vẫn In Progress, REJECT, Thực Hiện Lại, hoặc BOD ghi ĐANG SỬA. Riêng task tồn còn loại công đoạn Trainning, Pending/Cancel và Archived. Trục tồn neo về 0.",
               example: "Task bắt đầu ngày 20/07 và cuối ngày vẫn chưa kiểm duyệt được tính vào Tồn cuối ngày 20/07, nhưng không thuộc KPI/Aging task tồn trước mốc 20/07.",
+              note: "Task kiểm duyệt trong ngày nhưng Ngày Bắt Đầu lại sau đó không vào hai nhóm bàn giao; tooltip ghi riêng phần này là sai thứ tự ngày.",
             }}
           />
         </div>
@@ -132,7 +132,7 @@ export function DailyTaskChart({
             })}
             <line className="dailyPanelSeparator" x1={left} x2={width - right} y1="252" y2="252" />
             <text className="dailyPanelLabel" x={left} y="282">TỒN CUỐI NGÀY</text>
-            {[0, 1].map((ratio) => {
+            {[0, 0.5, 1].map((ratio) => {
               const y = backlogTop + backlogHeight - ratio * backlogHeight;
               return (
                 <g key={`backlog-${ratio}`}>
@@ -203,7 +203,7 @@ export function DailyTaskChart({
                     {row.backlog}
                   </text>
                   <title>
-                    {formatDate(row.date)} · Được giao: {row.assigned} · Bàn giao: {row.handedSameDay + row.handedBacklog} (Task trong ngày: {row.handedSameDay}, Xử lý task tồn: {row.handedBacklog}) · Tồn cuối ngày: {row.backlog}
+                    {formatDate(row.date)} · Được giao: {row.assigned} · Bàn giao: {row.handedSameDay + row.handedBacklog} (Task trong ngày: {row.handedSameDay}, Xử lý task tồn: {row.handedBacklog}){row.handedOutOfOrder > 0 ? ` +${row.handedOutOfOrder} sai thứ tự ngày` : ""} · Tồn cuối ngày: {row.backlog}
                   </title>
                   {(index % labelStep === 0 || index === rows.length - 1) && (
                     <text className="dailyAxisText" x={x} y={height - 18} textAnchor="middle">

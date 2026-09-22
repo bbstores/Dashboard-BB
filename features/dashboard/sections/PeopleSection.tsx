@@ -7,7 +7,7 @@ import {
 import type { DashboardStats } from "../analytics/calculateDashboardStats";
 import type { calculateDailyTaskChart } from "../analytics/calculateDailyTaskChart";
 import { DailyTaskChart } from "../components/DailyTaskChart";
-import { AssigneeStageRadar } from "../components/AssigneeStageRadar";
+import { AssigneeStageMix } from "../components/AssigneeStageMix";
 import { HorizontalBars } from "../components/HorizontalBars";
 import { StaffColumns } from "../components/StaffColumns";
 import {
@@ -110,7 +110,7 @@ export function PeopleSection({
         }}
       />
 
-      <AssigneeStageRadar
+      <AssigneeStageMix
         profiles={viewModel.assigneeStageProfiles}
         onSelect={(assignee, stage) =>
           onOpenDetail({
@@ -153,14 +153,20 @@ export function PeopleSection({
         onSelect={(name, metric) => {
           if (
             metric === "feedbackInternal" ||
+            metric === "feedbackBod" ||
             metric === "feedbackBusiness"
           ) {
             const source =
-              metric === "feedbackBusiness" ? "business" : "internal";
-            const sourceLabel =
-              source === "business"
-                ? "Team Kinh Doanh Trả Về"
-                : "Nội Bộ Trả Về";
+              metric === "feedbackBusiness"
+                ? "business"
+                : metric === "feedbackBod"
+                  ? "bod"
+                  : "internal";
+            const sourceLabel = {
+              business: "Kinh Doanh Reject",
+              bod: "BOD Không Duyệt",
+              internal: "Lead Trả Về",
+            }[source];
             onOpenDetail({
               title: `${sourceLabel} · ${name}`,
               subtitle:

@@ -8,6 +8,7 @@ export const DASHBOARD_SHEETS = {
   collections: "2.1 Bộ Sưu Tập",
   products: "2.3 Product.SKU",
   shoots: "2.11 Lịch Quay",
+  holidays: "Table",
 } as const;
 
 export const COST_COLUMNS = {
@@ -52,6 +53,7 @@ export const TASK_COLUMNS = {
   shootSession: "Ca Quay",
   publicationIds: "2.7 Đăng Bài",
   platform: "Nền Tảng",
+  bodApproval: "BOD DUYỆT",
 } as const;
 
 export const SHOOT_SESSION_COLUMNS = {
@@ -103,10 +105,15 @@ export const NORM_COLUMNS = {
   contentMinutes: "Thời gian Viết Content",
 } as const;
 
+export const HOLIDAY_COLUMNS = {
+  date: "Ngày Nghỉ",
+} as const;
+
 export const TASK_REQUIRED_HEADERS = Object.values(TASK_COLUMNS).filter(
   (header) =>
     header !== TASK_COLUMNS.receivedStartDate &&
-    header !== TASK_COLUMNS.shootSession,
+    header !== TASK_COLUMNS.shootSession &&
+    header !== TASK_COLUMNS.bodApproval,
 );
 export const FEEDBACK_REQUIRED_HEADERS = Object.values(
   FEEDBACK_COLUMNS,

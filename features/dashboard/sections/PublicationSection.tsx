@@ -1,10 +1,14 @@
 import type { PieMetricSet } from "../analytics/types";
+import { HorizontalBars } from "../components/HorizontalBars";
 import { PieChart } from "../components/PieChart";
 import {
   groupCount,
+  groupWithOther,
   isGraphicPublication,
+  isOtherGroupLabel,
   isVideoPublication,
   matchesGroup,
+  otherGroupLabels,
 } from "../model/taskUtils";
 import type {
   DetailView,
@@ -22,6 +26,45 @@ export type PublicationSectionProps = {
   onExcludeOutsourceChange: (key: string, checked: boolean) => void;
   onOpenDetail: (detail: DetailView) => void;
 };
+
+/** Bộ chọn phạm vi và trừ outsource, tách ra để bar dùng lại của PieChart. */
+function PublicationScopeTools({
+  scope,
+  excludeOutsource,
+  onScopeChange,
+  onExcludeOutsourceChange,
+}: {
+  scope: PieScope;
+  excludeOutsource: boolean;
+  onScopeChange: (scope: PieScope) => void;
+  onExcludeOutsourceChange: (checked: boolean) => void;
+}) {
+  return (
+    <>
+      <select
+        className="scopeSelector"
+        value={scope}
+        onChange={(event) => onScopeChange(event.target.value as PieScope)}
+        aria-label="Phạm vi dữ liệu"
+      >
+        <option value="combined">Tổng khử trùng</option>
+        <option value="started">Bắt đầu trong kỳ</option>
+        <option value="inspectionCarry">Carry-in bàn giao</option>
+        <option value="completionCarry">Carry-in hoàn thành</option>
+      </select>
+      <label className="checkboxLabel">
+        <input
+          type="checkbox"
+          checked={excludeOutsource}
+          onChange={(event) =>
+            onExcludeOutsourceChange(event.target.checked)
+          }
+        />
+        Trừ outsource
+      </label>
+    </>
+  );
+}
 
 export function PublicationSection({
   videoMetrics,
@@ -42,51 +85,51 @@ export function PublicationSection({
           <h2>Video</h2>
         </div>
         <div className="publicationGrid">
-          <PieChart
+          <HorizontalBars
             title="Theo Format Type"
+            subtitle="SỐ ẤN PHẨM VIDEO"
+            className="publicationFormatBars"
+            rows={groupWithOther(videoMetrics.videoFormats)}
             help={{
               title: "Ấn phẩm Video theo Format Type",
               purpose: "Cơ cấu số ấn phẩm video theo từng định dạng đầu ra.",
               objective:
                 "Giúp quản lý biết đội ngũ đang sản xuất nhiều loại video nào để cân đối năng lực edit và kế hoạch nội dung.",
               calculation:
-                "Chỉ lấy task có Format Type chứa từ khóa video và Công đoạn là Edit, sau đó nhóm theo Format Type.",
+                "Chỉ lấy task có Format Type chứa từ khóa video và Công đoạn là Edit, sau đó nhóm theo Format Type. Các định dạng ngoài 9 nhóm lớn nhất được gom vào lát Khác.",
               example:
-                "Reels Video có 30 trong tổng 50 ấn phẩm video → lát này là 30 và 60%.",
+                "Reels Video có 30 trong tổng 50 ấn phẩm video → thanh này là 30.",
+              note: "Dùng thanh ngang vì số định dạng thường vượt quá số màu của biểu đồ tròn.",
             }}
-            data={videoMetrics.videoFormats}
-            compact
-            scope={videoScope}
-            onScopeChange={(scope) =>
-              onScopeChange("videoPublications", scope)
+            headerAction={
+              <PublicationScopeTools
+                scope={videoScope}
+                excludeOutsource={videoExcludeOutsource}
+                onScopeChange={(scope) =>
+                  onScopeChange("videoPublications", scope)
+                }
+                onExcludeOutsourceChange={(checked) =>
+                  onExcludeOutsourceChange("videoPublications", checked)
+                }
+              />
             }
-            excludeOutsource={videoExcludeOutsource}
-            onExcludeOutsourceChange={(checked) =>
-              onExcludeOutsourceChange("videoPublications", checked)
-            }
-            hoverBreakdown={(label) => {
+            onSelect={(label) => {
+              const others = otherGroupLabels(videoMetrics.videoFormats);
               const tasks = videoMetrics.tasks.filter(
                 (task) =>
                   isVideoPublication(task) &&
-                  matchesGroup(task.formatType, label),
+                  (isOtherGroupLabel(label)
+                    ? others.some((name) =>
+                        matchesGroup(task.formatType, name),
+                      )
+                    : matchesGroup(task.formatType, label)),
               );
-              return {
-                title: `${label} · phân bổ theo Type`,
-                data: groupCount(tasks, (task) => task.type),
-              };
-            }}
-            onSelect={(label) =>
               onOpenDetail({
                 title: `Video · Format Type · ${label}`,
-                subtitle:
-                  "Format Type chứa 'video' và Công đoạn là Edit",
-                tasks: videoMetrics.tasks.filter(
-                  (task) =>
-                    isVideoPublication(task) &&
-                    matchesGroup(task.formatType, label),
-                ),
-              })
-            }
+                subtitle: "Format Type chứa 'video' và Công đoạn là Edit",
+                tasks,
+              });
+            }}
           />
           <PieChart
             title="Theo Type"
@@ -135,8 +178,11 @@ export function PublicationSection({
           <h2>Graphic</h2>
         </div>
         <div className="publicationGrid">
-          <PieChart
+          <HorizontalBars
             title="Theo Format Type"
+            subtitle="SỐ ẤN PHẨM GRAPHIC"
+            className="publicationFormatBars"
+            rows={groupWithOther(graphicMetrics.graphicFormats)}
             help={{
               title: "Ấn phẩm Graphic theo Format Type",
               purpose:
@@ -144,43 +190,40 @@ export function PublicationSection({
               objective:
                 "Giúp quản lý nhìn nhu cầu thiết kế theo định dạng để cân đối năng lực graphic và kế hoạch sản xuất.",
               calculation:
-                "Chỉ lấy task có Công đoạn Graphic Design và Format Type không chứa video, sau đó nhóm theo Format Type.",
+                "Chỉ lấy task có Công đoạn Graphic Design và Format Type không chứa video, sau đó nhóm theo Format Type. Các định dạng ngoài 9 nhóm lớn nhất được gom vào lát Khác.",
               example:
-                "Banner có 40 trong tổng 100 ấn phẩm graphic → lát Banner là 40 và 40%.",
+                "Banner có 40 trong tổng 100 ấn phẩm graphic → thanh Banner là 40.",
+              note: "Dùng thanh ngang vì số định dạng thường vượt quá số màu của biểu đồ tròn.",
             }}
-            data={graphicMetrics.graphicFormats}
-            compact
-            scope={graphicScope}
-            onScopeChange={(scope) =>
-              onScopeChange("graphicPublications", scope)
+            headerAction={
+              <PublicationScopeTools
+                scope={graphicScope}
+                excludeOutsource={graphicExcludeOutsource}
+                onScopeChange={(scope) =>
+                  onScopeChange("graphicPublications", scope)
+                }
+                onExcludeOutsourceChange={(checked) =>
+                  onExcludeOutsourceChange("graphicPublications", checked)
+                }
+              />
             }
-            excludeOutsource={graphicExcludeOutsource}
-            onExcludeOutsourceChange={(checked) =>
-              onExcludeOutsourceChange("graphicPublications", checked)
-            }
-            hoverBreakdown={(label) => {
+            onSelect={(label) => {
+              const others = otherGroupLabels(graphicMetrics.graphicFormats);
               const tasks = graphicMetrics.tasks.filter(
                 (task) =>
                   isGraphicPublication(task) &&
-                  matchesGroup(task.formatType, label),
+                  (isOtherGroupLabel(label)
+                    ? others.some((name) =>
+                        matchesGroup(task.formatType, name),
+                      )
+                    : matchesGroup(task.formatType, label)),
               );
-              return {
-                title: `${label} · phân bổ theo Type`,
-                data: groupCount(tasks, (task) => task.type),
-              };
-            }}
-            onSelect={(label) =>
               onOpenDetail({
                 title: `Graphic · Format Type · ${label}`,
-                subtitle:
-                  "Công đoạn Graphic Design và không phải video",
-                tasks: graphicMetrics.tasks.filter(
-                  (task) =>
-                    isGraphicPublication(task) &&
-                    matchesGroup(task.formatType, label),
-                ),
-              })
-            }
+                subtitle: "Công đoạn Graphic Design và không phải video",
+                tasks,
+              });
+            }}
           />
           <PieChart
             title="Theo Type"

@@ -22,6 +22,7 @@ export type Task = {
   shootSession?: string;
   publicationIds?: string[];
   platform?: string;
+  bodApproval?: string;
 };
 
 export type ShootSession = {
@@ -71,7 +72,7 @@ export type Feedback = {
   rejectedBy?: string;
 };
 
-export type FeedbackReturnSource = "business" | "internal";
+export type FeedbackReturnSource = "business" | "bod" | "internal";
 
 export type PublicationPost = {
   id: string;
@@ -142,10 +143,13 @@ export type DailyTaskDatum = {
   assigned: number;
   handedSameDay: number;
   handedBacklog: number;
+  /** Kiểm duyệt trong ngày nhưng Ngày Bắt Đầu lại sau đó — lỗi thứ tự dữ liệu. */
+  handedOutOfOrder: number;
   backlog: number;
   assignedTasks: Task[];
   handedSameDayTasks: Task[];
   handedBacklogTasks: Task[];
+  handedOutOfOrderTasks: Task[];
   backlogTasks: Task[];
 };
 

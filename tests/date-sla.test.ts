@@ -91,61 +91,78 @@ test("evaluates handoff and completion SLA edge cases", () => {
   assert.equal(evaluateOverall(completedLate, at(22, 9)).code, "late");
 });
 
-test("uses 13:00 media deadlines two days after start and one day after handoff", () => {
+test("uses 14:00 media deadlines at D+2 and D+3 from the start date", () => {
   const mediaTask = task({
     stage: "Chụp",
     startDate: at(20, 9),
   });
 
   assert.equal(handoffDueDate(mediaTask)?.getDate(), 22);
-  assert.equal(handoffDueDate(mediaTask)?.getHours(), 13);
+  assert.equal(handoffDueDate(mediaTask)?.getHours(), 14);
   assert.equal(completionDueDate(mediaTask)?.getDate(), 23);
-  assert.equal(completionDueDate(mediaTask)?.getHours(), 13);
+  assert.equal(completionDueDate(mediaTask)?.getHours(), 14);
 
   assert.equal(
     evaluateHandoff(
-      { ...mediaTask, inspectionDate: at(22, 13) },
-      at(22, 13),
+      { ...mediaTask, inspectionDate: at(22, 14) },
+      at(22, 14),
     ).code,
     "onTime",
   );
   assert.equal(
     evaluateHandoff(
-      { ...mediaTask, inspectionDate: at(22, 13, 1) },
-      at(22, 13, 1),
+      { ...mediaTask, inspectionDate: at(22, 14, 1) },
+      at(22, 14, 1),
     ).code,
     "late",
   );
-  assert.equal(evaluateHandoff(mediaTask, at(22, 13)).code, "ongoing");
-  assert.equal(evaluateHandoff(mediaTask, at(22, 13, 1)).code, "overdue");
+  assert.equal(evaluateHandoff(mediaTask, at(22, 14)).code, "ongoing");
+  assert.equal(evaluateHandoff(mediaTask, at(22, 14, 1)).code, "overdue");
 
   assert.equal(
     evaluateOverall(
-      { ...mediaTask, status: "Done", completedDate: at(23, 13) },
-      at(23, 13),
+      { ...mediaTask, status: "Done", completedDate: at(23, 14) },
+      at(23, 14),
     ).code,
     "onTime",
   );
   assert.equal(
     evaluateOverall(
-      { ...mediaTask, status: "Done", completedDate: at(23, 13, 1) },
-      at(23, 13, 1),
+      { ...mediaTask, status: "Done", completedDate: at(23, 14, 1) },
+      at(23, 14, 1),
     ).code,
     "late",
   );
 });
 
-test("moves a media deadline falling on Sunday to Monday", () => {
+test("moves a media deadline off Sunday without compounding the shift", () => {
   const friday = new Date(2026, 6, 17, 9);
   const mediaTask = task({ stage: "Quay", startDate: friday });
   const handoffDue = handoffDueDate(mediaTask)!;
   const completionDue = completionDueDate(mediaTask)!;
 
+  // D+2 là Chủ nhật 19/7 nên hạn bàn giao dời sang thứ Hai 20/7.
   assert.equal(handoffDue.getDay(), 1);
   assert.equal(handoffDue.getDate(), 20);
-  assert.equal(handoffDue.getHours(), 13);
-  assert.equal(completionDue.getDate(), 21);
-  assert.equal(completionDue.getHours(), 13);
+  assert.equal(handoffDue.getHours(), 14);
+
+  // Hạn hoàn thành tính độc lập từ ngày bắt đầu: D+3 là thứ Hai 20/7,
+  // không bị cộng dồn thêm một ngày vì mốc bàn giao đã dời.
+  assert.equal(completionDue.getDate(), 20);
+  assert.equal(completionDue.getHours(), 14);
+});
+
+test("moves a media deadline off a public holiday, not just Sunday", () => {
+  // 01/09 và 02/09/2026 là ngày nghỉ; D+2 của 30/8 là 01/09.
+  const mediaTask = task({
+    stage: "Quay",
+    startDate: new Date(2026, 7, 30, 9),
+  });
+  const handoffDue = handoffDueDate(mediaTask)!;
+
+  assert.equal(handoffDue.getMonth(), 8);
+  assert.equal(handoffDue.getDate(), 3);
+  assert.equal(handoffDue.getHours(), 14);
 });
 
 test("calculates handoff lateness in business minutes", () => {

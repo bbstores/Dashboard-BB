@@ -6,12 +6,17 @@ import {
 import type { Task, WorkNorm } from "../model/types";
 import type { NormRow } from "./types";
 
+/**
+ * Công đoạn sản xuất cần đối chiếu định mức. Công đoạn ngoài danh sách này
+ * vẫn vào mẫu để độ phủ không bị thổi lên (ví dụ Đổi Nhạc chưa có định mức).
+ */
 const NORM_STAGES = new Set([
   "quay",
   "chụp",
   "edit",
   "graphic design",
   "viết content",
+  "đổi nhạc",
 ]);
 
 export function calculateNormMetrics(

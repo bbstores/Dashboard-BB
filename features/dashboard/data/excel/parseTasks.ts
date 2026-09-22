@@ -72,6 +72,9 @@ export function parseTasks(sheet: import("exceljs").Worksheet): Task[] {
       platform: normalize(
         valueAt(row, headers, TASK_COLUMNS.platform),
       ),
+      bodApproval: normalize(
+        valueAt(row, headers, TASK_COLUMNS.bodApproval),
+      ),
     });
   }
   return tasks;

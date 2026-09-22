@@ -4,7 +4,7 @@ import {
   percentile,
   startOfDay,
 } from "@/shared/date/dateUtils";
-import { VIETNAM_HOLIDAYS_2026 } from "@/shared/date/constants";
+import { isHolidayKey } from "@/shared/date/constants";
 import type {
   DashboardData,
   MediaCapacitySnapshot,
@@ -705,7 +705,7 @@ export function calculateMediaTrendSeries(
 function isWorkingDay(value: Date) {
   return (
     value.getDay() !== 0 &&
-    !VIETNAM_HOLIDAYS_2026.has(dateKey(value))
+    !isHolidayKey(dateKey(value))
   );
 }
 

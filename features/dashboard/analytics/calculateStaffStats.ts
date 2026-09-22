@@ -22,15 +22,15 @@ export function calculateStaffStats(
     inWindow(item.at, dateWindow),
   );
   const feedbackCount = new Map<string, number>();
-  const internalFeedbackCount = new Map<string, number>();
-  const businessFeedbackCount = new Map<string, number>();
+  const sourceCounts: Record<string, Map<string, number>> = {
+    internal: new Map<string, number>(),
+    bod: new Map<string, number>(),
+    business: new Map<string, number>(),
+  };
   for (const item of selectedFeedback) {
     const rawNames = item.assignee || taskByCode.get(item.taskCode)?.assignee;
     if (!rawNames) continue;
-    const sourceCount =
-      feedbackReturnSource(item) === "business"
-        ? businessFeedbackCount
-        : internalFeedbackCount;
+    const sourceCount = sourceCounts[feedbackReturnSource(item)];
     for (const name of assigneeNames(rawNames)) {
       feedbackCount.set(name, (feedbackCount.get(name) ?? 0) + 1);
       sourceCount.set(name, (sourceCount.get(name) ?? 0) + 1);
@@ -39,7 +39,9 @@ export function calculateStaffStats(
 
   const rowsByPerson = new Map<string, ClassifiedTask[]>();
   for (const item of classified) {
-    if (!item.included || !item.task.assignee) continue;
+    if (!item.included) continue;
+    // `assigneeNames` gom task trống vào nhóm "Chưa có assignee" để khối lượng
+    // chưa phân công không biến mất khỏi chart.
     for (const name of assigneeNames(item.task.assignee)) {
       const rows = rowsByPerson.get(name) ?? [];
       rows.push(item);
@@ -70,8 +72,9 @@ export function calculateStaffStats(
         completionCarry: completionCarryRows.length,
         completionCarryTasks: completionCarryRows.map((row) => row.task),
         feedback: feedbackCount.get(name) ?? 0,
-        feedbackInternal: internalFeedbackCount.get(name) ?? 0,
-        feedbackBusiness: businessFeedbackCount.get(name) ?? 0,
+        feedbackInternal: sourceCounts.internal.get(name) ?? 0,
+        feedbackBod: sourceCounts.bod.get(name) ?? 0,
+        feedbackBusiness: sourceCounts.business.get(name) ?? 0,
       };
     })
     .sort((a, b) => b.total - a.total);

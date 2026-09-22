@@ -1,5 +1,6 @@
 import type { DashboardData } from "../../model/types";
 import { parseFeedback } from "./parseFeedback";
+import { parseHolidays } from "./parseHolidays";
 import { parseNorms } from "./parseNorms";
 import { parsePublications } from "./parsePublications";
 import { parsePostingNorms } from "./parsePostingNorms";
@@ -7,6 +8,7 @@ import { parseTasks } from "./parseTasks";
 import { parseCosts } from "./parseCosts";
 import { parseShootSessions } from "./parseShootSessions";
 import { validateDashboardWorkbook } from "./validateWorkbook";
+import { registerHolidays } from "@/shared/date/constants";
 
 export async function readDashboardWorkbook(
   file: File,
@@ -26,8 +28,13 @@ export async function readDashboardWorkbook(
     productSheet,
     shootSheet,
     shootSessionSheet,
+    holidaySheet,
   } =
     validateDashboardWorkbook(workbook);
+
+  // Ngày nghỉ phải được nạp trước khi tính bất kỳ hạn SLA nào.
+  registerHolidays(holidaySheet ? parseHolidays(holidaySheet) : []);
+
   const tasks = parseTasks(taskSheet);
 
   return {

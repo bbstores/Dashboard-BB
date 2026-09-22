@@ -870,6 +870,18 @@
   display: block;
   height: 7px;
   overflow: hidden;
+  position: relative;
+}
+/* Kênh vượt định mức: thanh đổi màu và có vạch đánh dấu mốc 100%. */
+.postingNormProgress > i.overAttained > b {
+  background: linear-gradient(90deg, var(--green) 0%, #8fbf45 100%);
+}
+.postingNormProgress > i > u {
+  background: rgba(20, 32, 28, .55);
+  bottom: 0;
+  position: absolute;
+  top: 0;
+  width: 1.5px;
 }
 .postingNormProgress > i > b {
   background: var(--green);

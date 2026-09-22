@@ -20,13 +20,29 @@ export function normalizedKey(value: unknown) {
   return normalize(value).toLocaleLowerCase("vi");
 }
 
+/**
+ * Ba cổng reject trong quy trình: lead kiểm duyệt (nội bộ), BOD, và team kinh doanh.
+ * Nhận diện theo tên người trả về vì workbook không có cột phân loại nguồn.
+ */
+const FEEDBACK_SOURCE_NAMES: Array<{
+  match: string;
+  source: FeedbackReturnSource;
+}> = [
+  { match: "thuy sang", source: "business" },
+  { match: "thuy an", source: "bod" },
+];
+
 export function feedbackReturnSource(
   feedback: Pick<Feedback, "rejectedBy">,
 ): FeedbackReturnSource {
   const rejectedBy = normalizedKey(feedback.rejectedBy)
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "");
-  return rejectedBy.includes("thuy sang") ? "business" : "internal";
+  return (
+    FEEDBACK_SOURCE_NAMES.find((entry) =>
+      rejectedBy.includes(entry.match),
+    )?.source ?? "internal"
+  );
 }
 
 export function numberValue(value: unknown) {
@@ -140,9 +156,9 @@ export function cycleBucket(days: number) {
   return "Trên 5 ngày";
 }
 
+/** Task tồn luôn bắt đầu trước ngày mốc nên `days` tối thiểu là 1. */
 export function agingBucket(days: number) {
-  if (days === 0) return "Bắt đầu hôm nay";
-  if (days === 1) return "1 ngày";
+  if (days <= 1) return "1 ngày";
   if (days <= 3) return "2–3 ngày";
   if (days <= 7) return "4–7 ngày";
   return "Trên 7 ngày";
@@ -157,6 +173,42 @@ export function groupCount<T>(rows: T[], key: (row: T) => string): PieDatum[] {
   return Array.from(result.entries())
     .map(([label, value]) => ({ label, value }))
     .sort((a, b) => b.value - a.value);
+}
+
+/**
+ * Gom đuôi phân bố thành một nhóm "Khác".
+ *
+ * Bảng màu chỉ có 10 màu và lặp bằng modulo, nên phân bố nhiều hơn 10 nhóm sẽ
+ * có hai nhóm cùng màu. Gom đuôi vừa tránh trùng màu vừa bỏ các lát 1 task
+ * không đọc được.
+ */
+export function groupWithOther(
+  rows: PieDatum[],
+  maxGroups = 9,
+): PieDatum[] {
+  if (rows.length <= maxGroups + 1) return rows;
+  const head = rows.slice(0, maxGroups);
+  const tail = rows.slice(maxGroups);
+  return [
+    ...head,
+    {
+      label: `Khác · ${tail.length} nhóm`,
+      value: tail.reduce((sum, row) => sum + row.value, 0),
+    },
+  ];
+}
+
+/** Các nhãn đã bị gộp vào lát "Khác", để drill-down lấy đúng tập task. */
+export function otherGroupLabels(
+  rows: PieDatum[],
+  maxGroups = 9,
+): string[] {
+  if (rows.length <= maxGroups + 1) return [];
+  return rows.slice(maxGroups).map((row) => row.label);
+}
+
+export function isOtherGroupLabel(label: string) {
+  return label.startsWith("Khác · ");
 }
 
 export function collectionMonths(task: Task) {

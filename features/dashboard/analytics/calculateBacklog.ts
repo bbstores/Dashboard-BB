@@ -1,10 +1,19 @@
 import { EXCLUDED_BACKLOG_STATUSES } from "../model/constants";
 import { startOfDay } from "@/shared/date/dateUtils";
 import { normalizedKey } from "../model/taskUtils";
+import { isReworkStatus } from "../model/slaUtils";
 import type { Task } from "../model/types";
 
 const FINISHED_STATUSES = new Set(["done", "kinh doanh done"]);
 const EXCLUDED_BACKLOG_STAGES = new Set(["trainning", "training"]);
+
+/** BOD từ chối và task đang được sửa lại thì vẫn là việc đang mở. */
+function isOpenReworkTask(task: Task) {
+  return (
+    isReworkStatus(task.status) ||
+    normalizedKey(task.bodApproval) === "đang sửa"
+  );
+}
 
 function isEligibleAtCutoff(task: Task, cutoff: Date) {
   return Boolean(
@@ -36,7 +45,11 @@ function isBacklogAtCutoff(task: Task, cutoff: Date) {
   if (isBacklogAttentionTask(task, cutoff)) return false;
   const notInspectedAtCutoff =
     !task.inspectionDate || task.inspectionDate > cutoff;
-  return notInspectedAtCutoff || status === "in progress";
+  return (
+    notInspectedAtCutoff ||
+    status === "in progress" ||
+    isOpenReworkTask(task)
+  );
 }
 
 /**

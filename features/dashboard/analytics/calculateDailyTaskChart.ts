@@ -82,6 +82,15 @@ export function calculateDailyTaskChart(
         dateKey(task.inspectionDate) === key &&
         startOfDay(task.startDate) < startOfDay(task.inspectionDate),
     );
+    // Hai nhóm bàn giao ở trên bỏ qua task có Ngày Bắt Đầu sau Ngày Kiểm Duyệt,
+    // nên đếm riêng để tooltip không báo thiếu số task thực được kiểm duyệt.
+    const handedOutOfOrderTasks = tasks.filter(
+      (task) =>
+        task.startDate &&
+        task.inspectionDate &&
+        dateKey(task.inspectionDate) === key &&
+        startOfDay(task.startDate) > startOfDay(task.inspectionDate),
+    );
     const backlogTasks = tasks.filter((task) =>
       isEndOfDayBacklogTask(task, cutoff),
     );
@@ -91,10 +100,12 @@ export function calculateDailyTaskChart(
       assigned: assignedTasks.length,
       handedSameDay: handedSameDayTasks.length,
       handedBacklog: handedBacklogTasks.length,
+      handedOutOfOrder: handedOutOfOrderTasks.length,
       backlog: backlogTasks.length,
       assignedTasks,
       handedSameDayTasks,
       handedBacklogTasks,
+      handedOutOfOrderTasks,
       backlogTasks,
     });
   }

@@ -1110,11 +1110,18 @@ function CapacityTrend({
   const totalPoints = rows.map((row, index) =>
     point(row.totalMinutes, index),
   );
-  const rollingAveragePoints = rows.flatMap((row, index) =>
-    row.rollingAverageMinutes === null
-      ? []
-      : [point(row.rollingAverageMinutes, index)],
-  );
+  // Gom thành từng đoạn liên tục để đường không vẽ bắc ngang qua kỳ chưa hoàn tất.
+  const rollingAverageSegments = rows.reduce<
+    Array<Array<{ x: number; y: number }>>
+  >((segments, row, index) => {
+    if (row.rollingAverageMinutes === null) {
+      if (segments.at(-1)?.length) segments.push([]);
+      return segments;
+    }
+    if (!segments.length) segments.push([]);
+    segments.at(-1)!.push(point(row.rollingAverageMinutes, index));
+    return segments;
+  }, []);
   const yFor = (value: number) =>
     top + plotHeight - (value / max) * plotHeight;
 
@@ -1301,11 +1308,15 @@ function CapacityTrend({
             className="capacityTrendLine total"
             d={linePath(totalPoints)}
           />
-          {rollingAveragePoints.length > 1 && (
-            <path
-              className="capacityTrendLine rolling"
-              d={linePath(rollingAveragePoints)}
-            />
+          {rollingAverageSegments.map(
+            (segment, index) =>
+              segment.length > 1 && (
+                <path
+                  className="capacityTrendLine rolling"
+                  d={linePath(segment)}
+                  key={`rolling-${index}`}
+                />
+              ),
           )}
           {rows.map((row, index) => (
             <g key={row.key}>
@@ -1336,7 +1347,7 @@ function CapacityTrend({
                   r={5}
                 />
                 <text
-                  className="capacityPointValue shoot"
+                  className="capacityPointValue shoot onHover"
                   x={shootPoints[index].x}
                   y={shootPoints[index].y - 11}
                   textAnchor="middle"
@@ -1363,7 +1374,7 @@ function CapacityTrend({
                   r={5}
                 />
                 <text
-                  className="capacityPointValue output"
+                  className="capacityPointValue output onHover"
                   x={outputPoints[index].x}
                   y={outputPoints[index].y + 19}
                   textAnchor="middle"
@@ -1390,7 +1401,7 @@ function CapacityTrend({
                   r={5}
                 />
                 <text
-                  className="capacityPointValue total"
+                  className="capacityPointValue total onHover"
                   x={totalPoints[index].x}
                   y={totalPoints[index].y - 11}
                   textAnchor="middle"

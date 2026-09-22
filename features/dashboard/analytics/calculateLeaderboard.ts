@@ -1,4 +1,8 @@
-import { assigneeNames, normalizedKey } from "../model/taskUtils";
+import {
+  assigneeNames,
+  isPendingCancelTask,
+  normalizedKey,
+} from "../model/taskUtils";
 import type { Task } from "../model/types";
 import type { ClassifiedTask, LeaderboardRow } from "./types";
 
@@ -18,12 +22,7 @@ function emptyLeaderboardValues(): LeaderboardValues {
 }
 
 function isWaitingTask(task: Task) {
-  return [
-    "to do",
-    "todo",
-    "pending / cancel",
-    "pending/cancel",
-  ].includes(normalizedKey(task.status));
+  return ["to do", "todo"].includes(normalizedKey(task.status));
 }
 
 export function calculateLeaderboard(
@@ -33,6 +32,9 @@ export function calculateLeaderboard(
 
   for (const item of classified) {
     if (!item.started && !item.inspectionCarry) continue;
+    // Task đã hủy không phản ánh tải công việc, khớp với cách BST và Media
+    // capacity đang loại Pending / Cancel.
+    if (isPendingCancelTask(item.task)) continue;
     for (const name of assigneeNames(item.task.assignee)) {
       const current = rows.get(name) ?? emptyLeaderboardValues();
       current.value += item.task.expectedMinutes;

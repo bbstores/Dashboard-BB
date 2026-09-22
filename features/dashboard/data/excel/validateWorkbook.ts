@@ -19,6 +19,7 @@ export type DashboardWorksheets = {
   productSheet?: import("exceljs").Worksheet;
   shootSheet?: import("exceljs").Worksheet;
   shootSessionSheet?: import("exceljs").Worksheet;
+  holidaySheet?: import("exceljs").Worksheet;
 };
 
 export class WorkbookValidationError extends Error {
@@ -71,6 +72,7 @@ export function validateDashboardWorkbook(
   );
   const productSheet = workbook.getWorksheet(DASHBOARD_SHEETS.products);
   const shootSheet = workbook.getWorksheet(DASHBOARD_SHEETS.shoots);
+  const holidaySheet = workbook.getWorksheet(DASHBOARD_SHEETS.holidays);
 
   validateRequiredHeaders(taskSheet, TASK_REQUIRED_HEADERS);
   validateRequiredHeaders(feedbackSheet, FEEDBACK_REQUIRED_HEADERS);
@@ -100,5 +102,6 @@ export function validateDashboardWorkbook(
     productSheet,
     shootSheet,
     shootSessionSheet: shootSheet,
+    holidaySheet,
   };
 }

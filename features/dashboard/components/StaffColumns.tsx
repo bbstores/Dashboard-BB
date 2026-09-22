@@ -19,6 +19,7 @@ export function StaffColumns({
     completionCarryTasks?: Task[];
     feedback: number;
     feedbackInternal: number;
+    feedbackBod: number;
     feedbackBusiness: number;
   }>;
   onSelect?: (
@@ -29,17 +30,26 @@ export function StaffColumns({
       | "inspectionCarry"
       | "completionCarry"
       | "feedbackInternal"
+      | "feedbackBod"
       | "feedbackBusiness",
   ) => void;
   className?: string;
 }) {
-  const max = Math.max(
+  // Hai nhóm chỉ số có đơn vị khác nhau nên dùng hai thang riêng, nếu dùng
+  // chung thì cột trả về luôn bị nén thành vạch không đọc được.
+  const taskMax = Math.max(
     ...rows.flatMap((row) => [
       row.total,
       row.started,
       row.inspectionCarry,
       row.completionCarry,
+    ]),
+    1,
+  );
+  const feedbackMax = Math.max(
+    ...rows.flatMap((row) => [
       row.feedbackInternal,
+      row.feedbackBod,
       row.feedbackBusiness,
     ]),
     1,
@@ -56,30 +66,37 @@ export function StaffColumns({
           <span><i className="c2" />Bắt đầu trong kỳ</span>
           <span><i className="c3" />Carry-in bàn giao</span>
           <span><i className="c4" />Carry-in hoàn thành</span>
-          <span><i className="c5" />Nội Bộ Trả Về</span>
-          <span><i className="c6" />Team Kinh Doanh Trả Về</span>
+          <span><i className="c5" />Lead Trả Về</span>
+          <span><i className="c6" />BOD Không Duyệt</span>
+          <span><i className="c7" />Kinh Doanh Reject</span>
           <HelpButton help={dashboardHelp("Số task thực hiện & số lần trả về")} />
         </div>
       </div>
       <div className="columnScroller">
-        <div className="columnChart" style={{ minWidth: `${Math.max(780, rows.length * 124)}px` }}>
+        <div className="columnChart" style={{ minWidth: `${Math.max(820, rows.length * 142)}px` }}>
           {rows.map((row) => (
             <div className="columnGroup" key={row.name}>
               <div className="columns">
                 {([
-                  ["total", row.total, "Tổng task"],
-                  ["started", row.started, "Bắt đầu trong kỳ"],
-                  ["inspectionCarry", row.inspectionCarry, "Carry-in bàn giao"],
-                  ["completionCarry", row.completionCarry, "Carry-in hoàn thành"],
-                  ["feedbackInternal", row.feedbackInternal, "Nội Bộ Trả Về"],
-                  ["feedbackBusiness", row.feedbackBusiness, "Team Kinh Doanh Trả Về"],
-                ] as const).map(([metric, value, label], index) => (
+                  ["total", row.total, "Tổng task", "task"],
+                  ["started", row.started, "Bắt đầu trong kỳ", "task"],
+                  ["inspectionCarry", row.inspectionCarry, "Carry-in bàn giao", "task"],
+                  ["completionCarry", row.completionCarry, "Carry-in hoàn thành", "task"],
+                  ["feedbackInternal", row.feedbackInternal, "Lead Trả Về", "feedback"],
+                  ["feedbackBod", row.feedbackBod, "BOD Không Duyệt", "feedback"],
+                  ["feedbackBusiness", row.feedbackBusiness, "Kinh Doanh Reject", "feedback"],
+                ] as const).map(([metric, value, label, scale], index) => (
                   <button
                     type="button"
                     key={metric}
                     className={`column c${index + 1}`}
-                    style={{ height: `${Math.max(value ? 8 : 0, (value / max) * 220)}px` }}
-                    title={`${label}: ${value}`}
+                    style={{
+                      height: `${Math.max(
+                        value ? 8 : 0,
+                        (value / (scale === "task" ? taskMax : feedbackMax)) * 220,
+                      )}px`,
+                    }}
+                    title={`${label}: ${value}${scale === "feedback" ? ` · thang riêng, cao nhất ${feedbackMax}` : ""}`}
                     aria-label={`${label} của ${row.name}: ${value}`}
                     onClick={() => onSelect?.(row.name, metric)}
                   >

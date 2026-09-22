@@ -31,6 +31,8 @@ export function HorizontalBars({
   help?: DashboardHelp;
 }) {
   const max = Math.max(...rows.map((row) => row.value), 1);
+  const VISIBLE_ROWS = 15;
+  const hidden = rows.slice(VISIBLE_ROWS);
   return (
     <article className={`chartCard ${className}`}>
       <div className="chartTitle">
@@ -56,7 +58,7 @@ export function HorizontalBars({
         </div>
       )}
       <div className="horizontalBars">
-        {rows.slice(0, 15).map((row, index) => (
+        {rows.slice(0, VISIBLE_ROWS).map((row, index) => (
           <button
             type="button"
             className={`horizontalRow ${onSelect ? "interactive" : ""}`}
@@ -148,6 +150,12 @@ export function HorizontalBars({
             )}
           </button>
         ))}
+        {hidden.length > 0 && (
+          <p className="barsOverflow">
+            … và {hidden.length} nhóm khác ·{" "}
+            {format(hidden.reduce((sum, row) => sum + row.value, 0))}
+          </p>
+        )}
         {!rows.length && <p className="emptyText">Chưa có dữ liệu phù hợp.</p>}
       </div>
     </article>

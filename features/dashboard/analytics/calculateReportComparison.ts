@@ -3,7 +3,7 @@ import {
   inputDate,
   startOfDay,
 } from "@/shared/date/dateUtils";
-import { VIETNAM_HOLIDAYS_2026 } from "@/shared/date/constants";
+import { isHolidayKey } from "@/shared/date/constants";
 import type {
   DashboardData,
   DateWindow,
@@ -107,7 +107,7 @@ function workingDays(from: Date, to: Date) {
   ) {
     if (
       cursor.getDay() !== 0 &&
-      !VIETNAM_HOLIDAYS_2026.has(dateKey(cursor))
+      !isHolidayKey(dateKey(cursor))
     ) {
       total += 1;
     }
@@ -288,9 +288,11 @@ function mediaPoint(
       ? (overallOnTime / stats.overallEligible.length) * 100
       : 0,
     overdue: stats.sla.overdueHandoffs.length,
-    handoffLateP50: stats.sla.handoffLateP50,
-    checkingP50: stats.sla.checkingToDoneP50,
-    checkingP90: stats.sla.checkingToDoneP90,
+    // Bảng so sánh vẽ thanh và delta nên cần số; kỳ không có mẫu quy về 0.
+    // Card SLA trực tiếp vẫn hiện "—" để không nhầm với thành tích 0 phút.
+    handoffLateP50: stats.sla.handoffLateP50 ?? 0,
+    checkingP50: stats.sla.checkingToDoneP50 ?? 0,
+    checkingP90: stats.sla.checkingToDoneP90 ?? 0,
     video,
     graphic,
     cost: stats.costs.selectedAmount,

@@ -45,7 +45,7 @@ const { cleanup, fireEvent, render, screen } = await import(
 
 afterEach(cleanup);
 
-test("StaffColumns separates internal and business returns", () => {
+test("StaffColumns separates lead, BOD and business returns", () => {
   const selections: string[] = [];
 
   render(
@@ -57,8 +57,9 @@ test("StaffColumns separates internal and business returns", () => {
           started: 8,
           inspectionCarry: 2,
           completionCarry: 1,
-          feedback: 5,
+          feedback: 6,
           feedbackInternal: 3,
+          feedbackBod: 1,
           feedbackBusiness: 2,
         },
       ]}
@@ -66,14 +67,54 @@ test("StaffColumns separates internal and business returns", () => {
     />,
   );
 
-  assert.ok(screen.getByText("Nội Bộ Trả Về"));
-  assert.ok(screen.getByText("Team Kinh Doanh Trả Về"));
+  assert.ok(screen.getByText("Lead Trả Về"));
+  assert.ok(screen.getByText("BOD Không Duyệt"));
+  assert.ok(screen.getByText("Kinh Doanh Reject"));
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Team Kinh Doanh Trả Về của Nhân sự A: 2",
+      name: "BOD Không Duyệt của Nhân sự A: 1",
     }),
   );
-  assert.deepEqual(selections, ["Nhân sự A:feedbackBusiness"]);
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Kinh Doanh Reject của Nhân sự A: 2",
+    }),
+  );
+  assert.deepEqual(selections, [
+    "Nhân sự A:feedbackBod",
+    "Nhân sự A:feedbackBusiness",
+  ]);
+});
+
+test("StaffColumns scales return columns independently of task columns", () => {
+  render(
+    <StaffColumns
+      rows={[
+        {
+          name: "Nhân sự A",
+          total: 120,
+          started: 100,
+          inspectionCarry: 15,
+          completionCarry: 5,
+          feedback: 3,
+          feedbackInternal: 2,
+          feedbackBod: 1,
+          feedbackBusiness: 0,
+        },
+      ]}
+    />,
+  );
+
+  // Với thang chung, cột trả về = 2 trên nền 120 chỉ cao ~4px và bị kẹp về 8px.
+  // Thang riêng đưa nó lên đúng tỷ lệ so với mức trả về cao nhất (2).
+  const leadColumn = screen.getByRole("button", {
+    name: "Lead Trả Về của Nhân sự A: 2",
+  });
+  assert.equal(leadColumn.style.height, "220px");
+  const totalColumn = screen.getByRole("button", {
+    name: "Tổng task của Nhân sự A: 120",
+  });
+  assert.equal(totalColumn.style.height, "220px");
 });
 
 function task(): Task {
@@ -941,10 +982,12 @@ test("monthly daily chart keeps all 31 date labels readable", () => {
     assigned: index,
     handedSameDay: 0,
     handedBacklog: 0,
+    handedOutOfOrder: 0,
     backlog: index,
     assignedTasks: [],
     handedSameDayTasks: [],
     handedBacklogTasks: [],
+    handedOutOfOrderTasks: [],
     backlogTasks: [],
   }));
 

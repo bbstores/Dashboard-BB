@@ -7,6 +7,7 @@ import {
   endOfDay,
   nextWorkingDay,
   businessMinutesBetween,
+  isWorkingDay,
 } from "@/shared/date/dateUtils";
 import { normalizedKey } from "./taskUtils";
 
@@ -16,34 +17,41 @@ function isSpecialMediaTask(task: Task) {
   return SPECIAL_MEDIA_STAGES.has(normalizedKey(task.stage));
 }
 
-function moveSundayToMonday(value: Date) {
+/** Hạn rơi vào Chủ nhật hoặc ngày nghỉ thì dời sang ngày làm việc kế tiếp, giữ nguyên giờ. */
+function moveToWorkingDay(value: Date) {
   const date = new Date(value);
-  if (date.getDay() === 0) date.setDate(date.getDate() + 1);
+  while (!isWorkingDay(date)) date.setDate(date.getDate() + 1);
   return date;
+}
+
+/**
+ * Mốc phúc lợi của Quay/Chụp: hạn tính từ ngày bắt đầu, chốt 14:00.
+ * Bàn giao D+2 14:00, hoàn thành D+3 14:00 — hai mốc tính độc lập nhau nên
+ * phép dời ngày nghỉ của mốc bàn giao không được cộng dồn sang mốc hoàn thành.
+ */
+const MEDIA_DEADLINE_HOUR = 14;
+
+function mediaDueDate(startDate: Date, dayOffset: number) {
+  const dueDate = startOfDay(startDate);
+  dueDate.setDate(dueDate.getDate() + dayOffset);
+  dueDate.setHours(MEDIA_DEADLINE_HOUR, 0, 0, 0);
+  return moveToWorkingDay(dueDate);
 }
 
 /** Hạn bàn giao áp dụng từ KPI_START_DATE. */
 export function handoffDueDate(task: Task) {
   if (!task.startDate) return null;
   if (!isSpecialMediaTask(task)) return endOfDay(task.startDate);
-
-  const dueDate = startOfDay(task.startDate);
-  dueDate.setDate(dueDate.getDate() + 2);
-  dueDate.setHours(13, 0, 0, 0);
-  return moveSundayToMonday(dueDate);
+  return mediaDueDate(task.startDate, 2);
 }
 
-/** Hạn hoàn thành: công đoạn thường giữ quy định cũ; Quay/Chụp thêm 1 ngày sau hạn bàn giao. */
+/** Hạn hoàn thành: công đoạn thường là cuối ngày làm việc kế tiếp; Quay/Chụp là D+3 14:00. */
 export function completionDueDate(task: Task) {
   if (!task.startDate) return null;
   if (!isSpecialMediaTask(task)) {
     return endOfDay(nextWorkingDay(task.startDate));
   }
-
-  const handoffDue = handoffDueDate(task)!;
-  const dueDate = new Date(handoffDue);
-  dueDate.setDate(dueDate.getDate() + 1);
-  return moveSundayToMonday(dueDate);
+  return mediaDueDate(task.startDate, 3);
 }
 
 export function evaluateHandoff(task: Task, asOf: Date): MilestoneEvaluation {
@@ -74,6 +82,13 @@ export function evaluateHandoff(task: Task, asOf: Date): MilestoneEvaluation {
     : { label: "🟢 Đang trong hạn bàn giao", code: "ongoing" };
 }
 
+/** Trạng thái thuộc vòng lặp làm lại sau khi bị reject. */
+export function isReworkStatus(status: string) {
+  return ["reject", "thực hiện lại", "thuc hien lai"].includes(
+    normalizedKey(status),
+  );
+}
+
 export function evaluateOverall(task: Task, asOf: Date): MilestoneEvaluation {
   if (!task.startDate) {
     return { label: "⚪ Thiếu ngày bắt đầu", code: "invalid" };
@@ -102,11 +117,11 @@ export function evaluateOverall(task: Task, asOf: Date): MilestoneEvaluation {
       ? { label: "✅ Hoàn thành đúng hạn", code: "onTime" }
       : { label: "🔥 Hoàn thành trễ hạn", code: "late" };
   }
+  if (isReworkStatus(status)) {
+    return { label: "🔄 Đang làm lại sau reject", code: "ongoing" };
+  }
   if (asOf > dueDate) {
     return { label: "❌ Quá hạn hoàn thành", code: "overdue" };
-  }
-  if (status === "reviewing") {
-    return { label: "🟠 Đang reviewing", code: "ongoing" };
   }
   if (status === "checking") {
     return { label: "🟡 Đang kiểm duyệt", code: "ongoing" };

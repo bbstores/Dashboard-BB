@@ -20,7 +20,7 @@ import {
   businessMinutesBetween,
   calendarDaysBetween,
   operationalMinute,
-  percentile,
+  percentileOf,
 } from "@/shared/date/dateUtils";
 import { isBacklogTask } from "./calculateBacklog";
 import { calculateNormMetrics } from "./calculateNormMetrics";
@@ -97,6 +97,9 @@ export function calculateSla(
       (row): row is { task: Task; days: number } =>
         row.days !== null && row.days >= 0,
     );
+  const checkingToDoneEligible = completedCohort.filter(
+    (task) => task.inspectionDate,
+  ).length;
   const checkingToDoneRows = completedCohort
     .map((task) => ({
       task,
@@ -138,7 +141,7 @@ export function calculateSla(
     handoffOnTimeRate: handedForKpi.length
       ? (onTimeHandoffs.length / handedForKpi.length) * 100
       : 0,
-    handoffLateP50: percentile(
+    handoffLateP50: percentileOf(
       lateHandoffs.map((row) => row.minutes),
       0.5,
     ),
@@ -151,11 +154,11 @@ export function calculateSla(
     cycleDistribution: groupCount(cycleRows, (row) =>
       cycleBucket(row.days),
     ),
-    cycleP50: percentile(
+    cycleP50: percentileOf(
       cycleRows.map((row) => row.days),
       0.5,
     ),
-    cycleP90: percentile(
+    cycleP90: percentileOf(
       cycleRows.map((row) => row.days),
       0.9,
     ),
@@ -164,15 +167,16 @@ export function calculateSla(
       agingBucket(row.days),
     ),
     checkingToDoneRows,
+    checkingToDoneEligible,
     staffTimeOfDayRows: calculateStaffTimeOfDayRows(
       data.tasks,
       dateWindow,
     ),
-    checkingToDoneP50: percentile(
+    checkingToDoneP50: percentileOf(
       checkingToDoneRows.map((row) => row.minutes),
       0.5,
     ),
-    checkingToDoneP90: percentile(
+    checkingToDoneP90: percentileOf(
       checkingToDoneRows.map((row) => row.minutes),
       0.9,
     ),

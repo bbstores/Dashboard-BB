@@ -247,30 +247,25 @@
   width: 8px;
 }
 .staffTimeLegend i.inspection,
-.staffTimeValues i.inspection,
-.staffTimeMarker.inspection {
+.staffTimeValues i.inspection {
   background: #8fbf45;
 }
 .staffTimeLegend i.completion,
-.staffTimeValues i.completion,
-.staffTimeMarker.completion {
+.staffTimeValues i.completion {
   background: #d46b5f;
 }
-.staffTimeScale {
+/* Trục giờ dùng chung, nhãn đặt theo đúng vị trí thời gian. */
+.staffTimeAxis {
   color: var(--muted);
-  display: grid;
   font-size: 8px;
-  grid-template-columns: auto 1fr auto;
-  margin: 26px 295px 5px 170px;
+  height: 14px;
+  margin: 24px 280px 6px 170px;
+  position: relative;
 }
-.staffTimeScale span {
-  text-align: center;
-}
-.staffTimeScale span:first-child {
-  text-align: left;
-}
-.staffTimeScale span:last-child {
-  text-align: right;
+.staffTimeAxis span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 .staffTimeRows {
   display: grid;
@@ -293,91 +288,107 @@
   white-space: nowrap;
 }
 .staffTimeTrack {
-  background: #d9ddd4;
-  height: 2px;
+  background: none;
+  border: 0;
+  height: 34px;
+  padding: 0;
   position: relative;
+  width: 100%;
 }
-.staffTimeActiveRange {
-  background: #174f3d;
-  border-radius: 999px;
-  height: 4px;
-  opacity: 0;
+.staffTimeTrack::after {
+  background: #d9ddd4;
+  content: "";
+  height: 2px;
+  left: 0;
   position: absolute;
-  top: -1px;
-  transition:
-    width .48s cubic-bezier(.2, .8, .2, 1),
-    opacity .18s ease;
-  z-index: 1;
-}
-.staffTimeActiveRange.active {
-  opacity: 1;
+  right: 0;
+  top: 50%;
 }
 .staffTimeGrid {
   background: rgba(23, 79, 61, .1);
-  height: 26px;
+  height: 34px;
   position: absolute;
-  top: -12px;
+  top: 0;
   width: 1px;
 }
-.staffTimeMarker {
-  border: 3px solid #fbfaf5;
-  border-radius: 50%;
-  cursor: pointer;
+.staffTimeWhisker {
+  background: #9aa79f;
+  height: 2px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+.staffTimeWhisker::before,
+.staffTimeWhisker::after {
+  background: #9aa79f;
+  content: "";
+  height: 10px;
+  position: absolute;
+  top: -4px;
+  width: 1px;
+}
+.staffTimeWhisker::before { left: 0; }
+.staffTimeWhisker::after { right: 0; }
+.staffTimeBox {
+  border-radius: 3px;
   height: 16px;
-  padding: 0;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+.staffTimeBox.inspection { background: rgba(23, 79, 61, .32); }
+.staffTimeBox.completion { background: rgba(143, 191, 69, .48); }
+.staffTimeMedian {
+  background: var(--green);
+  height: 20px;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 16px;
-  z-index: 1;
+  width: 2px;
+  z-index: 4;
 }
-.staffTimeMarker:first-of-type b,
-.staffTimeMarker:first-of-type > small {
-  left: 0;
-  transform: none;
-}
-.staffTimeMarker:last-of-type b,
-.staffTimeMarker:last-of-type > small {
-  left: auto;
-  right: 0;
-  transform: none;
-}
-.staffTimeMarker b {
-  background: transparent;
-  bottom: 18px;
-  color: var(--green);
-  display: block;
-  font-size: 8px;
-  left: 50%;
+.staffTimeP90 {
+  background: var(--orange);
+  height: 12px;
   position: absolute;
-  transform: translateX(-50%);
-  white-space: nowrap;
-}
-.staffTimeMarker > small {
-  color: var(--muted);
-  font-size: 7px;
-  font-weight: 850;
-  left: 50%;
-  position: absolute;
-  top: 17px;
-  transform: translateX(-50%);
-  white-space: nowrap;
-}
-.staffTimeMarker.median {
-  height: 20px;
-  outline: 3px solid rgba(143, 191, 69, .2);
-  width: 20px;
-}
-.staffTimeMarker.median b,
-.staffTimeMarker.median > small {
-  color: #174f3d;
-  font-weight: 900;
-}
-.staffTimeMarker.active {
-  box-shadow: 0 0 0 5px rgba(217, 255, 114, .42);
-  transform: translate(-50%, -50%) scale(1.18);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
   z-index: 3;
 }
+.staffTimeMedianLabel {
+  color: var(--green);
+  font-size: 8px;
+  font-weight: 800;
+  position: absolute;
+  top: -2px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  z-index: 5;
+}
+.staffTimeTip {
+  background: rgba(30, 42, 38, .96);
+  border-radius: 8px;
+  bottom: 30px;
+  color: #fff;
+  display: flex;
+  gap: 10px;
+  left: 50%;
+  padding: 7px 10px;
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 20;
+}
+.staffTimeTip span {
+  display: grid;
+  gap: 1px;
+  text-align: center;
+}
+.staffTimeTip small { color: rgba(255,255,255,.62); font-size: 7px; }
+.staffTimeTip b { font-size: 9px; }
+
 .staffTimeValues {
   gap: 6px;
   justify-content: flex-end;
@@ -414,7 +425,7 @@
   font-size: 8px;
 }
 @media (max-width: 900px) {
-  .staffTimeScale {
+  .staffTimeAxis {
     display: none;
   }
 
