@@ -177,7 +177,7 @@ test("narrows only the numerator when filtering by collection month", () => {
   );
 });
 
-test("excludes cancelled and no-social work, and flags unusable rows", () => {
+test("separates Digital's own sourcing from what Media delivered", () => {
   const tasks = [
     task({ code: "TSK-OK" }),
     task({ code: "TSK-CANCEL", status: "Pending / Cancel" }),
@@ -187,24 +187,20 @@ test("excludes cancelled and no-social work, and flags unusable rows", () => {
     post({ id: "P1", posted: true, bookTaskCode: "TSK-OK" }),
     post({ id: "P2", posted: true, bookTaskCode: "TSK-CANCEL" }),
     post({ id: "P3", posted: true, bookTaskCode: "TSK-NOSOCIAL" }),
-    post({ id: "P4", posted: true, postCategory: "" }),
-    post({ id: "P5", posted: true, bookTaskCode: "" }),
+    // Book Task trống = Digital reup hoặc tự có source, không phải Media giao.
+    post({ id: "P4", posted: true, bookTaskCode: "", postCategory: "" }),
   ];
   const result = calculateCollectionPosting(tasks, posts, WINDOW, "video");
 
   assert.deepEqual(
-    result.produced.map((item) => item.id).sort(),
-    ["P1", "P5"],
-    "chỉ còn ấn phẩm BST hợp lệ",
+    result.produced.map((item) => item.id),
+    ["P1"],
+    "chỉ còn ấn phẩm BST hợp lệ do Media giao",
   );
   assert.deepEqual(
     result.uncategorized.map((item) => item.id),
     ["P4"],
-  );
-  assert.deepEqual(
-    result.unlinked.map((item) => item.id),
-    ["P5"],
-    "ấn phẩm BST không có Book Task thì không lọc được theo tháng",
+    "bài Book Task trống là nguồn của Digital, không phải dữ liệu thiếu",
   );
 });
 

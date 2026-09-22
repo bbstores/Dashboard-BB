@@ -78,7 +78,10 @@ export type CollectionPostingFulfillment = {
   notYetDue: PublicationPost[];
   /** Mốc dùng để chia quá hạn và chưa tới lịch. */
   asOf: Date;
-  /** Dòng đăng bài trong phạm vi nhưng chưa điền Loại Post. */
+  /**
+   * Dòng đăng bài có Book Task trống: Digital reup hoặc tự có source.
+   * Đây không phải dữ liệu thiếu — nó là nội dung không do Media giao.
+   */
   uncategorized: PublicationPost[];
   /** Ấn phẩm BST không nối được về task nên không lọc được theo tháng. */
   unlinked: PublicationPost[];
@@ -203,7 +206,7 @@ export function calculateCollectionPosting(
         ).length
       : 0,
     uncategorized: posts.filter(
-      (post) => inScope(post, scope) && !normalize(post.postCategory),
+      (post) => inScope(post, scope) && !normalize(post.bookTaskCode),
     ),
     unlinked: posts.filter(
       (post) =>

@@ -1336,14 +1336,15 @@ function CollectionPostingPanel({
               className="postingCollectionWarning"
               onClick={() =>
                 openPosts(
-                  "Bài đăng chưa điền Loại Post",
-                  "Không quy được về Bộ Sưu Tập nên không nằm trong tử số lẫn mẫu số của tỷ lệ đăng",
+                  "Bài đăng do Digital tự có nguồn",
+                  "Cột Book Task trống nên không đến từ ấn phẩm Media giao — reup hoặc Digital tự có source",
                   performance.uncategorized,
                 )
               }
             >
-              {formatNumber(performance.uncategorized.length)} bài {scopeNoun}{" "}
-              chưa điền Loại Post nên chưa tính được là BST hay không.
+              {formatNumber(performance.uncategorized.length)} bài {scopeNoun} do
+              Digital tự có nguồn (Book Task trống) — tính vào sản lượng kênh
+              nhưng không phải ấn phẩm Media giao.
             </button>
           )}
           {performance.unlinked.length > 0 && (
