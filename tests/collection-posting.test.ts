@@ -6,8 +6,8 @@ import type {
   Task,
 } from "../features/dashboard/model/types";
 
-const WINDOW = { from: null, to: null, hasFilter: false };
 const AS_OF = new Date(2026, 8, 22);
+const ALL_DATES = { from: null, to: null, hasFilter: false };
 
 function post(overrides: Partial<PublicationPost> = {}): PublicationPost {
   return {
@@ -67,7 +67,7 @@ test("counts one asset per task even when it posts to several platforms", () => 
   const result = calculateCollectionPosting(
     tasks,
     posts,
-    WINDOW,
+    ALL_DATES,
     "video",
     "",
     AS_OF,
@@ -76,15 +76,11 @@ test("counts one asset per task even when it posts to several platforms", () => 
   assert.equal(result.produced.length, 1, "một task là một ấn phẩm");
   assert.equal(result.posted.length, 1, "đăng được một kênh là đã đăng");
 
-  // Nhưng nghĩa vụ theo kênh vẫn là hai: kênh chưa đăng vẫn còn nợ.
-  const facebook = result.rows.find(
-    (row) => row.platform === "Facebook BBStore",
+  assert.equal(
+    result.pending.length,
+    0,
+    "đăng được một kênh là hết nợ ở mức ấn phẩm",
   );
-  const tiktok = result.rows.find((row) => row.platform === "Tiktok BB Store");
-  assert.equal(facebook?.owed.length, 1);
-  assert.equal(facebook?.posted.length, 1);
-  assert.equal(tiktok?.owed.length, 1);
-  assert.equal(tiktok?.posted.length, 0);
 });
 
 test("sees assets Media finished but Digital never scheduled", () => {
@@ -105,7 +101,7 @@ test("sees assets Media finished but Digital never scheduled", () => {
   const result = calculateCollectionPosting(
     tasks,
     posts,
-    WINDOW,
+    ALL_DATES,
     "video",
     "",
     AS_OF,
@@ -146,7 +142,7 @@ test("marks a scheduled asset overdue only after its posting date", () => {
   const result = calculateCollectionPosting(
     tasks,
     posts,
-    WINDOW,
+    ALL_DATES,
     "video",
     "",
     AS_OF,
@@ -180,7 +176,7 @@ test("scope changes the content mix, never the delivery funnel", () => {
   const wide = calculateCollectionPosting(
     tasks,
     posts,
-    WINDOW,
+    ALL_DATES,
     "video",
     "",
     AS_OF,
@@ -188,7 +184,7 @@ test("scope changes the content mix, never the delivery funnel", () => {
   const reelsOnly = calculateCollectionPosting(
     tasks,
     posts,
-    WINDOW,
+    ALL_DATES,
     "reels",
     "",
     AS_OF,
@@ -220,7 +216,7 @@ test("separates Digital's own sourcing from what Media delivered", () => {
   const result = calculateCollectionPosting(
     tasks,
     posts,
-    WINDOW,
+    ALL_DATES,
     "video",
     "",
     AS_OF,
@@ -242,13 +238,11 @@ test("offers every collection month and flags operational gaps", () => {
     asset({ code: "T6", collection: "BST 06.2026" }),
     asset({ code: "T9", collection: "BST 09.2026" }),
     asset({ code: "T11", collection: "BST 11.2026" }),
-    asset({ code: "T-NOPLAT", platform: "" }),
-    asset({ code: "T-NODATE", plannedPublishDate: null }),
   ];
   const result = calculateCollectionPosting(
     tasks,
     [],
-    WINDOW,
+    ALL_DATES,
     "video",
     "",
     AS_OF,
@@ -256,35 +250,68 @@ test("offers every collection month and flags operational gaps", () => {
 
   // Danh sách tháng lấy từ Tasklist nên thấy cả BST chưa có bài nào.
   assert.deepEqual(result.months, ["11.2026", "09.2026", "06.2026"]);
-  assert.deepEqual(
-    result.missingPlatform.map((item) => item.task.code),
-    ["T-NOPLAT"],
-  );
-  assert.equal(result.missingPlannedDate, 1);
 });
 
-test("windows assets by their planned publish date", () => {
+test("ignores the global date filter and follows only the collection filter", () => {
   const tasks = [
-    asset({ code: "T-IN", plannedPublishDate: new Date(2026, 8, 10) }),
-    asset({ code: "T-OUT", plannedPublishDate: new Date(2026, 6, 10) }),
+    asset({
+      code: "T-SEP",
+      collection: "BST 09.2026",
+      plannedPublishDate: new Date(2026, 8, 10),
+    }),
+    asset({
+      code: "T-JUL",
+      collection: "BST 07.2026",
+      plannedPublishDate: new Date(2026, 6, 10),
+    }),
+    asset({
+      code: "T-NODATE",
+      collection: "BST 09.2026",
+      plannedPublishDate: null,
+    }),
   ];
-  const september = {
-    from: new Date(2026, 8, 1),
-    to: new Date(2026, 8, 30),
-    hasFilter: true,
-  };
-  const result = calculateCollectionPosting(
+
+  const all = calculateCollectionPosting(
     tasks,
     [],
-    september,
+    ALL_DATES,
     "video",
     "",
     AS_OF,
   );
+  assert.equal(
+    all.produced.length,
+    3,
+    "ấn phẩm thiếu Ngày Đăng Dự Kiến vẫn được tính",
+  );
 
+  const september = calculateCollectionPosting(
+    tasks,
+    [],
+    ALL_DATES,
+    "video",
+    "09.2026",
+    AS_OF,
+  );
   assert.deepEqual(
-    result.produced.map((item) => item.task.code),
-    ["T-IN"],
+    september.produced.map((item) => item.task.code).sort(),
+    ["T-NODATE", "T-SEP"],
+  );
+
+  // Bộ lọc ngày chỉ chạm vào chỉ số cơ cấu, không đụng phễu giao nhận.
+  const narrowWindow = calculateCollectionPosting(
+    tasks,
+    [],
+    { from: new Date(2026, 0, 1), to: new Date(2026, 0, 2), hasFilter: true },
+    "video",
+    "",
+    AS_OF,
+  );
+  assert.equal(narrowWindow.produced.length, 3, "phễu không bị cắt theo ngày");
+  assert.equal(
+    narrowWindow.buckets.postedVideos.length,
+    0,
+    "cơ cấu thì bị cắt theo ngày",
   );
 });
 
@@ -304,7 +331,7 @@ test("treats a task as scheduled even when the row has no post type", () => {
   const result = calculateCollectionPosting(
     tasks,
     posts,
-    WINDOW,
+    ALL_DATES,
     "video",
     "",
     AS_OF,
@@ -334,7 +361,7 @@ test("groups every unposted asset into one actionable pending list", () => {
   const result = calculateCollectionPosting(
     tasks,
     posts,
-    WINDOW,
+    ALL_DATES,
     "video",
     "",
     AS_OF,

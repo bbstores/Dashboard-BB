@@ -16,7 +16,6 @@ import {
   calculateCollectionPosting,
   isReelPost,
   type CollectionPostingFulfillment,
-  type CollectionPostingRow,
   type CollectionAsset,
   type CollectionPostingScope,
   type PostingBuckets,
@@ -975,28 +974,25 @@ function rate(part: number, whole: number) {
 function ScopeChips({
   month,
   unit,
-  collectionScope,
 }: {
   month: string;
+  /** Quyết định luôn bộ lọc: chỉ số theo task chạy theo BST, theo bài chạy theo ngày. */
   unit: "task" | "post";
-  collectionScope: "none" | "numerator" | "full";
 }) {
-  const collectionLabel =
-    collectionScope === "none"
-      ? "Không theo bộ lọc BST"
-      : !month
-        ? "Tất cả BST"
-        : collectionScope === "numerator"
-          ? `BST ${month} · chỉ tử số`
-          : `BST ${month}`;
   return (
     <span className="postingScopeChips">
       <i className="unit">
         {unit === "task" ? "Đếm theo ấn phẩm (task)" : "Đếm theo bài đăng"}
       </i>
-      <i>Theo khoảng ngày đang lọc</i>
-      <i className={collectionScope === "none" ? "muted" : ""}>
-        {collectionLabel}
+      {unit === "task" ? (
+        <i>{month ? `BST ${month}` : "Tất cả BST"}</i>
+      ) : (
+        <i>Theo khoảng ngày đang lọc</i>
+      )}
+      <i className="muted">
+        {unit === "task"
+          ? "Không theo bộ lọc ngày"
+          : "Không theo bộ lọc BST"}
       </i>
     </span>
   );
@@ -1024,7 +1020,6 @@ function CollectionPostingPanel({
   onScopeChange,
   collectionMonth,
   onCollectionMonthChange,
-  dateWindow,
   onOpenDetail,
 }: {
   performance: CollectionPostingFulfillment;
@@ -1032,7 +1027,6 @@ function CollectionPostingPanel({
   onScopeChange: (scope: CollectionPostingScope) => void;
   collectionMonth: string;
   onCollectionMonthChange: (month: string) => void;
-  dateWindow: DateWindow;
   onOpenDetail: (detail: DetailView) => void;
 }) {
   const [reelBase, setReelBase] = useState<ShareBase>("postedVideo");
@@ -1082,11 +1076,10 @@ function CollectionPostingPanel({
           <span className="chartKicker">MEDIA TRẢ RA → DIGITAL ĐĂNG</span>
           <h3>Ấn phẩm Bộ Sưu Tập đã được đăng tới đâu</h3>
           <p className="postingChartNote">
-            {dateWindow.hasFilter
-              ? `Chỉ tính ấn phẩm có Ngày Đăng Dự Kiến từ ${formatDate(dateWindow.from)} đến ${formatDate(dateWindow.to)}.`
-              : "Không lọc ngày — tính toàn bộ ấn phẩm trong workbook."}{" "}
-            Một ấn phẩm là một task; task đăng nhiều nền tảng vẫn tính là một.
-            Mỗi card ghi rõ đơn vị và phạm vi ở dòng cuối.
+            Hai card trái đo cơ cấu sản lượng, đếm theo bài đăng và chạy theo
+            bộ lọc ngày ở trên. Card phải đo phần Media giao cho Digital, đếm
+            theo ấn phẩm (task) và chạy theo bộ lọc Bộ Sưu Tập. Một task đăng
+            ba nền tảng sinh ba dòng đăng bài nhưng vẫn là một ấn phẩm.
           </p>
         </div>
         <div className="postingCollectionTools">
@@ -1182,13 +1175,53 @@ function CollectionPostingPanel({
             />
             Mẫu số là tổng Reels (thành tỷ lệ đã đăng)
           </label>
-          <ScopeChips
-            month={collectionMonth}
-            unit="post"
-            collectionScope="none"
-          />
+          <ScopeChips month={collectionMonth} unit="post" />
         </div>
 
+        <div className="postingCollectionMetric">
+          <button
+            type="button"
+            onClick={() =>
+              openPosts(
+                "Bài đăng BST đã lên sóng",
+                `Trên ${formatNumber(collectionDenominator.length)} bài ${BASE_LABEL[collectionBase]} · ${scopeNoun} · toàn bộ BST trong kỳ`,
+                collectionNumerator,
+              )
+            }
+          >
+            <small>BST chiếm bao nhiêu sản lượng</small>
+            <strong>
+              {formatRate(
+                rate(
+                  collectionNumerator.length,
+                  collectionDenominator.length,
+                ),
+              )}
+            </strong>
+            <em>
+              {formatNumber(collectionNumerator.length)} /{" "}
+              {formatNumber(collectionDenominator.length)} bài
+            </em>
+          </button>
+          <p className="postingCollectionFormula">
+            {collectionBase === "postedVideo"
+              ? "Bài đăng BST ÷ tổng video đã đăng — gồm cả nội dung Digital tự có nguồn"
+              : "Bài đăng BST dạng Reels ÷ tổng Reels — cả tử và mẫu đều thu về Reels nên là con số của riêng nhóm Facebook"}
+          </p>
+          <label className="checkboxLabel">
+            <input
+              type="checkbox"
+              checked={collectionBase === "allReels"}
+              onChange={(event) =>
+                setCollectionBase(
+                  event.target.checked ? "allReels" : "postedVideo",
+                )
+              }
+            />
+            Mẫu số là tổng Reels
+          </label>
+          <ScopeChips month={collectionMonth} unit="post" />
+        </div>
         <div className="postingCollectionMetric">
           <button
             type="button"
@@ -1257,268 +1290,38 @@ function CollectionPostingPanel({
               <span>chưa lên lịch</span>
             </button>
           </div>
-          <ScopeChips
-            month={collectionMonth}
-            unit="task"
-            collectionScope="full"
-          />
+          <ScopeChips month={collectionMonth} unit="task" />
         </div>
 
-        <div className="postingCollectionMetric">
-          <button
-            type="button"
-            onClick={() =>
-              openPosts(
-                "Bài đăng BST đã lên sóng",
-                `Trên ${formatNumber(collectionDenominator.length)} bài ${BASE_LABEL[collectionBase]} · ${scopeNoun}${monthNote}`,
-                collectionNumerator,
-              )
-            }
-          >
-            <small>BST chiếm bao nhiêu sản lượng</small>
-            <strong>
-              {formatRate(
-                rate(
-                  collectionNumerator.length,
-                  collectionDenominator.length,
-                ),
-              )}
-            </strong>
-            <em>
-              {formatNumber(collectionNumerator.length)} /{" "}
-              {formatNumber(collectionDenominator.length)} bài
-            </em>
-          </button>
-          <p className="postingCollectionFormula">
-            {collectionBase === "postedVideo"
-              ? "Bài đăng BST ÷ tổng video đã đăng — gồm cả nội dung Digital tự có nguồn"
-              : "Bài đăng BST dạng Reels ÷ tổng Reels — cả tử và mẫu đều thu về Reels nên là con số của riêng nhóm Facebook"}
-          </p>
-          <label className="checkboxLabel">
-            <input
-              type="checkbox"
-              checked={collectionBase === "allReels"}
-              onChange={(event) =>
-                setCollectionBase(
-                  event.target.checked ? "allReels" : "postedVideo",
-                )
-              }
-            />
-            Mẫu số là tổng Reels
-          </label>
-          <ScopeChips
-            month={collectionMonth}
-            unit="post"
-            collectionScope="numerator"
-          />
-        </div>
       </div>
 
-      {collectionMonth && !performance.produced.length ? (
+      {collectionMonth && !performance.produced.length && (
         <p className="postingCollectionEmpty">
           <strong>
-            BST {collectionMonth} chưa có ấn phẩm nào trong kỳ đang lọc.
+            BST {collectionMonth} chưa có ấn phẩm video nào trong Tasklist.
           </strong>{" "}
-          Đổi khoảng ngày hoặc chọn Tất cả BST để xem toàn bộ.
+          Chọn Tất cả BST để xem toàn bộ.
         </p>
-      ) : null}
+      )}
 
-      <div
-        className="postingCollectionTable"
-        role="table"
-        aria-label="Ấn phẩm Bộ Sưu Tập theo nền tảng"
-      >
-        <div className="postingCollectionHeader" role="row">
-          <span>Nền tảng</span>
-          <span>Phải đăng</span>
-          <span>Đã đăng</span>
-          <span>Quá hạn</span>
-          <span>Chưa lên lịch</span>
-          <span>Tỷ lệ đăng</span>
-          <span>{BASE_LABEL[collectionBase]}</span>
-          <span>BST chiếm</span>
-        </div>
-        {performance.rows
-          .filter((row) => !collectionMonth || row.owed.length > 0)
-          .map((row) => (
-            <CollectionPostingTableRow
-              key={row.platform}
-              row={row}
-              base={collectionBase}
-              scopeNoun={`${scopeNoun}${monthNote}`}
-              onOpenAssets={openAssets}
-              onOpenPosts={openPosts}
-            />
-          ))}
-        {!performance.rows.length && (
-          <p className="emptyText">
-            Không có ấn phẩm hoặc bài đăng nào trong khoảng lọc.
-          </p>
-        )}
-      </div>
-
-      <div className="postingCollectionWarnings">
-        {performance.digitalSourced.length > 0 && (
-          <button
-            type="button"
-            className="postingCollectionWarning neutral"
-            onClick={() =>
-              openPosts(
-                "Bài đăng do Digital tự có nguồn",
-                "Cột Book Task trống nên không đến từ ấn phẩm Media giao — reup hoặc Digital tự có source",
-                performance.digitalSourced,
-              )
-            }
-          >
-            {formatNumber(performance.digitalSourced.length)} bài {scopeNoun}{" "}
-            do Digital tự có nguồn (Book Task trống) — tính vào sản lượng kênh
-            nhưng không phải ấn phẩm Media giao.
-          </button>
-        )}
-        {performance.missingPlatform.length > 0 && (
-          <button
-            type="button"
-            className="postingCollectionWarning"
-            onClick={() =>
-              openAssets(
-                "Ấn phẩm chưa ghi Nền Tảng",
-                "Không quy được về kênh nào nên không xuất hiện trong bảng theo nền tảng",
-                performance.missingPlatform,
-              )
-            }
-          >
-            {formatNumber(performance.missingPlatform.length)} ấn phẩm chưa ghi
-            cột Nền Tảng nên không vào được bảng theo kênh.
-          </button>
-        )}
-        {performance.missingPlannedDate > 0 && (
-          <span className="postingCollectionWarning">
-            {formatNumber(performance.missingPlannedDate)} ấn phẩm BST chưa có
-            Ngày Đăng Dự Kiến nên không xếp được vào kỳ khi lọc ngày.
-          </span>
-        )}
-      </div>
+      {performance.digitalSourced.length > 0 && (
+        <button
+          type="button"
+          className="postingCollectionWarning neutral"
+          onClick={() =>
+            openPosts(
+              "Bài đăng do Digital tự có nguồn",
+              "Cột Book Task trống nên không đến từ ấn phẩm Media giao — reup hoặc Digital tự có source",
+              performance.digitalSourced,
+            )
+          }
+        >
+          {formatNumber(performance.digitalSourced.length)} bài {scopeNoun} do
+          Digital tự có nguồn (Book Task trống) — tính vào sản lượng kênh nhưng
+          không phải ấn phẩm Media giao.
+        </button>
+      )}
     </article>
-  );
-}
-
-function CollectionPostingTableRow({
-  row,
-  base,
-  scopeNoun,
-  onOpenAssets,
-  onOpenPosts,
-}: {
-  row: CollectionPostingRow;
-  base: ShareBase;
-  scopeNoun: string;
-  onOpenAssets: (
-    title: string,
-    subtitle: string,
-    assets: CollectionAsset[],
-  ) => void;
-  onOpenPosts: (
-    title: string,
-    subtitle: string,
-    posts: PublicationPost[],
-  ) => void;
-}) {
-  const fulfillment = rate(row.posted.length, row.owed.length);
-  const denominator = baseOf(row.buckets, base);
-  const shareNumerator = denominator.filter(
-    (post) =>
-      post.posted &&
-      row.posted.some((asset) =>
-        asset.posts.some((item) => item.id === post.id),
-      ),
-  );
-  const status =
-    fulfillment === null
-      ? "flexible"
-      : fulfillment >= 100
-        ? "met"
-        : fulfillment >= 80
-          ? "near"
-          : "below";
-  return (
-    <div className={`postingCollectionRow ${status}`} role="row">
-      <strong className="postingCollectionPlatform">{row.platform}</strong>
-      <button
-        type="button"
-        onClick={() =>
-          onOpenAssets(
-            `${row.platform} · ấn phẩm phải đăng`,
-            `${scopeNoun} · cột Nền Tảng trên task có kênh này`,
-            row.owed,
-          )
-        }
-      >
-        {formatNumber(row.owed.length)}
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          onOpenAssets(
-            `${row.platform} · ấn phẩm đã đăng`,
-            `${scopeNoun} · có dòng Đã Đăng = 1 ở kênh này`,
-            row.posted,
-          )
-        }
-      >
-        {formatNumber(row.posted.length)}
-      </button>
-      <button
-        type="button"
-        className={row.overdue.length ? "postingCollectionOverdue" : undefined}
-        onClick={() =>
-          onOpenAssets(
-            `${row.platform} · ấn phẩm quá hạn đăng`,
-            `${scopeNoun} · đã lên lịch, đã qua Ngày Đăng mà chưa lên bài`,
-            row.overdue,
-          )
-        }
-      >
-        {formatNumber(row.overdue.length)}
-      </button>
-      <button
-        type="button"
-        className={
-          row.notScheduled.length ? "postingCollectionOverdue" : undefined
-        }
-        onClick={() =>
-          onOpenAssets(
-            `${row.platform} · ấn phẩm chưa lên lịch`,
-            `${scopeNoun} · chưa có dòng nào ở bảng Đăng Bài cho kênh này`,
-            row.notScheduled,
-          )
-        }
-      >
-        {formatNumber(row.notScheduled.length)}
-      </button>
-      <span className="postingCollectionRate">
-        <i>
-          <b style={{ width: `${Math.min(100, fulfillment ?? 0)}%` }} />
-        </i>
-        <em>{formatRate(fulfillment)}</em>
-      </span>
-      <button
-        type="button"
-        onClick={() =>
-          onOpenPosts(
-            `${row.platform} · ${BASE_LABEL[base]}`,
-            base === "allReels"
-              ? "Toàn bộ dòng Reels của kênh, gồm cả chưa đăng"
-              : "Toàn bộ dòng Reels + Video có Đã Đăng = 1 của kênh",
-            denominator,
-          )
-        }
-      >
-        {formatNumber(denominator.length)}
-      </button>
-      <span className="postingCollectionShare">
-        {formatRate(rate(shareNumerator.length, denominator.length))}
-      </span>
-    </div>
   );
 }
 
@@ -1825,7 +1628,6 @@ export function PostingSection({
         onScopeChange={setCollectionScope}
         collectionMonth={collectionMonth}
         onCollectionMonthChange={setCollectionMonth}
-        dateWindow={dateWindow}
         onOpenDetail={onOpenDetail}
       />
 

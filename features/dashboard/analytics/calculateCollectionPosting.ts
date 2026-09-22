@@ -1,7 +1,6 @@
 import { endOfDay } from "@/shared/date/dateUtils";
 import {
   collectionMonths,
-  inWindow,
   isNoSocialPublicationTask,
   isPendingCancelTask,
   isVideoPublication,
@@ -35,7 +34,7 @@ import {
 export type CollectionPostingScope = "reels" | "video";
 
 /** Ba trạng thái của một ấn phẩm trong phễu Media → Digital. */
-export type CollectionAssetState =
+type CollectionAssetState =
   | "posted"
   | "scheduled"
   | "notScheduled";
@@ -56,12 +55,8 @@ export function isReelPost(post: PublicationPost) {
   return REEL_TYPES.has(normalizedKey(post.postType));
 }
 
-export function isVideoPost(post: PublicationPost) {
+function isVideoPost(post: PublicationPost) {
   return VIDEO_TYPES.has(normalizedKey(post.postType));
-}
-
-export function isCollectionPost(post: PublicationPost) {
-  return normalizedKey(post.postCategory) === "bộ sưu tập";
 }
 
 /** Bốn tập dòng đăng bài dùng làm mẫu số của chỉ số cơ cấu. */
@@ -70,19 +65,6 @@ export type PostingBuckets = {
   postedReels: PublicationPost[];
   videos: PublicationPost[];
   postedVideos: PublicationPost[];
-};
-
-export type CollectionPostingRow = {
-  platform: string;
-  /** Ấn phẩm phải đăng ở kênh này. */
-  owed: CollectionAsset[];
-  scheduled: CollectionAsset[];
-  posted: CollectionAsset[];
-  /** Đã lên lịch, chưa đăng, và đã qua Ngày Đăng. */
-  overdue: CollectionAsset[];
-  /** Chưa có dòng đăng bài nào cho kênh này. */
-  notScheduled: CollectionAsset[];
-  buckets: PostingBuckets;
 };
 
 export type CollectionPostingFulfillment = {
@@ -104,10 +86,6 @@ export type CollectionPostingFulfillment = {
   postedCollectionPosts: PublicationPost[];
   /** Dòng đăng bài Book Task trống: Digital reup hoặc tự có source. */
   digitalSourced: PublicationPost[];
-  /** Lỗi vận hành cần team bổ sung, không tham gia phép tính theo kênh. */
-  missingPlatform: CollectionAsset[];
-  missingPlannedDate: number;
-  rows: CollectionPostingRow[];
 };
 
 function bucketsOf(posts: PublicationPost[]): PostingBuckets {
@@ -121,6 +99,16 @@ function bucketsOf(posts: PublicationPost[]): PostingBuckets {
   };
 }
 
+/**
+ * Hai nhóm chỉ số trong panel chịu hai bộ lọc khác nhau, cố ý:
+ *
+ * - Phễu giao nhận đếm theo TASK và chỉ theo bộ lọc Bộ Sưu Tập, vì câu hỏi là
+ *   "bộ sưu tập này Media giao bao nhiêu, Digital đăng được bao nhiêu".
+ * - Chỉ số cơ cấu đếm theo DÒNG đăng bài và chỉ theo bộ lọc ngày, vì câu hỏi
+ *   là "trong sản lượng kỳ này, Reels và BST chiếm bao nhiêu".
+ */
+const ALL_DATES: DateWindow = { from: null, to: null, hasFilter: false };
+
 export function calculateCollectionPosting(
   tasks: Task[],
   publications: PublicationPost[],
@@ -129,11 +117,22 @@ export function calculateCollectionPosting(
   collectionMonth = "",
   asOf: Date = new Date(),
 ): CollectionPostingFulfillment {
-  const { posts } = selectEligiblePosts(tasks, publications, dateWindow);
+  // Phễu: toàn bộ workbook, không cắt theo ngày.
+  const { posts: allPosts } = selectEligiblePosts(
+    tasks,
+    publications,
+    ALL_DATES,
+  );
+  // Cơ cấu: chỉ dòng đăng bài trong khoảng ngày đang lọc.
+  const { posts: windowedPosts } = selectEligiblePosts(
+    tasks,
+    publications,
+    dateWindow,
+  );
   const dueCutoff = endOfDay(asOf);
 
   const postsByTask = new Map<string, PublicationPost[]>();
-  for (const post of publications) {
+  for (const post of allPosts) {
     const code = normalize(post.bookTaskCode);
     if (!code) continue;
     postsByTask.set(code, [...(postsByTask.get(code) ?? []), post]);
@@ -156,18 +155,11 @@ export function calculateCollectionPosting(
     return rightYear - leftYear || rightMonth - leftMonth;
   });
 
-  const missingPlannedDate = collectionTasks.filter(
-    (task) => !task.plannedPublishDate,
-  ).length;
-
   const assets: CollectionAsset[] = collectionTasks
     .filter(
       (task) =>
-        // Không lọc ngày thì lấy hết; có lọc thì xếp theo Ngày Đăng Dự Kiến.
-        (!dateWindow.hasFilter ||
-          inWindow(task.plannedPublishDate ?? null, dateWindow)) &&
-        (!collectionMonth ||
-          collectionMonths(task).includes(collectionMonth)),
+        !collectionMonth ||
+        collectionMonths(task).includes(collectionMonth),
     )
     .map((task) => {
       // Lấy mọi dòng đăng bài của task, không lọc theo loại bài: một task đã
@@ -192,66 +184,6 @@ export function calculateCollectionPosting(
     Boolean(post.scheduledAt) &&
     post.scheduledAt! <= dueCutoff;
 
-  const platforms = Array.from(
-    new Map([
-      ...assets.flatMap((asset) =>
-        asset.platforms.map(
-          (platform) =>
-            [normalizedKey(platform), platform] as [string, string],
-        ),
-      ),
-      ...posts
-        .filter(isVideoPost)
-        .map(
-          (post) =>
-            [
-              normalizedKey(post.platform),
-              normalize(post.platform) || "Chưa xác định",
-            ] as [string, string],
-        ),
-    ]).values(),
-  );
-
-  const rows = platforms
-    .map((platform): CollectionPostingRow => {
-      const key = normalizedKey(platform);
-      const owed = assets.filter((asset) =>
-        asset.platforms.some((name) => normalizedKey(name) === key),
-      );
-      const postsFor = (asset: CollectionAsset) =>
-        asset.posts.filter(
-          (post) => normalizedKey(post.platform) === key,
-        );
-      const scheduled = owed.filter((asset) => postsFor(asset).length);
-      return {
-        platform,
-        owed,
-        scheduled,
-        posted: scheduled.filter((asset) =>
-          postsFor(asset).some((post) => post.posted),
-        ),
-        overdue: scheduled.filter(
-          (asset) =>
-            !postsFor(asset).some((post) => post.posted) &&
-            postsFor(asset).some(isOverduePost),
-        ),
-        notScheduled: owed.filter((asset) => !postsFor(asset).length),
-        buckets: bucketsOf(
-          posts.filter(
-            (post) => normalizedKey(post.platform) === key,
-          ),
-        ),
-      };
-    })
-    .filter(
-      (row) => row.owed.length > 0 || row.buckets.postedVideos.length > 0,
-    )
-    .sort(
-      (left, right) =>
-        right.owed.length - left.owed.length ||
-        right.buckets.postedVideos.length - left.buckets.postedVideos.length,
-    );
-
   return {
     scope,
     months,
@@ -266,25 +198,24 @@ export function calculateCollectionPosting(
       (asset) =>
         asset.state === "scheduled" && asset.posts.some(isOverduePost),
     ),
-    buckets: bucketsOf(posts),
+    buckets: bucketsOf(windowedPosts),
     postedCollectionPosts: (() => {
-      const codes = new Set(
-        assets.map((asset) => normalize(asset.task.code)),
+      // Tử số của chỉ số cơ cấu không theo bộ lọc BST: hỏi BST nói chung
+      // chiếm bao nhiêu sản lượng của kỳ.
+      const collectionCodes = new Set(
+        collectionTasks.map((task) => normalize(task.code)),
       );
-      return posts.filter(
+      return windowedPosts.filter(
         (post) =>
           post.posted &&
           (scope === "reels" ? isReelPost(post) : isVideoPost(post)) &&
-          codes.has(normalize(post.bookTaskCode)),
+          collectionCodes.has(normalize(post.bookTaskCode)),
       );
     })(),
-    digitalSourced: posts.filter(
+    digitalSourced: windowedPosts.filter(
       (post) =>
         (scope === "reels" ? isReelPost(post) : isVideoPost(post)) &&
         !normalize(post.bookTaskCode),
     ),
-    missingPlatform: assets.filter((asset) => !asset.platforms.length),
-    missingPlannedDate,
-    rows,
   };
 }
