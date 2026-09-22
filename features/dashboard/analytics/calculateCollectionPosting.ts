@@ -33,9 +33,13 @@ import {
  */
 export type CollectionPostingScope = "reels" | "video";
 
-/** Ba trạng thái của một ấn phẩm trong phễu Media → Digital. */
+/**
+ * Bốn trạng thái của một ấn phẩm. Một ấn phẩm chỉ xong khi MỌI nền tảng đã
+ * khai trên task đều có bài đã đăng — đăng Facebook mà bỏ TikTok vẫn là nợ.
+ */
 type CollectionAssetState =
   | "posted"
+  | "partial"
   | "scheduled"
   | "notScheduled";
 
@@ -45,8 +49,32 @@ export type CollectionAsset = {
   posts: PublicationPost[];
   /** Kênh phải đăng, lấy từ cột Nền Tảng trên task. */
   platforms: string[];
+  /** Kênh đã khai nhưng chưa có bài đã đăng. */
+  missingPlatforms: string[];
   state: CollectionAssetState;
 };
+
+/**
+ * Shopee có hai đường ghi nhận và cả hai đều tính: dòng riêng mang Nền Tảng
+ * Shopee, hoặc dòng của kênh khác có tích cột Shopee — luồng đăng một lần cho
+ * cả hai nơi.
+ */
+function postedOnPlatform(
+  posts: PublicationPost[],
+  platform: string,
+) {
+  const key = normalizedKey(platform);
+  return posts.some((post) => {
+    if (!post.posted) return false;
+    if (key === "shopee") {
+      return (
+        normalizedKey(post.platform) === "shopee" ||
+        Boolean(post.shopeeSelected)
+      );
+    }
+    return normalizedKey(post.platform) === key;
+  });
+}
 
 const REEL_TYPES = new Set(["reels"]);
 const VIDEO_TYPES = new Set(["reels", "video"]);
@@ -73,13 +101,22 @@ export type CollectionPostingFulfillment = {
   collectionMonth: string;
   asOf: Date;
   /** Toàn bộ ấn phẩm BST Media trả ra trong kỳ. */
+  /** Mọi ấn phẩm BST, gồm cả ấn phẩm chưa khai nền tảng. */
   produced: CollectionAsset[];
+  /** Ấn phẩm đánh giá được — có khai nền tảng. Đây là mẫu số của tỷ lệ. */
+  evaluated: CollectionAsset[];
   posted: CollectionAsset[];
+  /** Đã đăng vài kênh nhưng chưa đủ mọi kênh đã khai. */
+  partial: CollectionAsset[];
   scheduled: CollectionAsset[];
   notScheduled: CollectionAsset[];
-  /** Tất cả ấn phẩm chưa lên sóng — đây là danh sách việc còn nợ. */
+  /** Tất cả ấn phẩm chưa xong — đây là danh sách việc còn nợ. */
   pending: CollectionAsset[];
   overdue: CollectionAsset[];
+  /** Ấn phẩm chưa khai Nền Tảng nên không kết luận được đạt hay trượt. */
+  missingPlatform: CollectionAsset[];
+  /** Kênh còn thiếu trong nhóm đăng một phần, nhiều nhất trước. */
+  missingPlatformTally: Array<{ platform: string; count: number }>;
   /** Mẫu số cơ cấu, đếm theo dòng đăng bài (gồm cả nguồn của Digital). */
   buckets: PostingBuckets;
   /** Dòng đăng bài BST đã đăng của chính các ấn phẩm đang xét — tử số cơ cấu. */
@@ -167,16 +204,24 @@ export function calculateCollectionPosting(
       // trống (Shopee, Website, Cửa hàng đều như vậy). Phạm vi Reels/Video
       // chỉ dùng cho các chỉ số cơ cấu đếm theo dòng.
       const taskPosts = postsByTask.get(normalize(task.code)) ?? [];
-      return {
-        task,
-        posts: taskPosts,
-        platforms: taskPlatformNames(task),
-        state: !taskPosts.length
-          ? ("notScheduled" as const)
-          : taskPosts.some((post) => post.posted)
-            ? ("posted" as const)
-            : ("scheduled" as const),
-      };
+      const platforms = taskPlatformNames(task);
+      const missingPlatforms = platforms.filter(
+        (platform) => !postedOnPlatform(taskPosts, platform),
+      );
+      const state: CollectionAssetState = !platforms.length
+        ? taskPosts.some((post) => post.posted)
+          ? "posted"
+          : taskPosts.length
+            ? "scheduled"
+            : "notScheduled"
+        : !missingPlatforms.length
+          ? "posted"
+          : missingPlatforms.length < platforms.length
+            ? "partial"
+            : taskPosts.length
+              ? "scheduled"
+              : "notScheduled";
+      return { task, posts: taskPosts, platforms, missingPlatforms, state };
     });
 
   const isOverduePost = (post: PublicationPost) =>
@@ -190,10 +235,32 @@ export function calculateCollectionPosting(
     collectionMonth,
     asOf: dueCutoff,
     produced: assets,
-    posted: assets.filter((asset) => asset.state === "posted"),
-    scheduled: assets.filter((asset) => asset.state === "scheduled"),
-    notScheduled: assets.filter((asset) => asset.state === "notScheduled"),
-    pending: assets.filter((asset) => asset.state !== "posted"),
+    evaluated: assets.filter((asset) => asset.platforms.length),
+    posted: assets.filter(
+      (asset) => asset.platforms.length && asset.state === "posted",
+    ),
+    partial: assets.filter((asset) => asset.state === "partial"),
+    scheduled: assets.filter(
+      (asset) => asset.platforms.length && asset.state === "scheduled",
+    ),
+    notScheduled: assets.filter(
+      (asset) => asset.platforms.length && asset.state === "notScheduled",
+    ),
+    pending: assets.filter(
+      (asset) => asset.platforms.length && asset.state !== "posted",
+    ),
+    missingPlatform: assets.filter((asset) => !asset.platforms.length),
+    missingPlatformTally: Array.from(
+      assets
+        .filter((asset) => asset.state === "partial")
+        .flatMap((asset) => asset.missingPlatforms)
+        .reduce(
+          (counts, platform) =>
+            counts.set(platform, (counts.get(platform) ?? 0) + 1),
+          new Map<string, number>(),
+        ),
+      ([platform, count]) => ({ platform, count }),
+    ).sort((left, right) => right.count - left.count),
     overdue: assets.filter(
       (asset) =>
         asset.state === "scheduled" && asset.posts.some(isOverduePost),

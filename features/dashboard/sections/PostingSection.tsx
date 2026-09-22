@@ -1232,48 +1232,70 @@ function CollectionPostingPanel({
             }
             onClick={() =>
               openAssets(
-                "Ấn phẩm BST chưa đăng",
-                `${formatNumber(performance.pending.length)} ấn phẩm Media đã trả ra nhưng chưa lên sóng · ${formatNumber(performance.scheduled.length)} đã lên lịch, ${formatNumber(performance.notScheduled.length)} chưa lên lịch · ${scopeNoun}${monthNote}`,
+                "Ấn phẩm BST chưa đăng đủ kênh",
+                `${formatNumber(performance.pending.length)} ấn phẩm còn nợ · ${formatNumber(performance.partial.length)} đăng một phần, ${formatNumber(performance.scheduled.length)} chưa đăng kênh nào, ${formatNumber(performance.notScheduled.length)} chưa lên lịch · ${scopeNoun}${monthNote}`,
                 performance.pending,
               )
             }
           >
-            <small>Ấn phẩm BST đã đăng</small>
+            <small>Ấn phẩm BST đã đăng đủ kênh</small>
             <strong>
               {formatRate(
                 rate(
                   performance.posted.length,
-                  performance.produced.length,
+                  performance.evaluated.length,
                 ),
               )}
             </strong>
             <em>
               {formatNumber(performance.posted.length)} /{" "}
-              {formatNumber(performance.produced.length)} ấn phẩm ·{" "}
+              {formatNumber(performance.evaluated.length)} ấn phẩm ·{" "}
               {performance.pending.length
-                ? `bấm để xem ${formatNumber(performance.pending.length)} ấn phẩm chưa đăng`
-                : "không còn ấn phẩm nào chưa đăng"}
+                ? `bấm để xem ${formatNumber(performance.pending.length)} ấn phẩm còn nợ`
+                : "không còn ấn phẩm nào chưa xong"}
             </em>
           </button>
           <p className="postingCollectionFormula">
-            Ấn phẩm đã đăng ít nhất một kênh ÷ tổng ấn phẩm Media trả ra —{" "}
-            {scopeNoun}
-            {monthNote}.
+            Ấn phẩm có mọi nền tảng đã khai đều đã đăng ÷ tổng ấn phẩm có khai
+            nền tảng — {scopeNoun}
+            {monthNote}. Cột Shopee tích trên dòng kênh khác cũng tính là đã
+            đăng Shopee.
           </p>
           <div className="postingFunnelStates">
+            <button
+              type="button"
+              className="partial"
+              onClick={() =>
+                openAssets(
+                  "Đăng một phần, chưa đủ kênh",
+                  performance.missingPlatformTally.length
+                    ? `Kênh còn thiếu: ${performance.missingPlatformTally
+                        .map(
+                          (item) =>
+                            `${item.platform} ${formatNumber(item.count)}`,
+                        )
+                        .join(" · ")}`
+                    : "Đã đăng vài kênh nhưng chưa đủ mọi nền tảng đã khai",
+                  performance.partial,
+                )
+              }
+            >
+              <b>{formatNumber(performance.partial.length)}</b>
+              <span>đăng một phần</span>
+            </button>
             <button
               type="button"
               className="scheduled"
               onClick={() =>
                 openAssets(
-                  "Đã lên lịch nhưng chưa đăng",
-                  `${formatNumber(performance.overdue.length)} trong số này đã qua Ngày Đăng`,
+                  "Chưa đăng kênh nào",
+                  `Đã có dòng trong bảng Đăng Bài nhưng chưa kênh nào lên sóng · ${formatNumber(performance.overdue.length)} đã qua Ngày Đăng`,
                   performance.scheduled,
                 )
               }
             >
               <b>{formatNumber(performance.scheduled.length)}</b>
-              <span>đã lên lịch, chưa đăng</span>
+              <span>chưa đăng kênh nào</span>
             </button>
             <button
               type="button"
@@ -1302,6 +1324,23 @@ function CollectionPostingPanel({
           </strong>{" "}
           Chọn Tất cả BST để xem toàn bộ.
         </p>
+      )}
+
+      {performance.missingPlatform.length > 0 && (
+        <button
+          type="button"
+          className="postingCollectionWarning"
+          onClick={() =>
+            openAssets(
+              "Ấn phẩm chưa khai Nền Tảng",
+              "Không biết phải đăng ở đâu nên không kết luận được đạt hay trượt — nằm ngoài mẫu số",
+              performance.missingPlatform,
+            )
+          }
+        >
+          {formatNumber(performance.missingPlatform.length)} ấn phẩm BST chưa
+          khai cột Nền Tảng nên chưa đánh giá được.
+        </button>
       )}
 
       {performance.digitalSourced.length > 0 && (

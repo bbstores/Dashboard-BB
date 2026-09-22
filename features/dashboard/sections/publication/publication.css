@@ -1558,7 +1558,7 @@
 .postingFunnelStates {
   display: grid;
   gap: 6px;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
 }
 .postingFunnelStates button {
   background: rgba(23, 79, 61, .05);
@@ -1581,6 +1581,7 @@
   font-size: 7.5px;
   font-weight: 700;
 }
+.postingFunnelStates .partial b { color: #c2701f; }
 .postingFunnelStates .scheduled b { color: #b8862f; }
 .postingFunnelStates .notScheduled b { color: #b3554a; }
 .postingCollectionWarning.neutral {

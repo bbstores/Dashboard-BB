@@ -74,12 +74,144 @@ test("counts one asset per task even when it posts to several platforms", () => 
   );
 
   assert.equal(result.produced.length, 1, "một task là một ấn phẩm");
-  assert.equal(result.posted.length, 1, "đăng được một kênh là đã đăng");
+  // Đăng Facebook mà bỏ TikTok thì chưa xong.
+  assert.equal(result.posted.length, 0);
+  assert.deepEqual(
+    result.partial.map((item) => item.task.code),
+    ["T1"],
+  );
+  assert.deepEqual(result.partial[0].missingPlatforms, ["Tiktok BB Store"]);
+  assert.deepEqual(result.missingPlatformTally, [
+    { platform: "Tiktok BB Store", count: 1 },
+  ]);
+});
 
+test("counts an asset done only when every declared platform is posted", () => {
+  const tasks = [
+    asset({ code: "T-FULL", platform: "Facebook BBStore, Tiktok BB Store" }),
+  ];
+  const posts = [
+    post({ id: "A", bookTaskCode: "T-FULL", posted: true }),
+    post({
+      id: "B",
+      bookTaskCode: "T-FULL",
+      platform: "Tiktok BB Store",
+      postType: "Video",
+      posted: true,
+    }),
+  ];
+  const result = calculateCollectionPosting(
+    tasks,
+    posts,
+    ALL_DATES,
+    "video",
+    "",
+    AS_OF,
+  );
+
+  assert.deepEqual(
+    result.posted.map((item) => item.task.code),
+    ["T-FULL"],
+  );
+  assert.equal(result.pending.length, 0);
+});
+
+test("accepts the Shopee tick on another platform's row as a Shopee post", () => {
+  const tasks = [
+    asset({ code: "T-SP", platform: "Tiktok BB Store, Shopee" }),
+    asset({ code: "T-SP-ROW", platform: "Tiktok BB Store, Shopee" }),
+    asset({ code: "T-SP-OWED", platform: "Tiktok BB Store, Shopee" }),
+  ];
+  const posts = [
+    // Luồng đăng một lần cho cả TikTok và Shopee.
+    post({
+      id: "TICK",
+      bookTaskCode: "T-SP",
+      platform: "Tiktok BB Store",
+      postType: "Video",
+      posted: true,
+      shopeeSelected: true,
+    }),
+    // Đường còn lại: dòng Shopee riêng, vẫn tính.
+    post({
+      id: "TT2",
+      bookTaskCode: "T-SP-ROW",
+      platform: "Tiktok BB Store",
+      postType: "Video",
+      posted: true,
+    }),
+    post({
+      id: "SP-ROW",
+      bookTaskCode: "T-SP-ROW",
+      platform: "Shopee",
+      postType: "",
+      posted: true,
+    }),
+    // Có dòng Shopee nhưng chưa tick, và dòng TikTok không mang cờ.
+    post({
+      id: "TT3",
+      bookTaskCode: "T-SP-OWED",
+      platform: "Tiktok BB Store",
+      postType: "Video",
+      posted: true,
+    }),
+    post({
+      id: "SP-OWED",
+      bookTaskCode: "T-SP-OWED",
+      platform: "Shopee",
+      postType: "",
+      posted: false,
+    }),
+  ];
+  const result = calculateCollectionPosting(
+    tasks,
+    posts,
+    ALL_DATES,
+    "video",
+    "",
+    AS_OF,
+  );
+
+  assert.deepEqual(
+    result.posted.map((item) => item.task.code).sort(),
+    ["T-SP", "T-SP-ROW"],
+    "cả hai đường ghi nhận Shopee đều tính",
+  );
+  assert.deepEqual(
+    result.partial.map((item) => item.task.code),
+    ["T-SP-OWED"],
+  );
+  assert.deepEqual(result.partial[0].missingPlatforms, ["Shopee"]);
+});
+
+test("keeps assets without a declared platform out of the rate", () => {
+  const tasks = [
+    asset({ code: "T-OK" }),
+    asset({ code: "T-NOPLAT", platform: "" }),
+  ];
+  const posts = [post({ id: "P", bookTaskCode: "T-OK", posted: true })];
+  const result = calculateCollectionPosting(
+    tasks,
+    posts,
+    ALL_DATES,
+    "video",
+    "",
+    AS_OF,
+  );
+
+  assert.equal(result.produced.length, 2);
+  assert.equal(result.evaluated.length, 1, "mẫu số bỏ ấn phẩm chưa khai kênh");
+  assert.deepEqual(
+    result.missingPlatform.map((item) => item.task.code),
+    ["T-NOPLAT"],
+  );
   assert.equal(
-    result.pending.length,
-    0,
-    "đăng được một kênh là hết nợ ở mức ấn phẩm",
+    result.posted.length +
+      result.partial.length +
+      result.scheduled.length +
+      result.notScheduled.length,
+    result.evaluated.length,
+    "bốn trạng thái phủ kín mẫu số",
   );
 });
 
