@@ -43,3 +43,6 @@ tsc_errors.log
 /.wrangler/
 /outputs/
 /work/
+
+# Workbook export từ Lark Base — chứa dữ liệu nhân sự, không commit
+/excel/
