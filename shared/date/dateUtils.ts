@@ -14,6 +14,19 @@ export function endOfDay(value: Date) {
   return date;
 }
 
+export function addDays(value: Date, days: number) {
+  const date = new Date(value);
+  date.setDate(date.getDate() + days);
+  return date;
+}
+
+/** 00:00 thứ Hai của tuần chứa `value` (tuần bắt đầu từ thứ Hai). */
+export function startOfWeek(value: Date) {
+  const date = startOfDay(value);
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  return date;
+}
+
 export function inputDate(value: string, end = false) {
   if (!value) return null;
   const [year, month, day] = value.split("-").map(Number);

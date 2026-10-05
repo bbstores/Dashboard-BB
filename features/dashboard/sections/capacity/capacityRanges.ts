@@ -1,32 +1,11 @@
-import { inputDate } from "@/shared/date/dateUtils";
+import { addDays, dateKey, inputDate, startOfWeek } from "@/shared/date/dateUtils";
 import type { MediaTrendGranularity } from "../../analytics/calculateMediaCapacity";
 
 export function toInputDate(value: Date | null) {
-  if (!value) return "";
-  return [
-    value.getFullYear(),
-    String(value.getMonth() + 1).padStart(2, "0"),
-    String(value.getDate()).padStart(2, "0"),
-  ].join("-");
+  return value ? dateKey(value) : "";
 }
 
 export type TrendPreset = "all" | "1w" | "1m" | "3m" | "1y" | "custom";
-
-function addCalendarDays(value: Date, days: number) {
-  const result = new Date(value);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
-function startOfCalendarWeek(value: Date) {
-  const result = new Date(
-    value.getFullYear(),
-    value.getMonth(),
-    value.getDate(),
-  );
-  result.setDate(result.getDate() - ((result.getDay() + 6) % 7));
-  return result;
-}
 
 export function flowRangeFromGlobal(
   globalDateFrom: string,
@@ -36,8 +15,8 @@ export function flowRangeFromGlobal(
   const parsedTo = inputDate(globalDateTo, true);
   const today = new Date();
   const anchor = parsedTo ?? parsedFrom ?? today;
-  const weekStart = startOfCalendarWeek(anchor);
-  const weekEnd = addCalendarDays(weekStart, 6);
+  const weekStart = startOfWeek(anchor);
+  const weekEnd = addDays(weekStart, 6);
   const fallbackTo = parsedFrom
     ? parsedFrom > today
       ? parsedFrom
@@ -74,10 +53,10 @@ export function trendGranularityFor(
 
 export function presetStart(preset: TrendPreset, anchor: Date, allStart: Date) {
   if (preset === "all") return allStart;
-  if (preset === "1w") return addCalendarDays(anchor, -6);
-  if (preset === "1m") return addCalendarDays(anchor, -29);
-  if (preset === "3m") return addCalendarDays(anchor, -89);
-  if (preset === "1y") return addCalendarDays(anchor, -364);
+  if (preset === "1w") return addDays(anchor, -6);
+  if (preset === "1m") return addDays(anchor, -29);
+  if (preset === "3m") return addDays(anchor, -89);
+  if (preset === "1y") return addDays(anchor, -364);
   return allStart;
 }
 

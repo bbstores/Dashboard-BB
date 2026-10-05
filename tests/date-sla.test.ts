@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  addDays,
   businessMinutesBetween,
   nextWorkingDay,
   operationalDayLag,
   percentile,
+  startOfWeek,
 } from "../shared/date/dateUtils";
 import {
   completionDueDate,
@@ -170,4 +172,16 @@ test("calculates handoff lateness in business minutes", () => {
   assert.equal(handoffLateMinutes(lateTask), 60);
   assert.equal(lateMinuteBucket(60), "1–60 phút");
   assert.equal(lateMinuteBucket(481), "Trên 480 phút");
+});
+
+test("addDays and startOfWeek work in local calendar days", () => {
+  const source = new Date(2026, 0, 31, 14, 45);
+  assert.deepEqual(addDays(source, 1), new Date(2026, 1, 1, 14, 45));
+  assert.deepEqual(addDays(source, -31), new Date(2025, 11, 31, 14, 45));
+  assert.deepEqual(source, new Date(2026, 0, 31, 14, 45), "input not mutated");
+
+  // Tuần bắt đầu thứ Hai 00:00; Chủ nhật thuộc tuần trước đó.
+  assert.deepEqual(startOfWeek(new Date(2026, 9, 5, 9)), new Date(2026, 9, 5));
+  assert.deepEqual(startOfWeek(new Date(2026, 9, 4, 23)), new Date(2026, 8, 28));
+  assert.deepEqual(startOfWeek(new Date(2027, 0, 1, 8)), new Date(2026, 11, 28));
 });

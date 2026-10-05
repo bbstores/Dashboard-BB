@@ -1,6 +1,6 @@
-import { dateKey, endOfDay, percentile, startOfDay } from "@/shared/date/dateUtils";
+import { addDays, dateKey, endOfDay, percentile, startOfDay, startOfWeek } from "@/shared/date/dateUtils";
 import type { MediaTrendGranularity, MediaTrendEvent, MediaTrendBucket, MediaTrendSeries, CapacityReference } from "./types";
-import { startOfWeek, endOfWeek, addDays, weekLabel, dayLabel, monthLabel, startOfMonth, endOfMonth } from "./calendar";
+import { endOfWeek, weekLabel, dayLabel, monthLabel, startOfMonth, endOfMonth } from "./calendar";
 
 function trendReference(
   rows: MediaTrendBucket[],

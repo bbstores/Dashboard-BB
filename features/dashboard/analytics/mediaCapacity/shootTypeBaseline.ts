@@ -1,9 +1,9 @@
-import { endOfDay, percentile, startOfDay } from "@/shared/date/dateUtils";
+import { addDays, endOfDay, percentile, startOfDay, startOfWeek } from "@/shared/date/dateUtils";
 import type { ShootSession } from "../../model/types";
 import { normalizedKey } from "../../model/taskUtils";
 import type { ShootTypeBaseline, ShootTypeBaselinePlanRow, ShootTypeBaselinePlan } from "./types";
 import { shootSessionStaffCount } from "./shootSessions";
-import { startOfWeek, endOfWeek, addDays } from "./calendar";
+import { endOfWeek } from "./calendar";
 
 function shootTypeLabel(value: string) {
   const types = value

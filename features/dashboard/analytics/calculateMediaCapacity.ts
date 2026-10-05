@@ -1,10 +1,10 @@
-import { endOfDay, startOfDay } from "@/shared/date/dateUtils";
+import { addDays, endOfDay, startOfDay, startOfWeek } from "@/shared/date/dateUtils";
 import type { DashboardData, MediaCapacitySnapshot, Task } from "../model/types";
 import { assigneeNames, isFinalPublicationTask, normalizedKey, normMinutesFor } from "../model/taskUtils";
 import type { MediaTrendEvent } from "./mediaCapacity/types";
 import { BASELINE_WEEK_COUNT, OFFICIAL_BASELINE_WEEK_COUNT, TREND_WEEK_COUNT } from "./mediaCapacity/constants";
 import { reconcileShootSessionTaskCounts } from "./mediaCapacity/shootSessions";
-import { startOfWeek, endOfWeek, addDays } from "./mediaCapacity/calendar";
+import { endOfWeek } from "./mediaCapacity/calendar";
 import { workingDaysBetween, isExcluded, isShootTask, calculateWeek } from "./mediaCapacity/week";
 import { quantityReference, referenceForValue, normalizedQuantityReference, periodTaskReference, medianReference } from "./mediaCapacity/references";
 import { calculateShootTypeBaselines } from "./mediaCapacity/shootTypeBaseline";

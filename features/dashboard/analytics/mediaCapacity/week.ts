@@ -1,17 +1,9 @@
-import { dateKey, startOfDay } from "@/shared/date/dateUtils";
-import { isHolidayKey } from "@/shared/date/constants";
+import { addDays, dateKey, isWorkingDay, startOfDay } from "@/shared/date/dateUtils";
 import type { DashboardData, Task, WorkNorm } from "../../model/types";
 import { normalizedKey, normMinutesFor } from "../../model/taskUtils";
 import type { MediaCapacityWeek } from "./types";
 import { uniqueShootStaffCount } from "./shootSessions";
-import { endOfWeek, addDays, weekLabel } from "./calendar";
-
-function isWorkingDay(value: Date) {
-  return (
-    value.getDay() !== 0 &&
-    !isHolidayKey(dateKey(value))
-  );
-}
+import { endOfWeek, weekLabel } from "./calendar";
 
 export function workingDaysBetween(start: Date, end: Date) {
   let count = 0;
