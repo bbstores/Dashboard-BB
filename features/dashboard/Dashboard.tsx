@@ -39,7 +39,7 @@ export function Dashboard() {
   const workbook = useWorkbookData(filters.resetWorkbookFilters);
   const dialogs = useDashboardDialogs();
   const reports = useSavedReports();
-  const analytics = useDashboardStats(workbook.data, filters.dateWindow, filters.collectionMonth, filters.backlogDate);
+  const analytics = useDashboardStats(workbook.data, filters.dateWindow, filters.collectionMonth, filters.appliedBacklogDate);
   const dailyTaskChart = useDailyTaskChart(
     workbook.data,
     filters.dailyAssignee,
@@ -82,7 +82,7 @@ export function Dashboard() {
   }
   return (
     <HelpProvider>
-      <main className="dashboard">
+      <main className={filters.applyingFilters ? "dashboard applyingFilters" : "dashboard"}>
         <DashboardHeader
           fileRef={workbook.fileRef}
           loading={workbook.loading}
@@ -113,7 +113,7 @@ export function Dashboard() {
               dateFrom={filters.dateFrom}
               dateTo={filters.dateTo}
               backlogDate={filters.backlogDate}
-              hasDateFilter={filters.dateWindow.hasFilter}
+              hasDateFilter={Boolean(filters.dateFrom || filters.dateTo)}
               department={dialogs.dashboardDepartment}
               showBacklogDate={dialogs.dashboardDepartment === "media"}
               onDateFromChange={filters.setDateFrom}
@@ -143,7 +143,7 @@ export function Dashboard() {
                     backlogTotal: analytics.backlogTotal,
                   }}
                   allTasks={workbook.data.tasks}
-                  backlogDate={filters.backlogDate}
+                  backlogDate={filters.appliedBacklogDate}
                   onOpenDetail={dialogs.setDetail}
                 />
                 <section className="dashboardGrid">
@@ -226,8 +226,8 @@ export function Dashboard() {
                   <MediaCapacitySection
                     data={workbook.data}
                     viewModel={analytics.mediaCapacity}
-                    globalDateFrom={filters.dateFrom}
-                    globalDateTo={filters.dateTo}
+                    globalDateFrom={filters.appliedDateFrom}
+                    globalDateTo={filters.appliedDateTo}
                     onOpenDetail={dialogs.setDetail}
                   />
                   <SlaSection
@@ -237,7 +237,7 @@ export function Dashboard() {
                       backlog: analytics.backlog,
                       backlogTasks: analytics.backlogTasks,
                     }}
-                    backlogDate={filters.backlogDate}
+                    backlogDate={filters.appliedBacklogDate}
                     onOpenDetail={dialogs.setDetail}
                     onOpenPercentile={dialogs.setPercentileDetail}
                   />

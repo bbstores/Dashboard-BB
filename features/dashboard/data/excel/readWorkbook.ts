@@ -10,12 +10,22 @@ import { parseShootSessions } from "./parseShootSessions";
 import { validateDashboardWorkbook } from "./validateWorkbook";
 import { registerHolidays } from "@/shared/date/constants";
 
-export async function readDashboardWorkbook(
-  file: File,
-): Promise<DashboardData> {
+export type ParsedDashboardWorkbook = {
+  data: DashboardData;
+  holidayKeys: string[];
+};
+
+/**
+ * Đọc workbook mà không đụng trạng thái toàn cục, nên chạy được trong Web
+ * Worker; nơi nhận kết quả tự nạp `holidayKeys` bằng `registerHolidays`.
+ */
+export async function parseDashboardWorkbook(
+  buffer: ArrayBuffer,
+  fileName: string,
+): Promise<ParsedDashboardWorkbook> {
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(await file.arrayBuffer());
+  await workbook.xlsx.load(buffer);
 
   const {
     taskSheet,
@@ -32,12 +42,10 @@ export async function readDashboardWorkbook(
   } =
     validateDashboardWorkbook(workbook);
 
-  // Ngày nghỉ phải được nạp trước khi tính bất kỳ hạn SLA nào.
-  registerHolidays(holidaySheet ? parseHolidays(holidaySheet) : []);
-
+  const holidayKeys = holidaySheet ? parseHolidays(holidaySheet) : [];
   const tasks = parseTasks(taskSheet);
 
-  return {
+  const data: DashboardData = {
     tasks,
     feedback: parseFeedback(feedbackSheet),
     norms: normSheet ? parseNorms(normSheet) : [],
@@ -56,6 +64,19 @@ export async function readDashboardWorkbook(
       productSheet,
       shootSheet,
     }),
-    fileName: file.name,
+    fileName,
   };
+  return { data, holidayKeys };
+}
+
+export async function readDashboardWorkbook(
+  file: File,
+): Promise<DashboardData> {
+  const { data, holidayKeys } = await parseDashboardWorkbook(
+    await file.arrayBuffer(),
+    file.name,
+  );
+  // Ngày nghỉ phải được nạp trước khi tính bất kỳ hạn SLA nào.
+  registerHolidays(holidayKeys);
+  return data;
 }

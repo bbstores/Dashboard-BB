@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { readDashboardWorkbook } from "../data/excel/readWorkbook";
+import { readDashboardWorkbookInWorker } from "../data/excel/readWorkbookInWorker";
 import type { DashboardData } from "../model/types";
 
 export function useWorkbookData(onWorkbookLoaded: () => void) {
@@ -12,7 +12,7 @@ export function useWorkbookData(onWorkbookLoaded: () => void) {
     setLoading(true);
     setError("");
     try {
-      setData(await readDashboardWorkbook(file));
+      setData(await readDashboardWorkbookInWorker(file));
       onWorkbookLoaded();
     } catch (reason) {
       setError(

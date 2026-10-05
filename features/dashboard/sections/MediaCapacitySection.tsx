@@ -797,10 +797,11 @@ function StaffParticipationChart({
                 </button>
               </div>
               <div className="capacitySessionDropdownOptions">
-                {sessionWorkloads.map(({ session, linkedTasks }) => (
+                {sessionWorkloads.map(({ session, linkedTasks }, index) => (
                   <button
                     type="button"
-                    key={session.id}
+                    // Workbook có thể có hai ca trùng mã (vd. hai dòng "22/10").
+                    key={`${session.id}:${index}`}
                     aria-pressed={!excludedSessionIds.includes(session.id)}
                     onClick={() =>
                       setExcludedSessionIds((current) =>
@@ -893,7 +894,7 @@ function StaffParticipationChart({
               {selectedSessions.map((session, index) => {
                 const x = xFor(index);
                 return (
-                  <g key={session.id}>
+                  <g key={`${session.id}:${index}`}>
                     <rect
                       className="capacityStaffBarGroup"
                       x={x - sessionSlotWidth / 2 + 6}
@@ -921,7 +922,7 @@ function StaffParticipationChart({
                 );
               })}
               {selectedWorkloads.map((workload, sessionIndex) => (
-                <g key={workload.session.id}>
+                <g key={`${workload.session.id}:${sessionIndex}`}>
                   {activeStaffNames.map(
                     (staffName, activeStaffIndex) => {
                       const staffIndex = staffNames.indexOf(staffName);

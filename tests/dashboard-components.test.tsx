@@ -351,7 +351,9 @@ test("Media shoot-type baseline uses an independent date range", () => {
     backlogDate: "2026-07-30",
   });
 
-  let openedTrendDetail: DetailView | null = null;
+  const openedTrendDetail: { current: DetailView | null } = {
+    current: null,
+  };
   const { container } = render(
     <HelpProvider>
       <MediaCapacitySection
@@ -360,7 +362,7 @@ test("Media shoot-type baseline uses an independent date range", () => {
         globalDateFrom="2026-07-20"
         globalDateTo="2026-07-26"
         onOpenDetail={(detail) => {
-          openedTrendDetail = detail;
+          openedTrendDetail.current = detail;
         }}
       />
     </HelpProvider>,
@@ -381,7 +383,7 @@ test("Media shoot-type baseline uses an independent date range", () => {
   assert.ok(demandNewButton);
   fireEvent.click(demandNewButton);
   assert.match(
-    openedTrendDetail?.title ?? "",
+    openedTrendDetail.current?.title ?? "",
     /Task Quay\/Chụp mới trong kỳ/,
   );
 
@@ -394,8 +396,8 @@ test("Media shoot-type baseline uses an independent date range", () => {
   ).find((button) => button.textContent?.includes("task đã xếp cả tuần"));
   assert.ok(scheduledTaskButton);
   fireEvent.click(scheduledTaskButton);
-  assert.match(openedTrendDetail?.title ?? "", /Task đã xếp ca/);
-  assert.equal(openedTrendDetail?.shootSessions?.length, 1);
+  assert.match(openedTrendDetail.current?.title ?? "", /Task đã xếp ca/);
+  assert.equal(openedTrendDetail.current?.shootSessions?.length, 1);
 
   const outputsCard = container.querySelector(".capacityFlowCard.outputs");
   assert.ok(outputsCard);
@@ -409,10 +411,10 @@ test("Media shoot-type baseline uses an independent date range", () => {
   assert.ok(outputNewButton);
   fireEvent.click(outputNewButton);
   assert.match(
-    openedTrendDetail?.title ?? "",
+    openedTrendDetail.current?.title ?? "",
     /Task ấn phẩm mới trong kỳ/,
   );
-  assert.equal(openedTrendDetail?.tasks?.length, 4);
+  assert.equal(openedTrendDetail.current?.tasks?.length, 4);
 
   assert.ok(screen.getByText("Thời gian tham gia theo từng ca quay"));
   assert.ok(screen.getByText("Ca quay · 1/1"));
@@ -440,14 +442,14 @@ test("Media shoot-type baseline uses an independent date range", () => {
   fireEvent.click(
     screen.getByRole("button", { name: "An · JULY-21 · 120 phút" }),
   );
-  assert.equal(openedTrendDetail?.tasks?.length, 2);
+  assert.equal(openedTrendDetail.current?.tasks?.length, 2);
   assert.deepEqual(
-    openedTrendDetail?.tasks?.map((item) => item.code),
+    openedTrendDetail.current?.tasks?.map((item) => item.code),
     ["JULY-TASK-01", "JULY-TASK-02"],
   );
-  assert.equal(openedTrendDetail?.shootSessions, undefined);
-  assert.match(openedTrendDetail?.title ?? "", /Task An thực hiện · JULY-21/);
-  assert.match(openedTrendDetail?.subtitle ?? "", /2 task · 120 phút/);
+  assert.equal(openedTrendDetail.current?.shootSessions, undefined);
+  assert.match(openedTrendDetail.current?.title ?? "", /Task An thực hiện · JULY-21/);
+  assert.match(openedTrendDetail.current?.subtitle ?? "", /2 task · 120 phút/);
 
   assert.ok(screen.getByText("20/7/2026–26/7/2026"));
   assert.ok(
@@ -476,12 +478,12 @@ test("Media shoot-type baseline uses an independent date range", () => {
   fireEvent.click(
     screen.getByRole("button", { name: /20\/07 · Quay\/Chụp/ }),
   );
-  assert.match(openedTrendDetail?.title ?? "", /Quay\/Chụp · 20\/07/);
+  assert.match(openedTrendDetail.current?.title ?? "", /Quay\/Chụp · 20\/07/);
   fireEvent.click(
     screen.getByRole("button", { name: /20\/07 · Tổng tải/ }),
   );
   assert.match(
-    openedTrendDetail?.title ?? "",
+    openedTrendDetail.current?.title ?? "",
     /Tổng tải chuẩn · 20\/07/,
   );
 
@@ -1264,7 +1266,7 @@ test("posting section shows source mix and counts multi-platform posts independe
       name: "Đúng ngày · Facebook: 1/1 task; mở 0 task trễ hạn",
     }),
   );
-  assert.deepEqual(postingDetailState.current?.publicationEvidence, []);
+  assert.equal(postingDetailState.current?.publicationEvidence?.length, 0);
   assert.ok(screen.getByText("Mỗi ngày một bài"));
   assert.ok(screen.getByText("Theo ấn phẩm mới"));
   assert.ok(

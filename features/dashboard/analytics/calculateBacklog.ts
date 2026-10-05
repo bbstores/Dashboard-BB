@@ -69,6 +69,28 @@ export function isEndOfDayBacklogTask(task: Task, cutoff: Date) {
   return isBacklogAtCutoff(task, cutoff);
 }
 
+/**
+ * Khoảng mốc (ms) mà task được tính tồn theo `isEndOfDayBacklogTask`:
+ * tồn khi `from <= cutoff` và (`until === null` hoặc `cutoff < until`).
+ * Tách phần không phụ thuộc mốc ra để chuỗi ngày chỉ còn so sánh số.
+ */
+export function endOfDayBacklogWindow(
+  task: Task,
+): { from: number; until: number | null } | null {
+  const { startDate, inspectionDate } = task;
+  // Ngay tại Ngày Bắt Đầu, task đã qua điều kiện "bắt đầu trước mốc".
+  if (!startDate || !isEligibleAtCutoff(task, startDate)) return null;
+  const status = normalizedKey(task.status);
+  if (EXCLUDED_BACKLOG_STATUSES.has(status)) return null;
+  if (isBacklogAttentionTask(task, startDate)) return null;
+  const alwaysOpen =
+    !inspectionDate || status === "in progress" || isOpenReworkTask(task);
+  return {
+    from: startDate.getTime(),
+    until: alwaysOpen ? null : inspectionDate.getTime(),
+  };
+}
+
 export function calculateBacklogBreakdown(tasks: Task[], cutoff: Date) {
   return {
     backlogTasks: tasks.filter((task) => isBacklogTask(task, cutoff)),

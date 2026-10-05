@@ -9,15 +9,37 @@ import type {
   WorkNorm,
 } from "./types";
 
+// normalize/normalizedKey bị gọi hàng trăm nghìn lần trên cùng một tập chuỗi
+// nhỏ (trạng thái, công đoạn, tên người), nên cache kết quả thay vì lặp lại
+// NFC + lowercase theo locale cho mỗi lần gọi.
+const NORMALIZE_CACHE_LIMIT = 50_000;
+const normalizeCache = new Map<string, string>();
+const normalizedKeyCache = new Map<string, string>();
+
+function cachedText(
+  cache: Map<string, string>,
+  text: string,
+  compute: (text: string) => string,
+) {
+  let result = cache.get(text);
+  if (result === undefined) {
+    if (cache.size >= NORMALIZE_CACHE_LIMIT) cache.clear();
+    result = compute(text);
+    cache.set(text, result);
+  }
+  return result;
+}
+
 export function normalize(value: unknown) {
-  return String(value ?? "")
-    .normalize("NFC")
-    .replace(/\s+/g, " ")
-    .trim();
+  return cachedText(normalizeCache, String(value ?? ""), (text) =>
+    text.normalize("NFC").replace(/\s+/g, " ").trim(),
+  );
 }
 
 export function normalizedKey(value: unknown) {
-  return normalize(value).toLocaleLowerCase("vi");
+  return cachedText(normalizedKeyCache, String(value ?? ""), (text) =>
+    normalize(text).toLocaleLowerCase("vi"),
+  );
 }
 
 /**

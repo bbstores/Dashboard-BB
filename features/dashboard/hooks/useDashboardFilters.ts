@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useDeferredValue,
   useMemo,
   useState,
 } from "react";
@@ -26,13 +27,23 @@ export function useDashboardFilters() {
     new Date().toISOString().slice(0, 10),
   );
 
+  // Ô nhập dùng giá trị tức thời; phần tính toán dùng bản trì hoãn để gõ ngày
+  // không bị khựng trong lúc dashboard tính lại.
+  const appliedDateFrom = useDeferredValue(dateFrom);
+  const appliedDateTo = useDeferredValue(dateTo);
+  const appliedBacklogDate = useDeferredValue(backlogDate);
+  const applyingFilters =
+    appliedDateFrom !== dateFrom ||
+    appliedDateTo !== dateTo ||
+    appliedBacklogDate !== backlogDate;
+
   const dateWindow = useMemo<DateWindow>(
     () => ({
-      from: inputDate(dateFrom),
-      to: inputDate(dateTo, true),
-      hasFilter: Boolean(dateFrom || dateTo),
+      from: inputDate(appliedDateFrom),
+      to: inputDate(appliedDateTo, true),
+      hasFilter: Boolean(appliedDateFrom || appliedDateTo),
     }),
-    [dateFrom, dateTo],
+    [appliedDateFrom, appliedDateTo],
   );
 
   const savedReportFilters = useMemo<SavedReportFilters>(
@@ -112,6 +123,10 @@ export function useDashboardFilters() {
     pieExcludeOutsource,
     backlogDate,
     setBacklogDate,
+    appliedDateFrom,
+    appliedDateTo,
+    appliedBacklogDate,
+    applyingFilters,
     dateWindow,
     savedReportFilters,
     clearDateWindow,
