@@ -1,18 +1,17 @@
-import { useMemo, useState } from "react";
-import { inputDate } from "@/shared/date/dateUtils";
 import { formatDate, formatHours, formatNumber } from "@/shared/formatting/format";
 import type { MediaCapacityStats } from "../analytics/calculateMediaCapacity";
-import { calculateMediaCapacity, calculateMediaTrendSeries, calculateShootTypeBaselinePlan } from "../analytics/calculateMediaCapacity";
 import type { DashboardData, DetailView, Task } from "../model/types";
 import { capacityHelp } from "./capacity/capacityHelp";
 import { detailWithStandardMinutes, formatRate, formatMetric, granularityLabel, uniqueTasks } from "./capacity/capacityFormat";
-import { toInputDate, flowRangeFromGlobal, trendGranularityFor, presetStart, typeRangeFromGlobal } from "./capacity/capacityRanges";
-import type { TrendPreset } from "./capacity/capacityRanges";
 import { FlowBreakdownButton, CapacityFlowCard } from "./capacity/CapacityFlowCard";
 import { ShootTypeBaselineChart } from "./capacity/ShootTypeBaselineChart";
 import { StaffParticipationChart } from "./capacity/StaffParticipationChart";
 import { CapacityTrend } from "./capacity/CapacityTrend";
-
+import {
+  useFlowRange,
+  useShootTypeRange,
+  useTrendRange,
+} from "./capacity/useCapacityRanges";
 
 type MediaCapacitySectionProps = {
   data: DashboardData;
@@ -29,48 +28,7 @@ export function MediaCapacitySection({
   globalDateTo,
   onOpenDetail,
 }: MediaCapacitySectionProps) {
-  const commonFlowRange = useMemo(
-    () => flowRangeFromGlobal(globalDateFrom, globalDateTo),
-    [globalDateFrom, globalDateTo],
-  );
-  const flowRangeKey = `${commonFlowRange.from}|${commonFlowRange.to}`;
-  const [flowRangeInput, setFlowRangeInput] = useState(() => ({
-    sourceKey: flowRangeKey,
-    ...commonFlowRange,
-  }));
-  const activeFlowRange =
-    flowRangeInput.sourceKey === flowRangeKey
-      ? flowRangeInput
-      : commonFlowRange;
-  const flowDateFrom = activeFlowRange.from;
-  const flowDateTo = activeFlowRange.to;
-  // Memo theo chuỗi ngày: Date mới mỗi lần render sẽ làm các useMemo bên dưới
-  // luôn tính lại (calculateMediaCapacity rất nặng).
-  const flowRangeStart = useMemo(() => inputDate(flowDateFrom), [flowDateFrom]);
-  const flowRangeEnd = useMemo(() => inputDate(flowDateTo, true), [flowDateTo]);
-  const invalidFlowRange = Boolean(
-    flowRangeStart &&
-      flowRangeEnd &&
-      flowRangeStart > flowRangeEnd,
-  );
-  const flowViewModel = useMemo(
-    () =>
-      !invalidFlowRange && flowRangeStart && flowRangeEnd
-        ? calculateMediaCapacity(
-            data,
-            flowRangeEnd,
-            new Date(),
-            { from: flowRangeStart, to: flowRangeEnd },
-          )
-        : viewModel,
-    [
-      data,
-      flowRangeEnd,
-      flowRangeStart,
-      invalidFlowRange,
-      viewModel,
-    ],
-  );
+  const flow = useFlowRange(data, viewModel, globalDateFrom, globalDateTo);
   const {
     focusWeek,
     focusFullWeek,
@@ -78,188 +36,14 @@ export function MediaCapacitySection({
     forecastOutputCount,
     isCompleteWeek,
     standardMinutes,
-  } = flowViewModel;
-  const baselineDateFrom = toInputDate(
-    officialBaseline.weeks[0]?.start ?? null,
+  } = flow.viewModel;
+  const shootType = useShootTypeRange(
+    viewModel,
+    officialBaseline,
+    globalDateFrom,
+    globalDateTo,
   );
-  const baselineDateTo = toInputDate(
-    officialBaseline.weeks.at(-1)?.end ?? null,
-  );
-  const sessionDates = useMemo(
-    () =>
-      viewModel.shootTypeSessions
-        .flatMap((session) => (session.date ? [session.date] : []))
-        .sort((left, right) => left.getTime() - right.getTime()),
-    [viewModel.shootTypeSessions],
-  );
-  const dataDateFrom = toInputDate(sessionDates[0] ?? null);
-  const dataDateTo = toInputDate(sessionDates.at(-1) ?? null);
-  const commonTypeRange = useMemo(
-    () =>
-      typeRangeFromGlobal({
-        globalDateFrom,
-        globalDateTo,
-        baselineDateFrom,
-        baselineDateTo,
-        dataDateFrom,
-        dataDateTo,
-      }),
-    [
-      globalDateFrom,
-      globalDateTo,
-      baselineDateFrom,
-      baselineDateTo,
-      dataDateFrom,
-      dataDateTo,
-    ],
-  );
-  const typeRangeKey = `${commonTypeRange.from}|${commonTypeRange.to}`;
-  const [typeRangeInput, setTypeRangeInput] = useState(() => ({
-    sourceKey: typeRangeKey,
-    ...commonTypeRange,
-  }));
-  const activeTypeRange =
-    typeRangeInput.sourceKey === typeRangeKey
-      ? typeRangeInput
-      : commonTypeRange;
-  const typeDateFrom = activeTypeRange.from;
-  const typeDateTo = activeTypeRange.to;
-  const setTypeDateFrom = (from: string) =>
-    setTypeRangeInput({ sourceKey: typeRangeKey, from, to: typeDateTo });
-  const setTypeDateTo = (to: string) =>
-    setTypeRangeInput({ sourceKey: typeRangeKey, from: typeDateFrom, to });
-  const typeRangeStart = useMemo(() => inputDate(typeDateFrom), [typeDateFrom]);
-  const typeRangeEnd = useMemo(() => inputDate(typeDateTo, true), [typeDateTo]);
-  const invalidTypeRange = Boolean(
-    typeRangeStart &&
-      typeRangeEnd &&
-      typeRangeStart > typeRangeEnd,
-  );
-  const typeBaselinePlan = useMemo(
-    () =>
-      invalidTypeRange
-        ? calculateShootTypeBaselinePlan([], null, null)
-        : calculateShootTypeBaselinePlan(
-            viewModel.shootTypeSessions,
-            typeRangeStart,
-            typeRangeEnd,
-          ),
-    [
-      invalidTypeRange,
-      typeRangeEnd,
-      typeRangeStart,
-      viewModel.shootTypeSessions,
-    ],
-  );
-  const typeBaselineSessions = typeBaselinePlan.sessions;
-  const typeBaselineSessionUnits = typeBaselinePlan.rows.reduce(
-    (total, row) => total + row.sessionUnits,
-    0,
-  );
-  const trendDataFrom = toInputDate(viewModel.trendDateRange.from);
-  const trendDataTo = toInputDate(viewModel.trendDateRange.to);
-  const trendAnchor = useMemo(
-    () => inputDate(globalDateTo || trendDataTo) ?? new Date(),
-    [globalDateTo, trendDataTo],
-  );
-  const trendAllStart = useMemo(
-    () => inputDate(trendDataFrom) ?? trendAnchor,
-    [trendAnchor, trendDataFrom],
-  );
-  const [trendPreset, setTrendPreset] = useState<TrendPreset>("3m");
-  const defaultTrendRange = useMemo(
-    () => ({
-      from: globalDateFrom || trendDataFrom,
-      to: globalDateTo || trendDataTo,
-    }),
-    [globalDateFrom, globalDateTo, trendDataFrom, trendDataTo],
-  );
-  const trendRangeKey = `${defaultTrendRange.from}|${defaultTrendRange.to}`;
-  const [trendCustomInput, setTrendCustomInput] = useState(() => ({
-    sourceKey: trendRangeKey,
-    ...defaultTrendRange,
-  }));
-  const activeTrendCustomRange =
-    trendCustomInput.sourceKey === trendRangeKey
-      ? trendCustomInput
-      : defaultTrendRange;
-  const trendCustomFrom = activeTrendCustomRange.from;
-  const trendCustomTo = activeTrendCustomRange.to;
-  const setTrendCustomFrom = (from: string) =>
-    setTrendCustomInput({
-      sourceKey: trendRangeKey,
-      from,
-      to: trendCustomTo,
-    });
-  const setTrendCustomTo = (to: string) =>
-    setTrendCustomInput({
-      sourceKey: trendRangeKey,
-      from: trendCustomFrom,
-      to,
-    });
-  const trendRange = useMemo(() => {
-    if (trendPreset === "custom") {
-      return {
-        from: trendCustomFrom,
-        to: trendCustomTo,
-      };
-    }
-    return {
-      from: toInputDate(
-        presetStart(trendPreset, trendAnchor, trendAllStart),
-      ),
-      to: toInputDate(trendAnchor),
-    };
-  }, [
-    trendAllStart,
-    trendAnchor,
-    trendCustomFrom,
-    trendCustomTo,
-    trendPreset,
-  ]);
-  const trendRangeStart = useMemo(
-    () => inputDate(trendRange.from),
-    [trendRange.from],
-  );
-  const trendRangeEnd = useMemo(
-    () => inputDate(trendRange.to, true),
-    [trendRange.to],
-  );
-  const invalidTrendRange = Boolean(
-    !trendRangeStart ||
-      !trendRangeEnd ||
-      trendRangeStart > trendRangeEnd,
-  );
-  const trendGranularity = trendRangeStart && trendRangeEnd
-    ? trendGranularityFor(
-        trendPreset,
-        trendRangeStart,
-        trendRangeEnd,
-      )
-    : "week";
-  const trendSeries = useMemo(
-    () =>
-      invalidTrendRange
-        ? calculateMediaTrendSeries(
-            [],
-            null,
-            null,
-            trendGranularity,
-          )
-        : calculateMediaTrendSeries(
-            viewModel.trendEvents,
-            trendRangeStart,
-            trendRangeEnd,
-            trendGranularity,
-          ),
-    [
-      invalidTrendRange,
-      trendGranularity,
-      trendRangeEnd,
-      trendRangeStart,
-      viewModel.trendEvents,
-    ],
-  );
+  const trend = useTrendRange(viewModel, globalDateFrom, globalDateTo);
   const shootCoverage = focusWeek.shootTasks.length
     ? (focusWeek.linkedShootTasks.length / focusWeek.shootTasks.length) *
       100
@@ -312,15 +96,9 @@ export function MediaCapacitySection({
                 Từ ngày
                 <input
                   type="date"
-                  value={flowDateFrom}
-                  max={flowDateTo || undefined}
-                  onChange={(event) =>
-                    setFlowRangeInput({
-                      sourceKey: flowRangeKey,
-                      from: event.target.value,
-                      to: flowDateTo,
-                    })
-                  }
+                  value={flow.range.from}
+                  max={flow.range.to || undefined}
+                  onChange={(event) => flow.range.setFrom(event.target.value)}
                 />
               </label>
               <span>→</span>
@@ -328,25 +106,14 @@ export function MediaCapacitySection({
                 Đến ngày
                 <input
                   type="date"
-                  value={flowDateTo}
-                  min={flowDateFrom || undefined}
-                  onChange={(event) =>
-                    setFlowRangeInput({
-                      sourceKey: flowRangeKey,
-                      from: flowDateFrom,
-                      to: event.target.value,
-                    })
-                  }
+                  value={flow.range.to}
+                  min={flow.range.from || undefined}
+                  onChange={(event) => flow.range.setTo(event.target.value)}
                 />
               </label>
               <button
                 type="button"
-                onClick={() =>
-                  setFlowRangeInput({
-                    sourceKey: flowRangeKey,
-                    ...commonFlowRange,
-                  })
-                }
+                onClick={flow.range.reset}
               >
                 Theo bộ lọc tổng
               </button>
@@ -363,7 +130,7 @@ export function MediaCapacitySection({
             </div>
           </div>
         </div>
-        {invalidFlowRange && (
+        {flow.invalid && (
           <p className="capacityFlowRangeError">
             Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.
           </p>
@@ -677,41 +444,36 @@ export function MediaCapacitySection({
         </div>
 
         <ShootTypeBaselineChart
-          plan={typeBaselinePlan}
-          dateFrom={typeDateFrom}
-          dateTo={typeDateTo}
-          sessionCount={typeBaselineSessions.length}
-          sessionUnits={typeBaselineSessionUnits}
-          invalidRange={invalidTypeRange}
-          onDateFromChange={setTypeDateFrom}
-          onDateToChange={setTypeDateTo}
-          onResetRange={() =>
-            setTypeRangeInput({
-              sourceKey: typeRangeKey,
-              ...commonTypeRange,
-            })
-          }
+          plan={shootType.plan}
+          dateFrom={shootType.range.from}
+          dateTo={shootType.range.to}
+          sessionCount={shootType.plan.sessions.length}
+          sessionUnits={shootType.sessionUnits}
+          invalidRange={shootType.invalid}
+          onDateFromChange={shootType.range.setFrom}
+          onDateToChange={shootType.range.setTo}
+          onResetRange={shootType.range.reset}
           onSelectAll={() =>
             onOpenDetail({
               title: "Dữ liệu tạo baseline tổng hợp",
-              subtitle: `${formatDate(typeRangeStart)}–${formatDate(typeRangeEnd)} · P50 chung ${formatMetric(typeBaselinePlan.overallTaskPerSessionP50)} task/buổi · ${formatMetric(typeBaselinePlan.overallTaskPerStaffSessionP50)} task/người/buổi · baseline tuần ${formatMetric(typeBaselinePlan.weeklyTaskBaseline)} task`,
-              shootSessions: typeBaselinePlan.sessions,
+              subtitle: `${formatDate(shootType.start)}–${formatDate(shootType.end)} · P50 chung ${formatMetric(shootType.plan.overallTaskPerSessionP50)} task/buổi · ${formatMetric(shootType.plan.overallTaskPerStaffSessionP50)} task/người/buổi · baseline tuần ${formatMetric(shootType.plan.weeklyTaskBaseline)} task`,
+              shootSessions: shootType.plan.sessions,
             })
           }
           onSelect={(row) =>
             onOpenDetail({
               title: `${row.type} · baseline linh động`,
-              subtitle: `${formatDate(typeRangeStart)}–${formatDate(typeRangeEnd)} · ${formatMetric(row.sessionUnits)} buổi mẫu · P50 ${formatMetric(row.taskPerSessionP50)} task/buổi · ${formatMetric(row.productPerSessionP50)} mã/buổi · ${formatMetric(row.taskPerStaffSessionP50)} task/người/buổi`,
+              subtitle: `${formatDate(shootType.start)}–${formatDate(shootType.end)} · ${formatMetric(row.sessionUnits)} buổi mẫu · P50 ${formatMetric(row.taskPerSessionP50)} task/buổi · ${formatMetric(row.productPerSessionP50)} mã/buổi · ${formatMetric(row.taskPerStaffSessionP50)} task/người/buổi`,
               shootSessions: row.sessions,
             })
           }
         />
 
         <StaffParticipationChart
-          sessions={typeBaselineSessions}
+          sessions={shootType.plan.sessions}
           tasks={data.tasks}
-          dateFrom={typeRangeStart}
-          dateTo={typeRangeEnd}
+          dateFrom={shootType.start}
+          dateTo={shootType.end}
           onSelectPoint={(staffName, session, staffTasks, minutes) => {
             onOpenDetail({
               title:
@@ -731,26 +493,26 @@ export function MediaCapacitySection({
         />
 
         <CapacityTrend
-          rows={trendSeries.rows}
-          shootReference={trendSeries.shootReference}
-          outputReference={trendSeries.outputReference}
-          totalReference={trendSeries.totalReference}
-          preset={trendPreset}
-          dateFrom={trendRange.from}
-          dateTo={trendRange.to}
-          granularity={trendGranularity}
-          invalidRange={invalidTrendRange}
-          onPresetChange={setTrendPreset}
-          onDateFromChange={setTrendCustomFrom}
-          onDateToChange={setTrendCustomTo}
+          rows={trend.series.rows}
+          shootReference={trend.series.shootReference}
+          outputReference={trend.series.outputReference}
+          totalReference={trend.series.totalReference}
+          preset={trend.preset}
+          dateFrom={trend.range.from}
+          dateTo={trend.range.to}
+          granularity={trend.granularity}
+          invalidRange={trend.invalid}
+          onPresetChange={trend.setPreset}
+          onDateFromChange={trend.setCustomFrom}
+          onDateToChange={trend.setCustomTo}
           onSelect={(bucket, metric) =>
             openStandardTasks(
               `${metric === "shoot" ? "Quay/Chụp" : metric === "output" ? "Bàn giao" : "Tổng tải chuẩn"} · ${bucket.label}`,
               metric === "shoot"
-                ? `Task Quay/Chụp phân theo ${granularityLabel(trendGranularity)} bằng Ngày Bắt Đầu`
+                ? `Task Quay/Chụp phân theo ${granularityLabel(trend.granularity)} bằng Ngày Bắt Đầu`
                 : metric === "output"
-                  ? `Task ấn phẩm phân theo ${granularityLabel(trendGranularity)} bằng Ngày Kiểm Duyệt`
-                  : `Hợp không trùng của task Quay/Chụp và Bàn giao trong ${granularityLabel(trendGranularity)}; giá trị trên chart vẫn là tổng giờ chuẩn của hai công đoạn`,
+                  ? `Task ấn phẩm phân theo ${granularityLabel(trend.granularity)} bằng Ngày Kiểm Duyệt`
+                  : `Hợp không trùng của task Quay/Chụp và Bàn giao trong ${granularityLabel(trend.granularity)}; giá trị trên chart vẫn là tổng giờ chuẩn của hai công đoạn`,
               metric === "shoot"
                 ? bucket.shootTasks
                 : metric === "output"
