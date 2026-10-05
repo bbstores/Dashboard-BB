@@ -1444,8 +1444,10 @@ export function MediaCapacitySection({
       : commonFlowRange;
   const flowDateFrom = activeFlowRange.from;
   const flowDateTo = activeFlowRange.to;
-  const flowRangeStart = inputDate(flowDateFrom);
-  const flowRangeEnd = inputDate(flowDateTo, true);
+  // Memo theo chuỗi ngày: Date mới mỗi lần render sẽ làm các useMemo bên dưới
+  // luôn tính lại (calculateMediaCapacity rất nặng).
+  const flowRangeStart = useMemo(() => inputDate(flowDateFrom), [flowDateFrom]);
+  const flowRangeEnd = useMemo(() => inputDate(flowDateTo, true), [flowDateTo]);
   const invalidFlowRange = Boolean(
     flowRangeStart &&
       flowRangeEnd &&
@@ -1526,8 +1528,8 @@ export function MediaCapacitySection({
     setTypeRangeInput({ sourceKey: typeRangeKey, from, to: typeDateTo });
   const setTypeDateTo = (to: string) =>
     setTypeRangeInput({ sourceKey: typeRangeKey, from: typeDateFrom, to });
-  const typeRangeStart = inputDate(typeDateFrom);
-  const typeRangeEnd = inputDate(typeDateTo, true);
+  const typeRangeStart = useMemo(() => inputDate(typeDateFrom), [typeDateFrom]);
+  const typeRangeEnd = useMemo(() => inputDate(typeDateTo, true), [typeDateTo]);
   const invalidTypeRange = Boolean(
     typeRangeStart &&
       typeRangeEnd &&
@@ -1615,8 +1617,14 @@ export function MediaCapacitySection({
     trendCustomTo,
     trendPreset,
   ]);
-  const trendRangeStart = inputDate(trendRange.from);
-  const trendRangeEnd = inputDate(trendRange.to, true);
+  const trendRangeStart = useMemo(
+    () => inputDate(trendRange.from),
+    [trendRange.from],
+  );
+  const trendRangeEnd = useMemo(
+    () => inputDate(trendRange.to, true),
+    [trendRange.to],
+  );
   const invalidTrendRange = Boolean(
     !trendRangeStart ||
       !trendRangeEnd ||

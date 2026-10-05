@@ -1,26 +1,26 @@
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import type { ReportDepartment } from "../model/types";
 
 export type SaveReportDialogProps = {
-  reportName: string;
   department: ReportDepartment;
-  onReportNameChange: (value: string) => void;
   onDepartmentChange: (department: ReportDepartment) => void;
   onClose: () => void;
-  onSave: () => void;
+  onSave: (reportName: string) => void;
 };
 
 export function SaveReportDialog({
-  reportName,
   department,
-  onReportNameChange,
   onDepartmentChange,
   onClose,
   onSave,
 }: SaveReportDialogProps) {
+  // Giữ tên báo cáo trong state cục bộ: nếu đặt ở Dashboard, mỗi phím gõ sẽ
+  // render lại toàn bộ dashboard và gây trễ khi nhập.
+  const [reportName, setReportName] = useState("");
+
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    onSave();
+    onSave(reportName);
   }
 
   return (
@@ -47,7 +47,7 @@ export function SaveReportDialog({
             required
             maxLength={80}
             value={reportName}
-            onChange={(event) => onReportNameChange(event.target.value)}
+            onChange={(event) => setReportName(event.target.value)}
             placeholder="Ví dụ: Báo cáo Media tuần 30"
           />
         </label>

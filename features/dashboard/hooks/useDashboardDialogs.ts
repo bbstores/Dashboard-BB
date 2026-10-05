@@ -20,7 +20,6 @@ export function useDashboardDialogs() {
   const [reportDepartment, setReportDepartment] =
     useState<ReportDepartment | null>(null);
   const [saveReportOpen, setSaveReportOpen] = useState(false);
-  const [reportName, setReportName] = useState("");
   const [saveDepartment, setSaveDepartment] =
     useState<ReportDepartment>("media");
 
@@ -39,7 +38,6 @@ export function useDashboardDialogs() {
   }
 
   function finishSaveReport(department: ReportDepartment) {
-    setReportName("");
     setSaveReportOpen(false);
     setReportDepartment(department);
   }
@@ -79,8 +77,6 @@ export function useDashboardDialogs() {
     reportDepartment,
     setReportDepartment,
     saveReportOpen,
-    reportName,
-    setReportName,
     saveDepartment,
     setSaveDepartment,
     openSaveReport,

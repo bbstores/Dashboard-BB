@@ -24,7 +24,7 @@ import { useDashboardDialogs } from "./hooks/useDashboardDialogs";
 import { useDashboardFilters } from "./hooks/useDashboardFilters";
 import { useDashboardStats } from "./hooks/useDashboardStats";
 import { useWorkbookData } from "./hooks/useWorkbookData";
-import type { ReportDepartment, SavedReport } from "./model/types";
+import type { PostingNorm, ReportDepartment, SavedReport } from "./model/types";
 import { useSavedReports } from "./saved-reports/useSavedReports";
 import { CollectionSection } from "./sections/CollectionSection";
 import { MediaCapacitySection } from "./sections/MediaCapacitySection";
@@ -33,6 +33,7 @@ import { PeopleSection } from "./sections/PeopleSection";
 import { PostingSection } from "./sections/PostingSection";
 import { PublicationSection } from "./sections/PublicationSection";
 import { SlaSection } from "./sections/SlaSection";
+const NO_POSTING_NORMS: PostingNorm[] = [];
 export function Dashboard() {
   const filters = useDashboardFilters();
   const workbook = useWorkbookData(filters.resetWorkbookFilters);
@@ -56,8 +57,8 @@ export function Dashboard() {
       dialogs.reportDepartment === department ? null : department,
     );
   }
-  function saveCurrentReport() {
-    const name = dialogs.reportName.trim();
+  function saveCurrentReport(reportName: string) {
+    const name = reportName.trim();
     if (!name || !analytics) return;
     reports.saveReport({
       name,
@@ -257,7 +258,7 @@ export function Dashboard() {
                 <PostingSection
                   tasks={workbook.data.tasks}
                   publications={workbook.data.publications}
-                  postingNorms={workbook.data.postingNorms ?? []}
+                  postingNorms={workbook.data.postingNorms ?? NO_POSTING_NORMS}
                   dateWindow={filters.dateWindow}
                   onOpenDetail={dialogs.setDetail}
                 />
@@ -286,9 +287,7 @@ export function Dashboard() {
         )}
         {dialogs.saveReportOpen && (
           <SaveReportDialog
-            reportName={dialogs.reportName}
             department={dialogs.saveDepartment}
-            onReportNameChange={dialogs.setReportName}
             onDepartmentChange={dialogs.setSaveDepartment}
             onClose={dialogs.closeSaveReport}
             onSave={saveCurrentReport}
