@@ -1,0 +1,4 @@
+export const BASELINE_WEEK_COUNT = 8;
+export const OFFICIAL_BASELINE_WEEK_COUNT = 12;
+export const MIN_OFFICIAL_BASELINE_WEEKS = 8;
+export const TREND_WEEK_COUNT = 12;
