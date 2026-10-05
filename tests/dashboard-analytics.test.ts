@@ -21,6 +21,8 @@ import {
 import {
   calculateReportComparison,
   comparisonPeriod,
+  isPendingReviewTask,
+  type ReviewComparisonPoint,
 } from "../features/dashboard/analytics/calculateReportComparison";
 import type {
   DashboardData,
@@ -489,6 +491,121 @@ test("compares only saved reports from the same department and period", () => {
     "week",
   );
   assert.equal(cachedPoints[0], points[0]);
+});
+
+test("review comparison reuses media weeks for on-time, review minutes and Monday backlog", () => {
+  const data: DashboardData = {
+    fileName: "review-comparison.xlsx",
+    publications: [],
+    feedback: [],
+    norms: [],
+    tasks: [
+      task("ON-TIME", {
+        status: "Done",
+        startDate: date(20),
+        inspectionDate: date(20, 10),
+        completedDate: date(20, 11),
+      }),
+      task("LATE", {
+        status: "Done",
+        startDate: date(20),
+        inspectionDate: date(21, 9),
+        completedDate: date(23, 9),
+      }),
+      task("CARRIED", {
+        status: "Done",
+        startDate: date(18),
+        inspectionDate: date(18, 16),
+        completedDate: date(20, 9),
+      }),
+      task("STILL-CHECKING", {
+        status: "Checking",
+        startDate: date(17),
+        inspectionDate: date(17, 10),
+      }),
+      task("REJECTED", {
+        status: "Reject",
+        startDate: date(17),
+        inspectionDate: date(17, 10),
+      }),
+      task("REOPENED", {
+        status: "In Progress",
+        startDate: date(17),
+        inspectionDate: date(17, 10),
+      }),
+      task("TRAINING", {
+        stage: "Training",
+        status: "Checking",
+        startDate: date(17),
+        inspectionDate: date(17, 10),
+      }),
+    ],
+  };
+  const report = (
+    id: string,
+    department: "media" | "business",
+  ): SavedReport => ({
+    id,
+    name: id,
+    department,
+    createdAt: "2026-07-29T03:00:00.000Z",
+    filters: {
+      dateFrom: "2026-07-20",
+      dateTo: "2026-07-26",
+      backlogDate: "2026-07-26",
+      collectionMonth: "",
+      leaderboardUnit: "minutes",
+      pieScopes: {},
+      pieExcludeOutsource: {},
+    },
+  });
+
+  const points = calculateReportComparison(
+    data,
+    [report("MEDIA-WEEK", "media"), report("BUSINESS-WEEK", "business")],
+    "review",
+    "week",
+  ) as ReviewComparisonPoint[];
+
+  assert.deepEqual(points.map((point) => point.id), ["MEDIA-WEEK"]);
+  const [point] = points;
+  assert.equal(point.reviewedTasks, 3);
+  assert.equal(Math.round(point.reviewOnTimeRate), 67);
+  assert.equal(point.reviewMinutesP25, 60);
+  assert.equal(point.reviewMinutesP50, 120);
+  assert.equal(point.reviewMinutesP75, 960);
+  assert.equal(point.reviewMinutesP90, 960);
+  assert.equal(point.pendingReview, 2);
+  assert.equal(point.pendingReviewAt.getTime(), new Date(2026, 6, 20).getTime());
+
+  const mediaPoints = calculateReportComparison(
+    data,
+    [report("MEDIA-WEEK", "media")],
+    "media",
+    "week",
+  );
+  assert.notEqual(mediaPoints[0], point);
+  assert.equal("pendingReview" in mediaPoints[0], false);
+});
+
+test("pending review excludes tasks no longer waiting for a reviewer", () => {
+  const cutoff = new Date(2026, 6, 20);
+  const pending = (overrides: Partial<Task>) =>
+    isPendingReviewTask(
+      task("REVIEW", { inspectionDate: date(18, 10), ...overrides }),
+      cutoff,
+    );
+
+  assert.equal(pending({ status: "Checking" }), true);
+  assert.equal(pending({ status: "Done", completedDate: date(20, 9) }), true);
+  assert.equal(pending({ status: "Done", completedDate: date(18, 11) }), false);
+  assert.equal(pending({ status: "Done" }), false);
+  assert.equal(pending({ status: "Thực hiện lại" }), false);
+  assert.equal(pending({ status: "Archived" }), false);
+  assert.equal(
+    pending({ status: "Checking", inspectionDate: date(20, 10) }),
+    false,
+  );
 });
 
 test("separates backlog rules from invalid Done chronology", () => {

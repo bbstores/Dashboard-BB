@@ -53,6 +53,11 @@
   padding: 8px;
 }
 
+/* Phòng ban có ba lựa chọn: Media, Kinh doanh, Kiểm duyệt. */
+.comparisonModeControls > div:first-child {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .comparisonModeControls small {
   color: rgba(255, 255, 255, 0.62);
   font-size: 8px;
@@ -100,6 +105,13 @@
 .comparisonReportPicker h2 {
   font-size: 22px;
   margin: 6px 0 0;
+}
+
+.comparisonReportPicker h2 + small {
+  color: var(--muted);
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
 }
 
 .comparisonReportPicker header > div:last-child {

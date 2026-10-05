@@ -4,9 +4,12 @@ import { useMemo, useState } from "react";
 import {
   calculateReportComparison,
   comparisonPeriod,
+  comparisonReportDepartment,
   type BusinessComparisonPoint,
+  type ComparisonDepartment,
   type ComparisonPeriod,
   type MediaComparisonPoint,
+  type ReviewComparisonPoint,
 } from "../analytics/calculateReportComparison";
 import {
   buildComparisonDetail,
@@ -16,7 +19,6 @@ import type {
   DashboardData,
   DashboardHelp,
   DetailView,
-  ReportDepartment,
   SavedReport,
 } from "../model/types";
 import {
@@ -25,7 +27,10 @@ import {
 } from "@/shared/formatting/format";
 import { HelpButton } from "./HelpButton";
 
-type ComparisonPoint = MediaComparisonPoint | BusinessComparisonPoint;
+type ComparisonPoint =
+  | MediaComparisonPoint
+  | BusinessComparisonPoint
+  | ReviewComparisonPoint;
 type Series<T> = {
   key: string;
   label: string;
@@ -39,6 +44,12 @@ type ComparisonSelect<T extends ComparisonPoint> = (
 ) => void;
 
 const COLORS = ["#195b47", "#8fc33c", "#ccff58", "#f3b252", "#d96b5f"];
+
+const DEPARTMENT_LABELS: Record<ComparisonDepartment, string> = {
+  media: "Media",
+  business: "Kinh doanh",
+  review: "Kiểm duyệt",
+};
 
 const COMPARISON_HELP: Record<string, DashboardHelp> = {
   "Cơ cấu task thực hiện": {
@@ -146,6 +157,22 @@ const COMPARISON_HELP: Record<string, DashboardHelp> = {
     calculation: "Gồm Book Task không tìm thấy hoặc không phải thành phẩm cuối và dòng liên kết tới task có Nền Tảng = Không Đăng Social.",
     example: "Số lỗi giảm từ 12 xuống 3 cho thấy quy trình nhập Book Task đã tốt hơn.",
   },
+  "Thời gian duyệt 1 task": {
+    title: "Thời gian duyệt 1 task",
+    purpose: "So sánh phân bố số phút kiểm duyệt một task giữa các kỳ.",
+    objective: "Thấy được cả tốc độ duyệt điển hình (P50) lẫn nhóm task duyệt chậm (P75, P90).",
+    calculation: "Lấy task có Ngày Hoàn Thành trong kỳ, đo từ Ngày Kiểm Duyệt đến Ngày Hoàn Thành chỉ trong giờ làm việc (Thứ 2–Thứ 7, 08:30–12:00 và 13:00–17:30, trừ ngày lễ). P25/P50/P75/P90 là mốc mà 25%/50%/75%/90% task không vượt quá.",
+    example: "P50 là 90 phút và P90 là 600 phút nghĩa là một nửa task được duyệt trong 90 phút, nhưng 10% task chậm nhất mất hơn 600 phút.",
+    note: "Kỳ không có task nào đủ hai mốc ngày hiển thị 0.",
+  },
+  "Task tồn duyệt đầu tuần": {
+    title: "Task tồn duyệt đầu tuần",
+    purpose: "Đếm số task đang chờ kiểm duyệt khi bắt đầu tuần làm việc.",
+    objective: "Theo dõi lượng việc tồn mà team kiểm duyệt mang sang mỗi tuần.",
+    calculation: "Mốc là 00:00 thứ Hai đầu tiên của kỳ. Tính task có Ngày Kiểm Duyệt trước mốc và Ngày Hoàn Thành sau mốc hoặc chưa có. Task chưa có Ngày Hoàn Thành chỉ được tính khi trạng thái hiện tại vẫn ở bước duyệt (không phải Done, In Progress, To Do, Reject/Thực hiện lại). Không tính Training, Archived và Pending/Cancel.",
+    example: "Task gửi duyệt 16:00 thứ Bảy và hoàn thành 09:00 thứ Hai được tính là 1 task tồn duyệt của tuần đó.",
+    note: "Dữ liệu chỉ lưu trạng thái hiện tại nên task bị trả về rồi gửi lại có thể không phản ánh đúng lịch sử ở các tuần cũ.",
+  },
   "Bài đăng theo nền tảng": {
     title: "Bài đăng theo nền tảng qua các kỳ",
     purpose: "So sánh cơ cấu phân phối nội dung trên các nền tảng.",
@@ -163,6 +190,16 @@ function comparisonHelp(title: string): DashboardHelp {
       objective: "Phát hiện tốc độ xử lý có theo kịp tốc độ nhận việc hay không.",
       calculation: "Task trong kỳ dùng Ngày Bắt Đầu; bàn giao carry-in dùng Ngày Kiểm Duyệt của task bắt đầu trước kỳ; tồn dùng 23:59 ngày cuối kỳ và không tính outsource.",
       example: "Nếu task vào giữ nguyên nhưng đường tồn tăng qua ba tuần, nhóm đang tích lũy backlog.",
+    };
+  }
+  if (title.startsWith("Tỷ lệ hoàn thành đúng hạn")) {
+    return {
+      title: "Tỷ lệ hoàn thành đúng hạn",
+      purpose: "Theo dõi tỷ lệ task được duyệt xong trước hạn hoàn thành qua từng kỳ.",
+      objective: "Đánh giá team kiểm duyệt có giữ được tiến độ đầu ra hay không.",
+      calculation: "Lấy task có Ngày Hoàn Thành trong kỳ và thuộc diện tính KPI hoàn thành. Tử số là task có Ngày Hoàn Thành không vượt quá hạn hoàn thành (cuối ngày làm việc kế tiếp sau Ngày Bắt Đầu; Quay/Chụp là D+3 14:00).",
+      example: "Tuần có 50 task hoàn thành, 42 task trước hạn → 84%.",
+      note: "Khác chart Tuân thủ SLA của Media: ở đây nhóm task theo Ngày Hoàn Thành (thời điểm duyệt xong) thay vì Ngày Bắt Đầu.",
     };
   }
   if (title.startsWith("Sản lượng đăng bài")) {
@@ -735,6 +772,55 @@ function MediaCharts({
   );
 }
 
+function ReviewCharts({
+  points,
+  period,
+  onSelect,
+}: {
+  points: ReviewComparisonPoint[];
+  period: ComparisonPeriod;
+  onSelect: ComparisonSelect<ReviewComparisonPoint>;
+}) {
+  const unit = period === "week" ? "tuần" : "tháng";
+  const minutes = (value: number) => `${formatNumber(value)} phút`;
+  return (
+    <section className="comparisonCharts">
+      <ComparisonTrend
+        title={`Tỷ lệ hoàn thành đúng hạn theo ${unit}`}
+        subtitle="TASK CÓ NGÀY HOÀN THÀNH TRONG KỲ"
+        points={points}
+        onSelect={onSelect}
+        format={formatPercent}
+        series={[
+          { key: "reviewOnTimeRate", label: "Hoàn thành đúng hạn", color: COLORS[0], value: (p) => p.reviewOnTimeRate },
+        ]}
+      />
+      <ComparisonTrend
+        title="Thời gian duyệt 1 task"
+        subtitle="P25 / P50 / P75 / P90 · PHÚT LÀM VIỆC"
+        points={points}
+        onSelect={onSelect}
+        format={minutes}
+        series={[
+          { key: "reviewMinutesP25", label: "P25", color: COLORS[1], value: (p) => p.reviewMinutesP25 },
+          { key: "reviewMinutesP50", label: "P50 (trung vị)", color: COLORS[0], value: (p) => p.reviewMinutesP50 },
+          { key: "reviewMinutesP75", label: "P75", color: COLORS[3], value: (p) => p.reviewMinutesP75 },
+          { key: "reviewMinutesP90", label: "P90", color: COLORS[4], value: (p) => p.reviewMinutesP90 },
+        ]}
+      />
+      <ComparisonBars
+        title="Task tồn duyệt đầu tuần"
+        subtitle="TẠI 00:00 THỨ HAI ĐẦU KỲ"
+        points={points}
+        onSelect={onSelect}
+        series={[
+          { key: "pendingReview", label: "Task chờ duyệt", color: COLORS[3], value: (p) => p.pendingReview },
+        ]}
+      />
+    </section>
+  );
+}
+
 function BusinessCharts({
   points,
   period,
@@ -877,7 +963,8 @@ export function ComparisonDashboard({
   onOpenDetail: (detail: DetailView) => void;
 }) {
   const [department, setDepartment] =
-    useState<ReportDepartment>("media");
+    useState<ComparisonDepartment>("media");
+  const reportDepartment = comparisonReportDepartment(department);
   const [period, setPeriod] = useState<ComparisonPeriod>("week");
   const [excludedIds, setExcludedIds] = useState<string[]>([]);
   const available = useMemo(
@@ -885,14 +972,14 @@ export function ComparisonDashboard({
       reports
         .filter(
           (report) =>
-            report.department === department &&
+            report.department === reportDepartment &&
             comparisonPeriod(report) === period,
         )
         .sort(
           (left, right) =>
             left.filters.dateFrom.localeCompare(right.filters.dateFrom),
         ),
-    [department, period, reports],
+    [period, reportDepartment, reports],
   );
   const selectedReports = useMemo(
     () =>
@@ -940,14 +1027,14 @@ export function ComparisonDashboard({
         <div className="comparisonModeControls">
           <div>
             <small>Phòng ban</small>
-            {(["media", "business"] as const).map((value) => (
+            {(["media", "business", "review"] as const).map((value) => (
               <button
                 type="button"
                 className={department === value ? "active" : ""}
                 onClick={() => setDepartment(value)}
                 key={value}
               >
-                {value === "media" ? "Media" : "Kinh doanh"}
+                {DEPARTMENT_LABELS[value]}
               </button>
             ))}
           </div>
@@ -972,9 +1059,12 @@ export function ComparisonDashboard({
           <div>
             <span>CHỌN BÁO CÁO</span>
             <h2>
-              {department === "media" ? "Media" : "Kinh doanh"} ·{" "}
+              {DEPARTMENT_LABELS[department]} ·{" "}
               {period === "week" ? "Theo tuần" : "Theo tháng"}
             </h2>
+            {department === "review" ? (
+              <small>Dùng các kỳ của báo cáo Media đã lưu</small>
+            ) : null}
           </div>
           <div>
             <button
@@ -1021,7 +1111,7 @@ export function ComparisonDashboard({
         ) : (
           <div className="comparisonEmpty">
             Chưa có báo cáo {period === "week" ? "tuần" : "tháng"} đã lưu
-            cho phòng ban này.
+            cho {department === "review" ? "Media" : "phòng ban này"}.
           </div>
         )}
       </section>
@@ -1030,6 +1120,12 @@ export function ComparisonDashboard({
         department === "media" ? (
           <MediaCharts
             points={points as MediaComparisonPoint[]}
+            period={period}
+            onSelect={openComparisonDetail}
+          />
+        ) : department === "review" ? (
+          <ReviewCharts
+            points={points as ReviewComparisonPoint[]}
             period={period}
             onSelect={openComparisonDetail}
           />

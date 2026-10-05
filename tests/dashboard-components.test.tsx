@@ -621,6 +621,20 @@ test("comparison charts open evidence and line charts select the clicked point",
     ),
     ["POST-COMPARE-001"],
   );
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Kiểm duyệt",
+    }),
+  );
+  screen.getByRole("heading", { name: "Thời gian duyệt 1 task" });
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Media tuần 20–26/07 · Task chờ duyệt: 0 · Xem dẫn chứng",
+    }),
+  );
+  assert.match(detailState.current?.title ?? "", /Task tồn duyệt đầu tuần/);
+  assert.deepEqual(detailState.current?.tasks, []);
 });
 
 test("KPI selection opens the matching detail data", () => {

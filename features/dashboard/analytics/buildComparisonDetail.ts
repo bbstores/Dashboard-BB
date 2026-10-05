@@ -4,12 +4,18 @@ import {
 } from "@/shared/formatting/format";
 import type {
   BusinessComparisonPoint,
+  ComparisonDepartment,
   MediaComparisonPoint,
+  ReviewComparisonPoint,
 } from "./calculateReportComparison";
 import {
   getBusinessComparisonStats,
   getMediaComparisonContext,
+  getReviewComparisonContext,
 } from "./calculateReportComparison";
+import {
+  businessMinutesBetween,
+} from "@/shared/date/dateUtils";
 import {
   normalize,
   normalizedKey,
@@ -32,7 +38,10 @@ export type ComparisonEvidenceSelection = {
   chartTitle: string;
   formattedValue: string;
   key: string;
-  point: MediaComparisonPoint | BusinessComparisonPoint;
+  point:
+    | MediaComparisonPoint
+    | BusinessComparisonPoint
+    | ReviewComparisonPoint;
   seriesLabel: string;
   value: number;
 };
@@ -398,12 +407,73 @@ function businessDetail(
   }
 }
 
+function reviewDetail(
+  data: DashboardData,
+  report: SavedReport,
+  selection: ComparisonEvidenceSelection,
+): DetailView {
+  const point = selection.point as ReviewComparisonPoint;
+  const stats = getReviewComparisonContext(data, report, {
+    from: point.from,
+    to: point.to,
+    hasFilter: true,
+  });
+  const minuteMetric = (minuteByTask: Map<Task, number>, label: string) => ({
+    label,
+    value: (task: Task) => minuteByTask.get(task) ?? 0,
+    format: (value: number) => `${formatNumber(value)} phút`,
+  });
+
+  switch (selection.key) {
+    case "reviewOnTimeRate":
+      return taskDetail(
+        selection,
+        stats.onTimeEligible.map((row) => row.task),
+        `${formatNumber(stats.onTimeTasks.length)}/${formatNumber(stats.onTimeEligible.length)} task có Ngày Hoàn Thành trong kỳ đúng hạn`,
+      );
+    case "pendingReview": {
+      const cutoff = stats.pendingReviewAt;
+      return {
+        ...taskDetail(
+          selection,
+          stats.pendingReviewTasks,
+          `Đã gửi kiểm duyệt nhưng chưa hoàn thành tại 00:00 ${formatDate(cutoff)}`,
+        ),
+        taskMetric: minuteMetric(
+          new Map(
+            stats.pendingReviewTasks.map((task) => [
+              task,
+              businessMinutesBetween(task.inspectionDate, cutoff) ?? 0,
+            ]),
+          ),
+          "Phút đã chờ duyệt tại mốc",
+        ),
+      };
+    }
+    default:
+      return {
+        ...taskDetail(
+          selection,
+          stats.reviewRows.map((row) => row.task),
+          `${formatNumber(stats.reviewRows.length)} task có Ngày Kiểm Duyệt và Ngày Hoàn Thành trong kỳ`,
+        ),
+        taskMetric: minuteMetric(
+          new Map(stats.reviewRows.map((row) => [row.task, row.minutes])),
+          "Phút duyệt",
+        ),
+      };
+  }
+}
+
 export function buildComparisonDetail(
   data: DashboardData,
   report: SavedReport,
-  department: SavedReport["department"],
+  department: ComparisonDepartment,
   selection: ComparisonEvidenceSelection,
 ): DetailView {
+  if (department === "review") {
+    return reviewDetail(data, report, selection);
+  }
   return department === "media"
     ? mediaDetail(data, report, selection)
     : businessDetail(data, report, selection);
