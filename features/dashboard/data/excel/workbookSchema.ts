@@ -43,6 +43,9 @@ export const TASK_COLUMNS = {
   assignee: "Assignee",
   startDate: "Ngày Bắt Đầu",
   completedDate: "Ngày Hoàn Thành",
+  firstCompletedDate: "Ngày Hoàn Thành Lần Đầu",
+  approvalBy: "Approval By",
+  bodApprovalDate: "Ngày BOD Duyệt",
   inspectionDate: "Ngày Kiểm Duyệt",
   receivedStartDate: "Thời Gian Bắt Đầu Nhận Task",
   businessApprovalDate: "Ngày Kinh Doanh Duyệt",
@@ -74,10 +77,12 @@ export const SHOOT_SESSION_COLUMNS = {
 } as const;
 
 export const FEEDBACK_COLUMNS = {
+  id: "ID",
   taskCode: "Task",
   at: "Thời Điểm",
   assignee: "Người Làm Task",
   rejectedBy: "Reject By",
+  error: "Lỗi",
 } as const;
 
 export const PUBLICATION_COLUMNS = {
@@ -114,13 +119,20 @@ export const HOLIDAY_COLUMNS = {
 export const TASK_REQUIRED_HEADERS = Object.values(TASK_COLUMNS).filter(
   (header) =>
     header !== TASK_COLUMNS.receivedStartDate &&
+    header !== TASK_COLUMNS.firstCompletedDate &&
+    header !== TASK_COLUMNS.approvalBy &&
+    header !== TASK_COLUMNS.bodApprovalDate &&
     header !== TASK_COLUMNS.shootSession &&
     header !== TASK_COLUMNS.bodApproval &&
     header !== TASK_COLUMNS.plannedPublishDate,
 );
 export const FEEDBACK_REQUIRED_HEADERS = Object.values(
   FEEDBACK_COLUMNS,
-).filter((header) => header !== FEEDBACK_COLUMNS.rejectedBy);
+).filter((header) =>
+  header !== FEEDBACK_COLUMNS.rejectedBy &&
+  header !== FEEDBACK_COLUMNS.id &&
+  header !== FEEDBACK_COLUMNS.error,
+);
 export const PUBLICATION_REQUIRED_HEADERS = Object.values(
   PUBLICATION_COLUMNS,
 ).filter(

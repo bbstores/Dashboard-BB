@@ -13,6 +13,10 @@ export type Task = {
   startDate: Date | null;
   receivedStartDate?: Date | null;
   completedDate: Date | null;
+  /** Approval By luôn là người duyệt mới nhất, không phải lịch sử người duyệt. */
+  approvalBy?: string;
+  firstCompletedDate?: Date | null;
+  bodApprovalDate?: Date | null;
   inspectionDate: Date | null;
   businessApprovalDate: Date | null;
   handoffRating: string;
@@ -68,10 +72,29 @@ export type WorkNorm = {
 };
 
 export type Feedback = {
+  id?: string;
   taskCode: string;
   at: Date | null;
   assignee: string;
   rejectedBy?: string;
+  error?: string;
+};
+
+export type ReviewerReturnEvent = {
+  kind: "reject" | "bod";
+  at: Date | null;
+  by: string;
+  error: string;
+  counted: boolean;
+  reason: string;
+};
+
+export type ReviewerReturnEvidence = {
+  task: Task;
+  approvedAt: Date | null;
+  events: ReviewerReturnEvent[];
+  ignoredFeedback: Feedback[];
+  issues: string[];
 };
 
 export type FeedbackReturnSource = "business" | "bod" | "internal";
@@ -237,6 +260,7 @@ export type DetailView = {
   subtitle: string;
   tasks?: Task[];
   feedback?: Array<Feedback & { task?: Task }>;
+  reviewerReturnEvidence?: ReviewerReturnEvidence[];
   publicationEvidence?: Array<{
     post: PublicationPost;
     task?: Task;

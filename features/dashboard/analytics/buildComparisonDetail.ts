@@ -425,6 +425,33 @@ function reviewDetail(
   });
 
   switch (selection.key) {
+    case "hieuApprovedTasks":
+    case "hieuReturnedTasks":
+    case "hieuReturnRate":
+    case "hieuRejectTasks":
+    case "hieuBodTasks":
+    case "hieuRejectEvents":
+    case "hieuUncertainTasks":
+    case "hieuIgnoredEvents": {
+      const returns = stats.reviewerReturns;
+      const rows = selection.key === "hieuApprovedTasks"
+        ? returns.rows
+        : selection.key === "hieuRejectTasks" || selection.key === "hieuRejectEvents"
+          ? returns.rejectRows
+          : selection.key === "hieuBodTasks"
+            ? returns.bodRows
+            : selection.key === "hieuUncertainTasks"
+              ? returns.uncertainRows
+              : selection.key === "hieuIgnoredEvents"
+                ? returns.ignoredRows
+                : returns.returnedRows;
+      return {
+        ...baseDetail(selection,
+          `${returns.returnedTasks}/${returns.approvedTasks} task có người duyệt mới nhất là Hiếu bị trả sau Done mới nhất. Theo dõi đến thời điểm file xuất; task có Reject và BOD không duyệt chỉ tính một lần.`,
+        ),
+        reviewerReturnEvidence: rows,
+      };
+    }
     case "reviewOnTimeRate":
       return taskDetail(
         selection,

@@ -26,6 +26,8 @@ import {
   formatNumber,
 } from "@/shared/formatting/format";
 import { HelpButton } from "./HelpButton";
+import { getReviewerReturns } from "../analytics/calculateReviewerReturns";
+import { ReviewerReturnsComparison } from "./ReviewerReturnsComparison";
 
 type ComparisonPoint =
   | MediaComparisonPoint
@@ -776,15 +778,31 @@ function ReviewCharts({
   points,
   period,
   onSelect,
+  data,
+  onOpenDetail,
 }: {
   points: ReviewComparisonPoint[];
   period: ComparisonPeriod;
   onSelect: ComparisonSelect<ReviewComparisonPoint>;
+  data: DashboardData;
+  onOpenDetail: (detail: DetailView) => void;
 }) {
   const unit = period === "week" ? "tuần" : "tháng";
   const minutes = (value: number) => `${formatNumber(value)} phút`;
+  const reviewerReturns = getReviewerReturns(data);
   return (
     <section className="comparisonCharts">
+      <ReviewerReturnsComparison
+        points={points}
+        available={reviewerReturns.available}
+        unassignedRows={reviewerReturns.unassignedRows}
+        onSelect={onSelect}
+        onOpenUnassigned={() => onOpenDetail({
+          title: "Task Hiếu chưa xếp được kỳ duyệt",
+          subtitle: "Toàn file · Approval By mới nhất là Hiếu Producer nhưng thiếu Ngày Hoàn Thành. Không đưa các task này vào mẫu số của từng kỳ.",
+          reviewerReturnEvidence: reviewerReturns.unassignedRows,
+        })}
+      />
       <ComparisonTrend
         title={`Tỷ lệ hoàn thành đúng hạn theo ${unit}`}
         subtitle="TASK CÓ NGÀY HOÀN THÀNH TRONG KỲ"
@@ -1128,6 +1146,8 @@ export function ComparisonDashboard({
             points={points as ReviewComparisonPoint[]}
             period={period}
             onSelect={openComparisonDetail}
+            data={data}
+            onOpenDetail={onOpenDetail}
           />
         ) : (
           <BusinessCharts

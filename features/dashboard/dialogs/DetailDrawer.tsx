@@ -7,6 +7,7 @@ import {
   formatDateTime,
 } from "@/shared/formatting/format";
 import { normalizedKey } from "../model/taskUtils";
+import { ReviewerReturnEvidenceTable, formatReviewerTimestamp } from "./ReviewerReturnEvidenceTable";
 
 type FeedbackEvidence = NonNullable<DetailView["feedback"]>[number];
 type PublicationEvidence = NonNullable<
@@ -19,6 +20,7 @@ type CostTaskSummaryEvidence = NonNullable<
   DetailView["costTaskSummaries"]
 >[number];
 type ShootSessionEvidence = ShootSession;
+type ReviewerReturnEvidence = NonNullable<DetailView["reviewerReturnEvidence"]>[number];
 
 type DetailRecord =
   | { kind: "task"; value: Task }
@@ -26,7 +28,8 @@ type DetailRecord =
   | { kind: "publication"; value: PublicationEvidence }
   | { kind: "costAllocation"; value: CostAllocationEvidence }
   | { kind: "costTaskSummary"; value: CostTaskSummaryEvidence }
-  | { kind: "shootSession"; value: ShootSessionEvidence };
+  | { kind: "shootSession"; value: ShootSessionEvidence }
+  | { kind: "reviewerReturn"; value: ReviewerReturnEvidence };
 
 type DetailColumn = {
   key: string;
@@ -60,6 +63,9 @@ function normalizeSearch(value: unknown) {
 }
 
 function detailRecords(detail: DetailView): DetailRecord[] {
+  if (detail.reviewerReturnEvidence) {
+    return detail.reviewerReturnEvidence.map((value) => ({ kind: "reviewerReturn", value }));
+  }
   if (detail.shootSessions) {
     return detail.shootSessions.map((value) => ({
       kind: "shootSession",
@@ -97,6 +103,35 @@ function detailRecords(detail: DetailView): DetailRecord[] {
 }
 
 function detailColumns(detail: DetailView): DetailColumn[] {
+  if (detail.reviewerReturnEvidence) {
+    const textColumns: Array<{ key: string; label: string; read: (row: ReviewerReturnEvidence) => string | number }> = [
+      { key: "task", label: "Task", read: (row) => `${row.task.code} ${row.task.title}` },
+      { key: "assignee", label: "Người làm", read: (row) => row.task.assignee },
+      { key: "approvalBy", label: "Người duyệt mới nhất", read: (row) => row.task.approvalBy ?? "" },
+      { key: "events", label: "Các lần trả", read: (row) => row.events.map((event) => `${event.kind === "bod" ? "BOD không duyệt" : "Reject"} ${event.by} ${event.error} ${formatReviewerTimestamp(event.at)} ${event.reason}`).join(" ") },
+      { key: "rejectEvents", label: "Lần Reject được tính", read: (row) => row.events.filter((event) => event.kind === "reject" && event.counted).length },
+      { key: "bodApproval", label: "BOD hiện tại", read: (row) => row.task.bodApproval ?? "" },
+      { key: "status", label: "Trạng thái hiện tại", read: (row) => row.task.status },
+      { key: "issues", label: "Chưa đủ dữ liệu", read: (row) => row.issues.join(" ") },
+      { key: "ignored", label: "Phản hồi bị loại", read: (row) => row.ignoredFeedback.map((feedback) => `${feedback.rejectedBy || "Thiếu người trả"} ${formatReviewerTimestamp(feedback.at)} Ngoài danh sách 5 người hợp lệ`).join(" ") },
+    ];
+    return [
+      ...textColumns.map(({ key, label, read }) => ({
+        key, label,
+        value: (record: DetailRecord) => record.kind === "reviewerReturn" ? read(record.value) : "",
+      })),
+      ...(["approvedAt", "firstCompletedDate"] as const).map((key) => ({
+        key,
+        label: key === "approvedAt" ? "Done mới nhất" : "Done lần đầu",
+        value: (record: DetailRecord) => record.kind === "reviewerReturn"
+          ? (key === "approvedAt" ? record.value.approvedAt : record.value.task.firstCompletedDate)?.getTime() ?? -1
+          : -1,
+        search: (record: DetailRecord) => record.kind === "reviewerReturn"
+          ? formatReviewerTimestamp((key === "approvedAt" ? record.value.approvedAt : record.value.task.firstCompletedDate) ?? null)
+          : "",
+      })),
+    ];
+  }
   if (detail.shootSessions) {
     const columns: DetailColumn[] = [
       {
@@ -798,6 +833,9 @@ export function DetailDrawer({
   const taskRows = pagedRecords.flatMap((record) =>
     record.kind === "task" ? [record.value] : [],
   );
+  const reviewerReturnRows = pagedRecords.flatMap((record) =>
+    record.kind === "reviewerReturn" ? [record.value] : [],
+  );
 
   const resetTools = () => {
     setSearch("");
@@ -923,7 +961,9 @@ export function DetailDrawer({
           </button>
         </div>
         <div className="detailTableWrap">
-          {detail.shootSessions ? (
+          {detail.reviewerReturnEvidence ? (
+            <ReviewerReturnEvidenceTable rows={reviewerReturnRows} rowOffset={rowOffset} />
+          ) : detail.shootSessions ? (
             <table className="detailTable shootSessionDetailTable">
               <thead>
                 <tr>

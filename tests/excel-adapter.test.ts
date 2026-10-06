@@ -43,6 +43,49 @@ function addSheet(
   return sheet;
 }
 
+test("imports latest approver, historical Done, BOD date and feedback identifiers without requiring new columns in old files", () => {
+  const workbook = new ExcelJS.Workbook();
+  const taskHeaders = [...TASK_REQUIRED_HEADERS, TASK_COLUMNS.approvalBy, TASK_COLUMNS.firstCompletedDate, TASK_COLUMNS.bodApprovalDate, TASK_COLUMNS.bodApproval];
+  const taskSheet = addSheet(workbook, DASHBOARD_SHEETS.tasks, taskHeaders);
+  const taskValues: Record<string, string> = {
+    [TASK_COLUMNS.code]: "TSK-REVIEW",
+    [TASK_COLUMNS.approvalBy]: "Hiếu - Producer",
+    [TASK_COLUMNS.completedDate]: "2026-09-22 10:00:00",
+    [TASK_COLUMNS.firstCompletedDate]: "2026-09-21 09:00:00",
+    [TASK_COLUMNS.bodApprovalDate]: "2026-09-23 11:00:00",
+    [TASK_COLUMNS.bodApproval]: "KHÔNG DUYỆT ",
+  };
+  taskSheet.addRow(taskHeaders.map((header) => taskValues[header] ?? ""));
+  const feedbackHeaders = Object.values(FEEDBACK_COLUMNS);
+  const feedbackSheet = addSheet(workbook, DASHBOARD_SHEETS.feedback, feedbackHeaders);
+  const feedbackValues: Record<string, string> = {
+    [FEEDBACK_COLUMNS.id]: "ERR-REVIEW",
+    [FEEDBACK_COLUMNS.taskCode]: "TSK-REVIEW",
+    [FEEDBACK_COLUMNS.at]: "2026-09-23 11:00:01",
+    [FEEDBACK_COLUMNS.rejectedBy]: "BOSS BB 🤍",
+    [FEEDBACK_COLUMNS.error]: "SCR019",
+  };
+  feedbackSheet.addRow(feedbackHeaders.map((header) => feedbackValues[header] ?? ""));
+  assert.doesNotThrow(() => validateDashboardWorkbook(workbook));
+  const [task] = parseTasks(taskSheet);
+  const [feedback] = parseFeedback(feedbackSheet);
+  assert.equal(task.approvalBy, "Hiếu - Producer");
+  assert.equal(task.firstCompletedDate?.getDate(), 21);
+  assert.equal(task.bodApprovalDate?.getDate(), 23);
+  assert.equal(task.bodApprovalDate?.getHours(), 11);
+  assert.equal(task.bodApproval, "KHÔNG DUYỆT");
+  assert.equal(feedback.id, "ERR-REVIEW");
+  assert.equal(feedback.error, "SCR019");
+  assert.equal(feedback.at?.getSeconds(), 1);
+
+  const oldWorkbook = new ExcelJS.Workbook();
+  const oldTasks = addSheet(oldWorkbook, DASHBOARD_SHEETS.tasks, TASK_REQUIRED_HEADERS);
+  oldTasks.addRow(TASK_REQUIRED_HEADERS.map((header) => taskValues[header] ?? ""));
+  addSheet(oldWorkbook, DASHBOARD_SHEETS.feedback, FEEDBACK_REQUIRED_HEADERS);
+  assert.doesNotThrow(() => validateDashboardWorkbook(oldWorkbook));
+  assert.equal(parseTasks(oldTasks)[0].approvalBy, undefined);
+});
+
 test("validates required workbook sheets and headers", () => {
   const missingSheetWorkbook = new ExcelJS.Workbook();
   addSheet(

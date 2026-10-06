@@ -8,6 +8,7 @@ import { DashboardKpis } from "../features/dashboard/components/DashboardKpis";
 import { DailyTaskChart } from "../features/dashboard/components/DailyTaskChart";
 import { StaffColumns } from "../features/dashboard/components/StaffColumns";
 import { ComparisonDashboard } from "../features/dashboard/components/ComparisonDashboard";
+import { calculateReviewerReturns } from "../features/dashboard/analytics/calculateReviewerReturns";
 import { DetailDrawer } from "../features/dashboard/dialogs/DetailDrawer";
 import { PercentileDialog } from "../features/dashboard/dialogs/PercentileDialog";
 import { HelpProvider } from "../features/dashboard/help/HelpProvider";
@@ -143,6 +144,60 @@ function task(): Task {
     outsource: "",
   };
 }
+
+test("review comparison opens deduplicated return evidence with searchable events and ignored actors", () => {
+  const reviewedTask = { ...task(), code: "HIEU-RETURN", status: "Done", approvalBy: "Hiếu - Producer", completedDate: new Date(2026, 6, 22, 10), bodApproval: "KHÔNG DUYỆT", bodApprovalDate: new Date(2026, 6, 23, 10) };
+  const data: DashboardData = {
+    fileName: "hieu.xlsx", tasks: [reviewedTask], norms: [], publications: [],
+    feedback: [
+      { taskCode: reviewedTask.code, at: new Date(2026, 6, 23, 11), assignee: "Nhân sự A", rejectedBy: "Media Planner", error: "SCR019" },
+      { taskCode: reviewedTask.code, at: new Date(2026, 6, 23, 12), assignee: "Nhân sự A", rejectedBy: "Thúy Sang - OM SOCIAL" },
+    ],
+  };
+  const report: SavedReport = { id: "HIEU-WEEK", name: "Media tuần Hiếu", department: "media", createdAt: "2026-07-27T00:00:00Z", filters: { dateFrom: "2026-07-20", dateTo: "2026-07-26", backlogDate: "2026-07-26", collectionMonth: "", leaderboardUnit: "minutes", pieScopes: {}, pieExcludeOutsource: {} } };
+  let detail: DetailView | undefined;
+  const view = render(<HelpProvider><ComparisonDashboard data={data} reports={[report]} onOpenDetail={(value) => { detail = value; }} /></HelpProvider>);
+  fireEvent.click(screen.getByRole("button", { name: "Kiểm duyệt" }));
+  screen.getByRole("heading", { name: "Task bị trả sau duyệt · Hiếu Producer" });
+  fireEvent.click(screen.getByRole("button", { name: "Media tuần Hiếu · Task bị trả: 1 · Xem dẫn chứng" }));
+  assert.deepEqual(detail?.reviewerReturnEvidence?.map((row) => row.task.code), ["HIEU-RETURN"]);
+  assert.equal(detail?.reviewerReturnEvidence?.[0].events.length, 2);
+  assert.equal(detail?.reviewerReturnEvidence?.[0].ignoredFeedback.length, 1);
+  view.unmount();
+  assert.ok(detail);
+  render(<DetailDrawer detail={detail} onClose={() => {}} />);
+  screen.getByRole("columnheader", { name: "Người duyệt mới nhất" });
+  screen.getByText("SCR019", { exact: false });
+  screen.getByText("Thúy Sang - OM SOCIAL");
+  fireEvent.change(screen.getByRole("searchbox", { name: "Tìm trong bảng dẫn chứng" }), { target: { value: "SCR019" } });
+  screen.getByText("HIEU-RETURN");
+  fireEvent.change(screen.getByRole("searchbox", { name: "Tìm trong bảng dẫn chứng" }), { target: { value: "KHONG-TON-TAI" } });
+  screen.getByText("Không có bản ghi khớp với tìm kiếm và bộ lọc.");
+});
+
+test("review return metrics distinguish missing Approval By from a real zero and an empty denominator", () => {
+  const report: SavedReport = { id: "EMPTY-WEEK", name: "Media tuần trống", department: "media", createdAt: "2026-07-27T00:00:00Z", filters: { dateFrom: "2026-07-20", dateTo: "2026-07-26", backlogDate: "2026-07-26", collectionMonth: "", leaderboardUnit: "minutes", pieScopes: {}, pieExcludeOutsource: {} } };
+  const data: DashboardData = { fileName: "legacy.xlsx", tasks: [task()], norms: [], feedback: [], publications: [] };
+  const view = render(<HelpProvider><ComparisonDashboard data={data} reports={[report]} onOpenDetail={() => {}} /></HelpProvider>);
+  fireEvent.click(screen.getByRole("button", { name: "Kiểm duyệt" }));
+  screen.getByText("Chưa có cột Approval By trong file. Không xác định được người duyệt mới nhất để tính chỉ số này.");
+  assert.equal(screen.queryByRole("button", { name: "Media tuần trống · Task bị trả: 0 · Xem dẫn chứng" }), null);
+  view.unmount();
+  render(<HelpProvider><ComparisonDashboard data={{ ...data, tasks: [{ ...task(), approvalBy: "Media Planner" }] }} reports={[report]} onOpenDetail={() => {}} /></HelpProvider>);
+  fireEvent.click(screen.getByRole("button", { name: "Kiểm duyệt" }));
+  const rate = screen.getByRole("button", { name: "Media tuần trống · Tỷ lệ ghi nhận: — · Xem dẫn chứng" });
+  assert.equal((rate as HTMLButtonElement).disabled, true);
+  screen.getByRole("button", { name: "Media tuần trống · Task bị trả: 0 · Xem dẫn chứng" });
+});
+
+test("review return drawer exposes uncertain dates without including them as confirmed returns", () => {
+  const data: DashboardData = { fileName: "uncertain.xlsx", tasks: [{ ...task(), approvalBy: "Hiếu - Producer", completedDate: new Date(2026, 6, 22, 10), bodApproval: "KHÔNG DUYỆT" }], norms: [], feedback: [], publications: [] };
+  const stats = calculateReviewerReturns(data, { from: new Date(2026, 6, 20), to: new Date(2026, 6, 26, 23, 59), hasFilter: true });
+  assert.equal(stats.returnedTasks, 0);
+  render(<DetailDrawer detail={{ title: "Chưa đủ dữ liệu", subtitle: "", reviewerReturnEvidence: stats.uncertainRows }} onClose={() => {}} />);
+  screen.getByText("BOD không duyệt nhưng thiếu Ngày BOD Duyệt", { exact: true });
+  assert.ok(screen.getByText(/BOD không duyệt nhưng thiếu Ngày BOD Duyệt · Chưa tính/));
+});
 
 test("DashboardFilters emits typed filter actions", () => {
   const changes: string[] = [];

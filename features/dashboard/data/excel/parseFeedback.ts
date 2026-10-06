@@ -20,6 +20,7 @@ export function parseFeedback(
     );
     if (!taskCode) continue;
     feedback.push({
+      id: normalize(valueAt(row, headers, FEEDBACK_COLUMNS.id)),
       taskCode,
       at: excelDateTime(
         temporalValueAt(row, headers, FEEDBACK_COLUMNS.at),
@@ -30,6 +31,7 @@ export function parseFeedback(
       rejectedBy: normalize(
         valueAt(row, headers, FEEDBACK_COLUMNS.rejectedBy),
       ),
+      error: normalize(valueAt(row, headers, FEEDBACK_COLUMNS.error)),
     });
   }
   return feedback;

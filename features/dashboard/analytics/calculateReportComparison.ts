@@ -27,6 +27,7 @@ import { calculateLeaderboard } from "./calculateLeaderboard";
 import { calculatePublicationStats } from "./calculatePublicationStats";
 import { calculateSla } from "./calculateSla";
 import { calculateTaskSelection } from "./classifyTasks";
+import { calculateReviewerReturns } from "./calculateReviewerReturns";
 
 export type ComparisonPeriod = "week" | "month";
 /** Kiểm duyệt chưa có báo cáo lưu riêng nên dùng các kỳ của báo cáo Media. */
@@ -96,6 +97,10 @@ export type ReviewComparisonPoint = ComparisonBase & {
   reviewMinutesP90: number;
   pendingReview: number;
   pendingReviewAt: Date;
+  reviewerReturns: Pick<ReturnType<typeof calculateReviewerReturns>,
+    "available" | "approvedTasks" | "returnedTasks" | "rejectTasks" |
+    "bodTasks" | "rejectEvents" | "uncertainTasks" | "ignoredEvents" | "returnRate"
+  >;
 };
 
 function reportWindow(report: SavedReport): DateWindow | null {
@@ -348,6 +353,7 @@ function buildReviewComparisonContext(
     pendingReviewTasks: data.tasks.filter((task) =>
       isPendingReviewTask(task, pendingReviewAt),
     ),
+    reviewerReturns: calculateReviewerReturns(data, window),
   };
 }
 
@@ -395,6 +401,17 @@ function reviewPoint(
     reviewMinutesP90: minutePercentile(0.9),
     pendingReview: stats.pendingReviewTasks.length,
     pendingReviewAt: stats.pendingReviewAt,
+    reviewerReturns: {
+      available: stats.reviewerReturns.available,
+      approvedTasks: stats.reviewerReturns.approvedTasks,
+      returnedTasks: stats.reviewerReturns.returnedTasks,
+      rejectTasks: stats.reviewerReturns.rejectTasks,
+      bodTasks: stats.reviewerReturns.bodTasks,
+      rejectEvents: stats.reviewerReturns.rejectEvents,
+      uncertainTasks: stats.reviewerReturns.uncertainTasks,
+      ignoredEvents: stats.reviewerReturns.ignoredEvents,
+      returnRate: stats.reviewerReturns.returnRate,
+    },
   };
 }
 

@@ -1,4 +1,4 @@
-import { normalize, numberValue } from "../../model/taskUtils";
+import { normalize, normalizedKey, numberValue } from "../../model/taskUtils";
 import type { Task } from "../../model/types";
 import { excelDate, excelDateTime } from "./excelDate";
 import { TASK_COLUMNS } from "./workbookSchema";
@@ -42,6 +42,17 @@ export function parseTasks(sheet: import("exceljs").Worksheet): Task[] {
       receivedStartDate,
       completedDate: excelDateTime(
         temporalValueAt(row, headers, TASK_COLUMNS.completedDate),
+        startDate,
+      ),
+      approvalBy: headers.has(normalizedKey(TASK_COLUMNS.approvalBy))
+        ? normalize(valueAt(row, headers, TASK_COLUMNS.approvalBy))
+        : undefined,
+      firstCompletedDate: excelDateTime(
+        temporalValueAt(row, headers, TASK_COLUMNS.firstCompletedDate),
+        startDate,
+      ),
+      bodApprovalDate: excelDateTime(
+        temporalValueAt(row, headers, TASK_COLUMNS.bodApprovalDate),
         startDate,
       ),
       inspectionDate: excelDateTime(

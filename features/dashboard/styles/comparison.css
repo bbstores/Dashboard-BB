@@ -463,6 +463,21 @@
   margin: 6px 0 0;
 }
 
+.reviewerReturnsCard { grid-column: 1 / -1; }
+.reviewerReturnsNote { color: var(--muted); font-size: 11px; line-height: 1.65; margin: 14px 0; }
+.reviewerReturnsScroller { overflow-x: auto; }
+.reviewerReturnsTable { border-collapse: collapse; min-width: 1050px; width: 100%; }
+.reviewerReturnsTable th, .reviewerReturnsTable td { border-bottom: 1px solid var(--line); padding: 13px 9px; text-align: center; }
+.reviewerReturnsTable thead th { color: var(--muted); font-size: 10px; font-weight: 700; max-width: 110px; }
+.reviewerReturnsTable th:first-child { min-width: 160px; text-align: left; }
+.reviewerReturnsTable tbody th { font-size: 11px; }
+.reviewerReturnsTable tbody th small { color: var(--muted); display: block; font-size: 9px; margin-top: 5px; }
+.reviewerReturnsTable td button { background: #e8eee9; border: 1px solid transparent; border-radius: 9px; color: var(--green); cursor: pointer; font-size: 16px; font-weight: 800; min-width: 48px; padding: 9px; }
+.reviewerReturnsTable td button:hover, .reviewerReturnsTable td button:focus-visible { border-color: var(--green); }
+.reviewerReturnsTable td button:disabled { background: transparent; color: var(--muted); cursor: default; }
+.reviewerReturnsTable .reviewerReturnsTotal button { background: #f6e3df; color: #954a40; }
+.reviewerReturnsUnassigned { background: #f9eddb; border: 1px solid #e5c995; border-radius: 10px; color: #775525; cursor: pointer; font-size: 11px; padding: 12px; text-align: left; }
+
 @media (max-width: 880px) {
   .comparisonHero {
     align-items: stretch;
