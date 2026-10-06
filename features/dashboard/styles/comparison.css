@@ -476,6 +476,7 @@
 .reviewerReturnsTable td button:hover, .reviewerReturnsTable td button:focus-visible { border-color: var(--green); }
 .reviewerReturnsTable td button:disabled { background: transparent; color: var(--muted); cursor: default; }
 .reviewerReturnsTable .reviewerReturnsTotal button { background: #f6e3df; color: #954a40; }
+.reviewerReturnsTable .reviewerReturnsSelf button { background: transparent; border-color: var(--line); color: var(--muted); }
 .reviewerReturnsUnassigned { background: #f9eddb; border: 1px solid #e5c995; border-radius: 10px; color: #775525; cursor: pointer; font-size: 11px; padding: 12px; text-align: left; }
 
 @media (max-width: 880px) {

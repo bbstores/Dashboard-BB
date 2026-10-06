@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { calculateReviewerReturns, getReviewerReturns, isTrustedReturner } from "../features/dashboard/analytics/calculateReviewerReturns";
+import { calculateReviewerReturns, getReviewerReturns, returnSourceOf } from "../features/dashboard/analytics/calculateReviewerReturns";
 import { calculateReportComparison, type ReviewComparisonPoint } from "../features/dashboard/analytics/calculateReportComparison";
 import { buildComparisonDetail } from "../features/dashboard/analytics/buildComparisonDetail";
 import type { DashboardData, Feedback, SavedReport, Task } from "../features/dashboard/model/types";
@@ -26,76 +26,80 @@ function data(tasks: Task[], feedback: Feedback[] = []): DashboardData {
   return { tasks, feedback, publications: [], norms: [], fileName: "reviewer.xlsx" };
 }
 
-test("only the five authorized returners are trusted, including export spellings", () => {
-  for (const name of ["Thuỳ An", "Thùy An", "BOSS BB 🤍", "Hiếu - Producer", "Thu Trang - Content MKT", "Thu Trang", "Media Planner"]) {
-    assert.equal(isTrustedReturner(name), true, name);
+test("maps export spellings to the later reviewers, Hiếu and nobody else", () => {
+  for (const [name, source] of [
+    ["Thuỳ An", "thuyAn"], ["Thùy An", "thuyAn"], ["BOSS BB 🤍", "boss"],
+    ["Thu Trang - Content MKT", "thuTrang"], ["Thu Trang", "thuTrang"], ["Media Planner", "thuTrang"],
+    ["Thúy Sang - OM SOCIAL", "thuySang"], ["Hiếu - Producer", "hieu"],
+  ] as const) {
+    assert.equal(returnSourceOf(name), source, name);
   }
-  for (const name of ["Thúy Sang - OM SOCIAL", "Bảo Ngân", "Thu Trang Media Planner", "Hoàng Anh - MEDIA PLANNER", "BOSS BB giả", "", undefined]) {
-    assert.equal(isTrustedReturner(name), false, String(name));
+  for (const name of ["TRÂMM", "Bảo Ngân", "Phương Thuỳ - Media", "Hoàng Anh - MEDIA PLANNER", "BOSS BB giả", "", undefined]) {
+    assert.equal(returnSourceOf(name), null, String(name));
   }
 });
 
-test("counts unique tasks across Reject and BOD and keeps history events separate", () => {
+test("counts unique returned tasks across later reviewers and BOD, and splits them by source", () => {
   const workbook = data([
     task("BOTH", { bodApproval: "KHÔNG DUYỆT ", bodApprovalDate: at(24) }),
-    task("BOD", { bodApproval: "KHÔNG DUYỆT", bodApprovalDate: at(24) }),
-    task("CLEAN"),
+    task("BOD", { bodApproval: "ĐANG SỬA" }),
+    task("SANG"),
+    task("CLEAN", { bodApproval: "DUYỆT" }),
     task("OTHER", { approvalBy: "Media Planner" }),
   ], [
     feedback("BOTH", { id: "ERR-1" }),
     feedback("BOTH", { id: "ERR-1" }),
     feedback("BOTH", { id: "ERR-2", rejectedBy: "Thu Trang - Content MKT" }),
     feedback("BOTH", { id: "ERR-3", rejectedBy: "Media Planner" }),
-    feedback("BOTH", { id: "ERR-4", rejectedBy: "Hiếu - Producer" }),
+    feedback("SANG", { rejectedBy: "Thúy Sang - OM SOCIAL" }),
     feedback("OTHER"),
-    feedback("CLEAN", { rejectedBy: "Thúy Sang - OM SOCIAL" }),
+    feedback("CLEAN", { rejectedBy: "TRÂMM" }),
     feedback("CLEAN", { rejectedBy: "" }),
     feedback("UNKNOWN"),
   ]);
   const stats = calculateReviewerReturns(workbook, window);
-  assert.equal(stats.approvedTasks, 3);
-  assert.equal(stats.returnedTasks, 2);
-  assert.equal(stats.rejectTasks, 1);
-  assert.equal(stats.bodTasks, 2);
-  assert.equal(stats.rejectEvents, 4, "BOD snapshot does not add a duplicate history event");
-  assert.equal(stats.ignoredEvents, 2);
-  assert.equal(stats.uncertainTasks, 0);
-  assert.ok(Math.abs(stats.returnRate! - 200 / 3) < 1e-10);
-  assert.deepEqual(stats.returnedRows.map((row) => row.task.code), ["BOTH", "BOD"]);
+  assert.equal(stats.approvedTasks, 4);
+  assert.equal(stats.returnedTasks, 3);
+  assert.deepEqual(stats.returnedRows.map((row) => row.task.code), ["BOTH", "BOD", "SANG"]);
+  assert.deepEqual(stats.sourceTasks, { thuyAn: 0, boss: 1, thuTrang: 1, thuySang: 1, bod: 2, hieu: 0 });
+  assert.equal(stats.rows[0].events.length, 4, "duplicate feedback ID counted once, BOD added once");
+  assert.equal(stats.rows.find((row) => row.task.code === "CLEAN")?.ignoredFeedback.length, 2);
+  assert.equal(stats.returnRate, 75);
   assert.equal(getReviewerReturns(workbook), getReviewerReturns(workbook));
 });
 
-test("does not attribute earlier review rounds to the latest reviewer or use current status to erase a return", () => {
-  const stats = calculateReviewerReturns(data([
-    task("BEFORE-FIRST", { firstCompletedDate: at(22) }),
-    task("EARLIER-ROUND", { firstCompletedDate: at(21) }),
-    task("SAME-TIME"),
-    task("REOPENED", { status: "Thực Hiện Lại" }),
-  ], [
-    feedback("BEFORE-FIRST", { at: at(21), rejectedBy: "Hiếu - Producer" }),
-    feedback("EARLIER-ROUND", { at: at(21, 12) }),
-    feedback("SAME-TIME", { at: at(22) }),
-    feedback("REOPENED"),
+test("later-reviewer returns count even when the task was Done again afterwards", () => {
+  // Thuỳ An trả ngày 21, task làm lại và Done ngày 22: Ngày Hoàn Thành đã bị ghi đè.
+  const stats = calculateReviewerReturns(data([task("REDONE"), task("NO-TIME")], [
+    feedback("REDONE", { at: at(21), rejectedBy: "Thùy An" }),
+    feedback("NO-TIME", { at: null }),
   ]), window);
-  assert.equal(stats.returnedTasks, 1);
-  assert.equal(stats.uncertainTasks, 2);
-  assert.deepEqual(stats.uncertainRows.map((row) => row.task.code), ["EARLIER-ROUND", "SAME-TIME"]);
-  assert.equal(stats.rows[0].events.length, 0, "reject before the first Done is not a post-approval return");
-  assert.equal(stats.returnedRows[0].task.code, "REOPENED");
+  assert.equal(stats.returnedTasks, 2);
+  assert.equal(stats.sourceTasks.thuyAn, 1);
 });
 
-test("missing dates remain uncertain and missing latest Done cannot be assigned to a period", () => {
+test("Hiếu's own rejects are normal review before Done and a separate self-reopen after it", () => {
+  const stats = calculateReviewerReturns(data([task("REVIEW"), task("REOPEN"), task("REOPEN-AND-BOSS")], [
+    feedback("REVIEW", { at: at(21), rejectedBy: "Hiếu - Producer" }),
+    feedback("REOPEN", { at: at(24), rejectedBy: "Hiếu - Producer" }),
+    feedback("REOPEN-AND-BOSS", { at: at(24), rejectedBy: "Hiếu - Producer" }),
+    feedback("REOPEN-AND-BOSS", { at: at(25) }),
+  ]), window);
+  assert.equal(stats.rows[0].events.length, 0);
+  assert.equal(stats.returnedTasks, 1);
+  assert.deepEqual(stats.returnedRows.map((row) => row.task.code), ["REOPEN-AND-BOSS"]);
+  assert.deepEqual(stats.sourceRows.hieu.map((row) => row.task.code), ["REOPEN", "REOPEN-AND-BOSS"]);
+});
+
+test("tasks without a latest Done stay out of every period", () => {
   const workbook = data([
-    task("BOD-NO-DATE", { bodApproval: "KHÔNG DUYỆT" }),
-    task("REJECT-NO-DATE"),
-    task("NO-LATEST-DONE", { completedDate: null, firstCompletedDate: at(22) }),
+    task("NO-LATEST-DONE", { completedDate: null }),
     task("INVALID-DATE", { completedDate: new Date(Number.NaN) }),
-    task("BOD-BEFORE-DONE", { bodApproval: "KHÔNG DUYỆT", bodApprovalDate: at(21) }),
-  ], [feedback("REJECT-NO-DATE", { at: null }), feedback("NO-LATEST-DONE")]);
+    task("IN-WINDOW"),
+  ], [feedback("NO-LATEST-DONE")]);
   const stats = calculateReviewerReturns(workbook, window);
-  assert.equal(stats.approvedTasks, 3);
+  assert.equal(stats.approvedTasks, 1);
   assert.equal(stats.returnedTasks, 0);
-  assert.equal(stats.uncertainTasks, 3);
   assert.deepEqual(getReviewerReturns(workbook).unassignedRows.map((row) => row.task.code), ["NO-LATEST-DONE", "INVALID-DATE"]);
 });
 
@@ -104,8 +108,7 @@ test("reports use the latest Done period and follow subsequent returns beyond it
     task("END", { completedDate: window.to }),
     task("NEXT", { completedDate: at(28, 0) }),
     task("START", { completedDate: window.from }),
-    task("LATEST", { firstCompletedDate: at(10), completedDate: at(28) }),
-  ], [feedback("END", { at: at(30) }), feedback("START", { at: at(28) })]);
+  ], [feedback("END", { at: at(30) }), feedback("START", { at: at(28) }), feedback("NEXT")]);
   const stats = calculateReviewerReturns(workbook, window);
   assert.equal(stats.approvedTasks, 2);
   assert.equal(stats.returnedTasks, 2);
@@ -120,23 +123,24 @@ test("legacy files without Approval By leave the new metric unavailable", () => 
 });
 
 test("comparison totals and drawer evidence use the same task population", () => {
-  const workbook = data([task("RETURNED"), task("CLEAN"), task("UNCERTAIN", { bodApproval: "KHÔNG DUYỆT" })], [feedback("RETURNED")]);
+  const workbook = data([task("RETURNED"), task("CLEAN"), task("BOD", { bodApproval: "KHÔNG DUYỆT" })], [feedback("RETURNED")]);
   const report: SavedReport = {
     id: "WEEK", name: "Media tuần", department: "media", createdAt: "2026-09-28T00:00:00Z",
     filters: { dateFrom: "2026-09-21", dateTo: "2026-09-27", backlogDate: "2026-09-27", collectionMonth: "", leaderboardUnit: "minutes", pieScopes: {}, pieExcludeOutsource: {} },
   };
   const [point] = calculateReportComparison(workbook, [report], "review", "week") as ReviewComparisonPoint[];
   assert.equal(point.reviewerReturns.approvedTasks, 3);
-  assert.equal(point.reviewerReturns.returnedTasks, 1);
+  assert.equal(point.reviewerReturns.returnedTasks, 2);
   for (const [key, expected] of [
-    ["hieuReturnedTasks", ["RETURNED"]],
-    ["hieuReturnRate", ["RETURNED"]],
-    ["hieuUncertainTasks", ["UNCERTAIN"]],
-    ["hieuApprovedTasks", ["RETURNED", "CLEAN", "UNCERTAIN"]],
+    ["hieuReturnedTasks", ["RETURNED", "BOD"]],
+    ["hieuReturnRate", ["RETURNED", "BOD"]],
+    ["hieuReturn:boss", ["RETURNED"]],
+    ["hieuReturn:bod", ["BOD"]],
+    ["hieuApprovedTasks", ["RETURNED", "CLEAN", "BOD"]],
   ] as const) {
     const detail = buildComparisonDetail(workbook, report, "review", {
       chartTitle: "Hiếu", key, point, seriesLabel: key, value: 1, formattedValue: "1",
     });
-    assert.deepEqual(detail.reviewerReturnEvidence?.map((row) => row.task.code), expected);
+    assert.deepEqual(detail.reviewerReturnEvidence?.map((row) => row.task.code), expected, key);
   }
 });

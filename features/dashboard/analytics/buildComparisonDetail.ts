@@ -13,6 +13,7 @@ import {
   getMediaComparisonContext,
   getReviewComparisonContext,
 } from "./calculateReportComparison";
+import { REVIEWER_RETURN_SOURCES } from "./calculateReviewerReturns";
 import {
   businessMinutesBetween,
 } from "@/shared/date/dateUtils";
@@ -424,32 +425,29 @@ function reviewDetail(
     format: (value: number) => `${formatNumber(value)} phút`,
   });
 
+  const returnSource = REVIEWER_RETURN_SOURCES.find(({ source }) => selection.key === `hieuReturn:${source}`);
+  if (returnSource) {
+    const rows = stats.reviewerReturns.sourceRows[returnSource.source];
+    return {
+      ...baseDetail(selection,
+        returnSource.source === "hieu"
+          ? `${rows.length} task Hiếu tự Reject lại sau Done mới nhất. Không cộng vào tổng task bị trả.`
+          : `${rows.length} task Hiếu chuyển Done có lần trả từ ${returnSource.label}.`,
+      ),
+      reviewerReturnEvidence: rows,
+    };
+  }
+
   switch (selection.key) {
     case "hieuApprovedTasks":
     case "hieuReturnedTasks":
-    case "hieuReturnRate":
-    case "hieuRejectTasks":
-    case "hieuBodTasks":
-    case "hieuRejectEvents":
-    case "hieuUncertainTasks":
-    case "hieuIgnoredEvents": {
+    case "hieuReturnRate": {
       const returns = stats.reviewerReturns;
-      const rows = selection.key === "hieuApprovedTasks"
-        ? returns.rows
-        : selection.key === "hieuRejectTasks" || selection.key === "hieuRejectEvents"
-          ? returns.rejectRows
-          : selection.key === "hieuBodTasks"
-            ? returns.bodRows
-            : selection.key === "hieuUncertainTasks"
-              ? returns.uncertainRows
-              : selection.key === "hieuIgnoredEvents"
-                ? returns.ignoredRows
-                : returns.returnedRows;
       return {
         ...baseDetail(selection,
-          `${returns.returnedTasks}/${returns.approvedTasks} task có người duyệt mới nhất là Hiếu bị trả sau Done mới nhất. Theo dõi đến thời điểm file xuất; task có Reject và BOD không duyệt chỉ tính một lần.`,
+          `${returns.returnedTasks}/${returns.approvedTasks} task có người chuyển Done gần nhất là Hiếu bị cấp sau trả. Theo dõi đến thời điểm file xuất; task bị nhiều người trả chỉ tính một lần.`,
         ),
-        reviewerReturnEvidence: rows,
+        reviewerReturnEvidence: selection.key === "hieuApprovedTasks" ? returns.rows : returns.returnedRows,
       };
     }
     case "reviewOnTimeRate":

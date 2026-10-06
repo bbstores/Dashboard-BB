@@ -95,14 +95,14 @@
   from { transform: translateX(40px); opacity: .5; }
   to { transform: translateX(0); opacity: 1; }
 }
-.reviewerReturnEvidenceTable { min-width: 1800px; }
+.reviewerReturnEvidenceTable { min-width: 1500px; }
 .reviewerReturnEvidenceTable td { vertical-align: top; }
 .reviewerReturnEvent { display: grid; gap: 5px; min-width: 190px; padding: 8px 0; }
 .reviewerReturnEvent + .reviewerReturnEvent { border-top: 1px solid var(--line); }
 .reviewerReturnEvent strong { font-size: 11px; }
 .reviewerReturnEvent span, .reviewerReturnEvent small { font-size: 10px; line-height: 1.5; }
 .reviewerReturnEvent.counted small { color: var(--green); }
-.reviewerReturnEvent.uncertain small { color: #916425; }
+.reviewerReturnEvent.self small { color: var(--muted); }
 .detailHeader {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;
   padding-bottom: 22px; border-bottom: 1px solid var(--line);

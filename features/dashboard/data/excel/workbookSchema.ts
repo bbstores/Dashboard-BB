@@ -43,7 +43,6 @@ export const TASK_COLUMNS = {
   assignee: "Assignee",
   startDate: "Ngày Bắt Đầu",
   completedDate: "Ngày Hoàn Thành",
-  firstCompletedDate: "Ngày Hoàn Thành Lần Đầu",
   approvalBy: "Approval By",
   bodApprovalDate: "Ngày BOD Duyệt",
   inspectionDate: "Ngày Kiểm Duyệt",
@@ -119,7 +118,6 @@ export const HOLIDAY_COLUMNS = {
 export const TASK_REQUIRED_HEADERS = Object.values(TASK_COLUMNS).filter(
   (header) =>
     header !== TASK_COLUMNS.receivedStartDate &&
-    header !== TASK_COLUMNS.firstCompletedDate &&
     header !== TASK_COLUMNS.approvalBy &&
     header !== TASK_COLUMNS.bodApprovalDate &&
     header !== TASK_COLUMNS.shootSession &&

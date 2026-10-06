@@ -13,9 +13,8 @@ export type Task = {
   startDate: Date | null;
   receivedStartDate?: Date | null;
   completedDate: Date | null;
-  /** Approval By luôn là người duyệt mới nhất, không phải lịch sử người duyệt. */
+  /** Approval By là người chuyển Checking sang Done gần nhất; mỗi lần Done lại sẽ ghi đè. */
   approvalBy?: string;
-  firstCompletedDate?: Date | null;
   bodApprovalDate?: Date | null;
   inspectionDate: Date | null;
   businessApprovalDate: Date | null;
@@ -80,13 +79,14 @@ export type Feedback = {
   error?: string;
 };
 
+/** Các cấp duyệt sau Hiếu; `hieu` là Hiếu tự mở lại task đã Done, không cộng vào tổng bị trả. */
+export type ReviewerReturnSource = "thuyAn" | "boss" | "thuTrang" | "thuySang" | "bod" | "hieu";
+
 export type ReviewerReturnEvent = {
-  kind: "reject" | "bod";
+  source: ReviewerReturnSource;
   at: Date | null;
   by: string;
   error: string;
-  counted: boolean;
-  reason: string;
 };
 
 export type ReviewerReturnEvidence = {
@@ -94,7 +94,6 @@ export type ReviewerReturnEvidence = {
   approvedAt: Date | null;
   events: ReviewerReturnEvent[];
   ignoredFeedback: Feedback[];
-  issues: string[];
 };
 
 export type FeedbackReturnSource = "business" | "bod" | "internal";

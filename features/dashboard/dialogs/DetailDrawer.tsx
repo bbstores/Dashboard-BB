@@ -7,7 +7,7 @@ import {
   formatDateTime,
 } from "@/shared/formatting/format";
 import { normalizedKey } from "../model/taskUtils";
-import { ReviewerReturnEvidenceTable, formatReviewerTimestamp } from "./ReviewerReturnEvidenceTable";
+import { ReviewerReturnEvidenceTable, formatReviewerTimestamp, reviewerReturnEventLabel } from "./ReviewerReturnEvidenceTable";
 
 type FeedbackEvidence = NonNullable<DetailView["feedback"]>[number];
 type PublicationEvidence = NonNullable<
@@ -107,29 +107,24 @@ function detailColumns(detail: DetailView): DetailColumn[] {
     const textColumns: Array<{ key: string; label: string; read: (row: ReviewerReturnEvidence) => string | number }> = [
       { key: "task", label: "Task", read: (row) => `${row.task.code} ${row.task.title}` },
       { key: "assignee", label: "Người làm", read: (row) => row.task.assignee },
-      { key: "approvalBy", label: "Người duyệt mới nhất", read: (row) => row.task.approvalBy ?? "" },
-      { key: "events", label: "Các lần trả", read: (row) => row.events.map((event) => `${event.kind === "bod" ? "BOD không duyệt" : "Reject"} ${event.by} ${event.error} ${formatReviewerTimestamp(event.at)} ${event.reason}`).join(" ") },
-      { key: "rejectEvents", label: "Lần Reject được tính", read: (row) => row.events.filter((event) => event.kind === "reject" && event.counted).length },
+      { key: "approvalBy", label: "Người chuyển Done gần nhất", read: (row) => row.task.approvalBy ?? "" },
+      { key: "events", label: "Các lần trả", read: (row) => row.events.map((event) => `${reviewerReturnEventLabel(event)} ${event.error} ${formatReviewerTimestamp(event.at)}`).join(" ") },
+      { key: "laterReturns", label: "Số lần cấp sau trả", read: (row) => row.events.filter((event) => event.source !== "hieu").length },
       { key: "bodApproval", label: "BOD hiện tại", read: (row) => row.task.bodApproval ?? "" },
       { key: "status", label: "Trạng thái hiện tại", read: (row) => row.task.status },
-      { key: "issues", label: "Chưa đủ dữ liệu", read: (row) => row.issues.join(" ") },
-      { key: "ignored", label: "Phản hồi bị loại", read: (row) => row.ignoredFeedback.map((feedback) => `${feedback.rejectedBy || "Thiếu người trả"} ${formatReviewerTimestamp(feedback.at)} Ngoài danh sách 5 người hợp lệ`).join(" ") },
+      { key: "ignored", label: "Phản hồi bị loại", read: (row) => row.ignoredFeedback.map((feedback) => `${feedback.rejectedBy || "Thiếu người trả"} ${formatReviewerTimestamp(feedback.at)}`).join(" ") },
     ];
     return [
       ...textColumns.map(({ key, label, read }) => ({
         key, label,
         value: (record: DetailRecord) => record.kind === "reviewerReturn" ? read(record.value) : "",
       })),
-      ...(["approvedAt", "firstCompletedDate"] as const).map((key) => ({
-        key,
-        label: key === "approvedAt" ? "Done mới nhất" : "Done lần đầu",
-        value: (record: DetailRecord) => record.kind === "reviewerReturn"
-          ? (key === "approvedAt" ? record.value.approvedAt : record.value.task.firstCompletedDate)?.getTime() ?? -1
-          : -1,
-        search: (record: DetailRecord) => record.kind === "reviewerReturn"
-          ? formatReviewerTimestamp((key === "approvedAt" ? record.value.approvedAt : record.value.task.firstCompletedDate) ?? null)
-          : "",
-      })),
+      {
+        key: "approvedAt",
+        label: "Done mới nhất",
+        value: (record: DetailRecord) => record.kind === "reviewerReturn" ? record.value.approvedAt?.getTime() ?? -1 : -1,
+        search: (record: DetailRecord) => record.kind === "reviewerReturn" ? formatReviewerTimestamp(record.value.approvedAt) : "",
+      },
     ];
   }
   if (detail.shootSessions) {

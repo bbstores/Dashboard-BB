@@ -98,8 +98,7 @@ export type ReviewComparisonPoint = ComparisonBase & {
   pendingReview: number;
   pendingReviewAt: Date;
   reviewerReturns: Pick<ReturnType<typeof calculateReviewerReturns>,
-    "available" | "approvedTasks" | "returnedTasks" | "rejectTasks" |
-    "bodTasks" | "rejectEvents" | "uncertainTasks" | "ignoredEvents" | "returnRate"
+    "available" | "approvedTasks" | "returnedTasks" | "sourceTasks" | "returnRate"
   >;
 };
 
@@ -405,11 +404,7 @@ function reviewPoint(
       available: stats.reviewerReturns.available,
       approvedTasks: stats.reviewerReturns.approvedTasks,
       returnedTasks: stats.reviewerReturns.returnedTasks,
-      rejectTasks: stats.reviewerReturns.rejectTasks,
-      bodTasks: stats.reviewerReturns.bodTasks,
-      rejectEvents: stats.reviewerReturns.rejectEvents,
-      uncertainTasks: stats.reviewerReturns.uncertainTasks,
-      ignoredEvents: stats.reviewerReturns.ignoredEvents,
+      sourceTasks: stats.reviewerReturns.sourceTasks,
       returnRate: stats.reviewerReturns.returnRate,
     },
   };

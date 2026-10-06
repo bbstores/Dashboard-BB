@@ -4,11 +4,13 @@ import type {
   Feedback,
   ReviewerReturnEvidence,
   ReviewerReturnEvent,
+  ReviewerReturnSource,
 } from "../model/types";
 import { inWindow, normalize, normalizedKey } from "../model/taskUtils";
 
 function personKey(value: string | undefined) {
   return normalizedKey(value)
+    .replace(/đ/g, "d")
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .replace(/[^a-z0-9]+/g, " ")
@@ -16,17 +18,31 @@ function personKey(value: string | undefined) {
 }
 
 const HIEU_KEY = "hieu producer";
-const TRUSTED_RETURNERS = new Map([
-  ["thuy an", "Thuỳ An"],
-  ["boss bb", "Boss BB"],
-  [HIEU_KEY, "Hiếu Producer"],
-  ["thu trang", "Thu Trang"],
-  ["thu trang content mkt", "Thu Trang"],
-  ["media planner", "Media Planner"],
+/** Các cấp lead chỉ duyệt sau khi Hiếu đã Done. */
+const LATER_REVIEWERS = new Map<string, ReviewerReturnSource>([
+  ["thuy an", "thuyAn"],
+  ["boss bb", "boss"],
+  ["thu trang", "thuTrang"],
+  ["thu trang content mkt", "thuTrang"],
+  ["media planner", "thuTrang"],
+  ["thuy sang", "thuySang"],
+  ["thuy sang om social", "thuySang"],
 ]);
+/** Mọi trạng thái BOD khác DUYỆT đều cho thấy BOD đã trả task. */
+const BOD_RETURN_STATES = new Set(["khong duyet", "dang sua", "da sua", "thuc hien lai"]);
 
-export function isTrustedReturner(name: string | undefined) {
-  return TRUSTED_RETURNERS.has(personKey(name));
+export const REVIEWER_RETURN_SOURCES: Array<{ source: ReviewerReturnSource; label: string }> = [
+  { source: "thuyAn", label: "Thuỳ An" },
+  { source: "boss", label: "Boss BB" },
+  { source: "thuTrang", label: "Thu Trang" },
+  { source: "thuySang", label: "Thúy Sang" },
+  { source: "bod", label: "BOD" },
+  { source: "hieu", label: "Hiếu tự mở lại" },
+];
+
+export function returnSourceOf(name: string | undefined): ReviewerReturnSource | null {
+  const key = personKey(name);
+  return key === HIEU_KEY ? "hieu" : LATER_REVIEWERS.get(key) ?? null;
 }
 
 function validDate(value: Date | null | undefined): Date | null {
@@ -36,9 +52,10 @@ function validDate(value: Date | null | undefined): Date | null {
 const cache = new WeakMap<DashboardData, ReturnType<typeof buildReviewerReturns>>();
 
 /**
- * Chỉ xác nhận trả sau Done mới nhất: Approval By không lưu người duyệt
- * của các vòng trước. Ngày Hoàn Thành Lần Đầu chỉ giúp loại reject trước
- * lần Done đầu tiên, không được dùng để gán người duyệt lịch sử cho Hiếu.
+ * Ngày Hoàn Thành bị ghi đè mỗi lần task Done lại, nên lần trả của cấp sau
+ * thường nằm trước Done mới nhất. Vì cấp lead chỉ duyệt sau Hiếu, mọi lần
+ * trả của họ đều được tính, không so với mốc Done. Riêng Reject của Hiếu chỉ
+ * là "tự mở lại" khi nằm sau Done mới nhất; trước đó là vòng duyệt bình thường.
  */
 function buildReviewerReturns(data: DashboardData) {
   const feedbackByTask = new Map<string, Feedback[]>();
@@ -63,58 +80,23 @@ function buildReviewerReturns(data: DashboardData) {
     if (seenTasks.has(taskKey)) continue;
     seenTasks.add(taskKey);
     const approvedAt = validDate(task.completedDate);
-    const firstDone = validDate(task.firstCompletedDate);
     const events: ReviewerReturnEvent[] = [];
     const ignoredFeedback: Feedback[] = [];
     for (const feedback of feedbackByTask.get(taskKey) ?? []) {
-      if (!isTrustedReturner(feedback.rejectedBy)) {
+      const source = returnSourceOf(feedback.rejectedBy);
+      if (!source) {
         ignoredFeedback.push(feedback);
         continue;
       }
       const at = validDate(feedback.at);
-      // Mốc lần đầu chỉ đáng tin làm cận dưới khi không nằm sau mốc mới nhất.
-      if (at && firstDone && (!approvedAt || firstDone <= approvedAt) && at < firstDone) {
-        continue;
-      }
-      const counted = Boolean(approvedAt && at && at > approvedAt);
-      events.push({
-        kind: "reject",
-        at,
-        by: normalize(feedback.rejectedBy),
-        error: normalize(feedback.error),
-        counted,
-        reason: counted
-          ? "Reject sau Done mới nhất"
-          : !at
-            ? "Thiếu thời điểm Reject"
-            : !approvedAt
-              ? "Thiếu ngày Done mới nhất"
-              : at.getTime() === approvedAt.getTime()
-                ? "Reject trùng mốc Done; chưa xác định thứ tự"
-                : "Reject trước Done mới nhất; chưa xác định người duyệt vòng trước",
-      });
+      if (source === "hieu" && !(approvedAt && at && at > approvedAt)) continue;
+      events.push({ source, at, by: normalize(feedback.rejectedBy), error: normalize(feedback.error) });
     }
-    if (personKey(task.bodApproval) === "khong duyet") {
-      const at = validDate(task.bodApprovalDate);
-      const counted = Boolean(approvedAt && at && at > approvedAt);
-      events.push({
-        kind: "bod",
-        at,
-        by: "BOD",
-        error: "",
-        counted,
-        reason: counted
-          ? "BOD không duyệt sau Done mới nhất"
-          : !at
-            ? "BOD không duyệt nhưng thiếu Ngày BOD Duyệt"
-            : !approvedAt
-              ? "Thiếu ngày Done mới nhất"
-              : "Mốc BOD không nằm sau Done mới nhất; chưa xác định thứ tự duyệt và trả",
-      });
+    if (BOD_RETURN_STATES.has(personKey(task.bodApproval))) {
+      events.push({ source: "bod", at: validDate(task.bodApprovalDate), by: `BOD · ${normalize(task.bodApproval)}`, error: "" });
     }
-    const issues = [...new Set(events.filter((event) => !event.counted).map((event) => event.reason))];
-    if (!approvedAt) issues.unshift("Thiếu ngày Done mới nhất; chưa xếp được kỳ duyệt");
-    rows.push({ task, approvedAt, events, ignoredFeedback, issues });
+    events.sort((a, b) => (a.at?.getTime() ?? Infinity) - (b.at?.getTime() ?? Infinity));
+    rows.push({ task, approvedAt, events, ignoredFeedback });
   }
   return {
     available: data.tasks.some((task) => task.approvalBy !== undefined),
@@ -132,31 +114,28 @@ export function getReviewerReturns(data: DashboardData) {
   return result;
 }
 
+function isReturnedAfterReview(row: ReviewerReturnEvidence) {
+  return row.events.some((event) => event.source !== "hieu");
+}
+
 export function calculateReviewerReturns(data: DashboardData, window: DateWindow) {
   const all = getReviewerReturns(data);
   const rows = all.rows.filter((row) => row.approvedAt && inWindow(row.approvedAt, window));
-  const returnedRows = rows.filter((row) => row.events.some((event) => event.counted));
-  const rejectRows = rows.filter((row) => row.events.some((event) => event.kind === "reject" && event.counted));
-  const bodRows = rows.filter((row) => row.events.some((event) => event.kind === "bod" && event.counted));
-  const uncertainRows = rows.filter((row) => row.issues.length);
-  const ignoredRows = rows.filter((row) => row.ignoredFeedback.length);
+  const returnedRows = rows.filter(isReturnedAfterReview);
+  const sourceRows = Object.fromEntries(REVIEWER_RETURN_SOURCES.map(({ source }) => [
+    source,
+    rows.filter((row) => row.events.some((event) => event.source === source)),
+  ])) as Record<ReviewerReturnSource, ReviewerReturnEvidence[]>;
   return {
     available: all.available,
     rows,
     returnedRows,
-    rejectRows,
-    bodRows,
-    uncertainRows,
-    ignoredRows,
+    sourceRows,
     approvedTasks: rows.length,
     returnedTasks: returnedRows.length,
-    rejectTasks: rejectRows.length,
-    bodTasks: bodRows.length,
-    // Lịch sử phản hồi và trạng thái BOD có thể cùng chỉ một lần trả.
-    // Chỉ đếm sự kiện của lịch sử, không cộng thêm snapshot BOD vào số lần.
-    rejectEvents: rows.reduce((sum, row) => sum + row.events.filter((event) => event.kind === "reject" && event.counted).length, 0),
-    uncertainTasks: uncertainRows.length,
-    ignoredEvents: rows.reduce((sum, row) => sum + row.ignoredFeedback.length, 0),
+    sourceTasks: Object.fromEntries(
+      Object.entries(sourceRows).map(([source, list]) => [source, list.length]),
+    ) as Record<ReviewerReturnSource, number>,
     returnRate: rows.length ? (returnedRows.length / rows.length) * 100 : null,
   };
 }

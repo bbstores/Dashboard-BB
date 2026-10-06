@@ -47,10 +47,6 @@ export function parseTasks(sheet: import("exceljs").Worksheet): Task[] {
       approvalBy: headers.has(normalizedKey(TASK_COLUMNS.approvalBy))
         ? normalize(valueAt(row, headers, TASK_COLUMNS.approvalBy))
         : undefined,
-      firstCompletedDate: excelDateTime(
-        temporalValueAt(row, headers, TASK_COLUMNS.firstCompletedDate),
-        startDate,
-      ),
       bodApprovalDate: excelDateTime(
         temporalValueAt(row, headers, TASK_COLUMNS.bodApprovalDate),
         startDate,
