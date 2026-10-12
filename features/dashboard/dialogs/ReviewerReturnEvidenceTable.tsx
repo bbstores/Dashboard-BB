@@ -24,7 +24,7 @@ export function ReviewerReturnEvidenceTable({ rows, rowOffset }: {
     <table className="detailTable reviewerReturnEvidenceTable">
       <thead>
         <tr>
-          <th>STT</th><th>Task</th><th>Người làm</th><th>Người chuyển Done gần nhất</th>
+          <th>STT</th><th>Task</th><th>Người làm</th><th>Người chuyển Done gần nhất</th><th>Producer Pass</th>
           <th>Done mới nhất</th><th>Các lần trả</th><th>Số lần cấp sau trả</th>
           <th>BOD hiện tại</th><th>Trạng thái hiện tại</th><th>Phản hồi bị loại</th>
         </tr>
@@ -36,6 +36,7 @@ export function ReviewerReturnEvidenceTable({ rows, rowOffset }: {
             <td data-label="Task" className="taskIdentity"><strong>{row.task.code}</strong><span>{row.task.title}</span></td>
             <td data-label="Người làm">{row.task.assignee || "—"}</td>
             <td data-label="Người chuyển Done gần nhất">{row.task.approvalBy || "—"}</td>
+            <td data-label="Producer Pass">{row.task.producerPass ? "Có" : "—"}</td>
             <td data-label="Done mới nhất">{formatReviewerTimestamp(row.approvedAt)}</td>
             <td data-label="Các lần trả">
               {row.events.length ? row.events.map((event, eventIndex) => (

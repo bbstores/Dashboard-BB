@@ -45,11 +45,12 @@ function addSheet(
 
 test("imports latest approver, BOD date and feedback identifiers without requiring new columns in old files", () => {
   const workbook = new ExcelJS.Workbook();
-  const taskHeaders = [...TASK_REQUIRED_HEADERS, TASK_COLUMNS.approvalBy, TASK_COLUMNS.bodApprovalDate, TASK_COLUMNS.bodApproval];
+  const taskHeaders = [...TASK_REQUIRED_HEADERS, TASK_COLUMNS.approvalBy, TASK_COLUMNS.producerPass, TASK_COLUMNS.bodApprovalDate, TASK_COLUMNS.bodApproval];
   const taskSheet = addSheet(workbook, DASHBOARD_SHEETS.tasks, taskHeaders);
   const taskValues: Record<string, string> = {
     [TASK_COLUMNS.code]: "TSK-REVIEW",
     [TASK_COLUMNS.approvalBy]: "Hiếu - Producer",
+    [TASK_COLUMNS.producerPass]: "true",
     [TASK_COLUMNS.completedDate]: "2026-09-22 10:00:00",
     [TASK_COLUMNS.bodApprovalDate]: "2026-09-23 11:00:00",
     [TASK_COLUMNS.bodApproval]: "KHÔNG DUYỆT ",
@@ -69,6 +70,7 @@ test("imports latest approver, BOD date and feedback identifiers without requiri
   const [task] = parseTasks(taskSheet);
   const [feedback] = parseFeedback(feedbackSheet);
   assert.equal(task.approvalBy, "Hiếu - Producer");
+  assert.equal(task.producerPass, true);
   assert.equal(task.bodApprovalDate?.getDate(), 23);
   assert.equal(task.bodApprovalDate?.getHours(), 11);
   assert.equal(task.bodApproval, "KHÔNG DUYỆT");
@@ -82,6 +84,7 @@ test("imports latest approver, BOD date and feedback identifiers without requiri
   addSheet(oldWorkbook, DASHBOARD_SHEETS.feedback, FEEDBACK_REQUIRED_HEADERS);
   assert.doesNotThrow(() => validateDashboardWorkbook(oldWorkbook));
   assert.equal(parseTasks(oldTasks)[0].approvalBy, undefined);
+  assert.equal(parseTasks(oldTasks)[0].producerPass, undefined);
 });
 
 test("validates required workbook sheets and headers", () => {

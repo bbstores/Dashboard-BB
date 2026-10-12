@@ -5,6 +5,7 @@ import type {
   ReviewerReturnEvidence,
   ReviewerReturnEvent,
   ReviewerReturnSource,
+  Task,
 } from "../model/types";
 import { inWindow, normalize, normalizedKey } from "../model/taskUtils";
 
@@ -52,6 +53,15 @@ function validDate(value: Date | null | undefined): Date | null {
 const cache = new WeakMap<DashboardData, ReturnType<typeof buildReviewerReturns>>();
 
 /**
+ * Approval By chỉ giữ người chuyển Done gần nhất nên mất dấu Hiếu khi người
+ * khác Done lại; Producer Pass giữ được dấu đó. Hai nguồn đều chưa tuyệt đối,
+ * nên task thuộc nhóm Hiếu khi một trong hai xác nhận.
+ */
+function isProducerApproved(task: Task) {
+  return task.producerPass === true || personKey(task.approvalBy) === HIEU_KEY;
+}
+
+/**
  * Ngày Hoàn Thành bị ghi đè mỗi lần task Done lại, nên lần trả của cấp sau
  * thường nằm trước Done mới nhất. Vì cấp lead chỉ duyệt sau Hiếu, mọi lần
  * trả của họ đều được tính, không so với mốc Done. Riêng Reject của Hiếu chỉ
@@ -75,7 +85,7 @@ function buildReviewerReturns(data: DashboardData) {
   const rows: ReviewerReturnEvidence[] = [];
   const seenTasks = new Set<string>();
   for (const task of data.tasks) {
-    if (personKey(task.approvalBy) !== HIEU_KEY) continue;
+    if (!isProducerApproved(task)) continue;
     const taskKey = normalizedKey(task.code);
     if (seenTasks.has(taskKey)) continue;
     seenTasks.add(taskKey);
@@ -99,7 +109,7 @@ function buildReviewerReturns(data: DashboardData) {
     rows.push({ task, approvedAt, events, ignoredFeedback });
   }
   return {
-    available: data.tasks.some((task) => task.approvalBy !== undefined),
+    available: data.tasks.some((task) => task.approvalBy !== undefined || task.producerPass !== undefined),
     rows,
     unassignedRows: rows.filter((row) => !row.approvedAt),
   };

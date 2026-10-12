@@ -180,7 +180,7 @@ test("review return metrics distinguish missing Approval By from a real zero and
   const data: DashboardData = { fileName: "legacy.xlsx", tasks: [task()], norms: [], feedback: [], publications: [] };
   const view = render(<HelpProvider><ComparisonDashboard data={data} reports={[report]} onOpenDetail={() => {}} /></HelpProvider>);
   fireEvent.click(screen.getByRole("button", { name: "Kiểm duyệt" }));
-  screen.getByText("Chưa có cột Approval By trong file. Không xác định được người chuyển Done để tính chỉ số này.");
+  screen.getByText("Chưa có cột Approval By hoặc Producer Pass trong file. Không xác định được task Hiếu đã duyệt để tính chỉ số này.");
   assert.equal(screen.queryByRole("button", { name: "Media tuần trống · Bị cấp sau trả: 0 · Xem dẫn chứng" }), null);
   view.unmount();
   render(<HelpProvider><ComparisonDashboard data={{ ...data, tasks: [{ ...task(), approvalBy: "Media Planner" }] }} reports={[report]} onOpenDetail={() => {}} /></HelpProvider>);

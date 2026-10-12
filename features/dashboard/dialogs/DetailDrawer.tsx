@@ -108,6 +108,7 @@ function detailColumns(detail: DetailView): DetailColumn[] {
       { key: "task", label: "Task", read: (row) => `${row.task.code} ${row.task.title}` },
       { key: "assignee", label: "Người làm", read: (row) => row.task.assignee },
       { key: "approvalBy", label: "Người chuyển Done gần nhất", read: (row) => row.task.approvalBy ?? "" },
+      { key: "producerPass", label: "Producer Pass", read: (row) => row.task.producerPass ? "Có" : "" },
       { key: "events", label: "Các lần trả", read: (row) => row.events.map((event) => `${reviewerReturnEventLabel(event)} ${event.error} ${formatReviewerTimestamp(event.at)}`).join(" ") },
       { key: "laterReturns", label: "Số lần cấp sau trả", read: (row) => row.events.filter((event) => event.source !== "hieu").length },
       { key: "bodApproval", label: "BOD hiện tại", read: (row) => row.task.bodApproval ?? "" },

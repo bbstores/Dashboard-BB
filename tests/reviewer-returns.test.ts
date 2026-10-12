@@ -116,6 +116,20 @@ test("reports use the latest Done period and follow subsequent returns beyond it
   assert.equal(empty.returnRate, null);
 });
 
+test("Producer Pass keeps a task in Hiếu's population after someone else moves it to Done again", () => {
+  const stats = calculateReviewerReturns(data([
+    task("REDONE-BY-OTHER", { approvalBy: "TRÂMM", producerPass: true }),
+    task("BLANK-APPROVER", { approvalBy: "", producerPass: true }),
+    task("NEVER-PASSED", { approvalBy: "TRÂMM", producerPass: false }),
+    task("APPROVAL-ONLY", { producerPass: false }),
+  ], [feedback("REDONE-BY-OTHER"), feedback("NEVER-PASSED")]), window);
+  assert.deepEqual(stats.rows.map((row) => row.task.code), ["REDONE-BY-OTHER", "BLANK-APPROVER", "APPROVAL-ONLY"]);
+  assert.deepEqual(stats.returnedRows.map((row) => row.task.code), ["REDONE-BY-OTHER"]);
+  const passOnly = calculateReviewerReturns(data([task("PASS-COLUMN-ONLY", { approvalBy: undefined, producerPass: true })]), window);
+  assert.equal(passOnly.available, true);
+  assert.equal(passOnly.approvedTasks, 1);
+});
+
 test("legacy files without Approval By leave the new metric unavailable", () => {
   const stats = calculateReviewerReturns(data([task("LEGACY", { approvalBy: undefined })]), window);
   assert.equal(stats.available, false);

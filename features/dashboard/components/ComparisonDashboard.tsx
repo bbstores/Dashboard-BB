@@ -799,7 +799,7 @@ function ReviewCharts({
         onSelect={onSelect}
         onOpenUnassigned={() => onOpenDetail({
           title: "Task Hiếu chưa xếp được kỳ duyệt",
-          subtitle: "Toàn file · Approval By mới nhất là Hiếu Producer nhưng thiếu Ngày Hoàn Thành. Không đưa các task này vào mẫu số của từng kỳ.",
+          subtitle: "Toàn file · Approval By là Hiếu Producer hoặc có Producer Pass nhưng thiếu Ngày Hoàn Thành. Không đưa các task này vào mẫu số của từng kỳ.",
           reviewerReturnEvidence: reviewerReturns.unassignedRows,
         })}
       />

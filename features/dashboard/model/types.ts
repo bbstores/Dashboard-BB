@@ -15,6 +15,8 @@ export type Task = {
   completedDate: Date | null;
   /** Approval By là người chuyển Checking sang Done gần nhất; mỗi lần Done lại sẽ ghi đè. */
   approvalBy?: string;
+  /** Producer Pass = true khi task từng được Producer chuyển Done; không bị ghi đè như Approval By. */
+  producerPass?: boolean;
   bodApprovalDate?: Date | null;
   inspectionDate: Date | null;
   businessApprovalDate: Date | null;
