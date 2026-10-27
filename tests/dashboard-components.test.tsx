@@ -59,7 +59,8 @@ test("StaffColumns separates lead, BOD and business returns", () => {
           inspectionCarry: 2,
           completionCarry: 1,
           feedback: 6,
-          feedbackInternal: 3,
+          feedbackHieu: 0,
+          feedbackLead: 3,
           feedbackBod: 1,
           feedbackBusiness: 2,
         },
@@ -68,6 +69,7 @@ test("StaffColumns separates lead, BOD and business returns", () => {
     />,
   );
 
+  assert.ok(screen.getByText("Hiếu Trả Về"));
   assert.ok(screen.getByText("Lead Trả Về"));
   assert.ok(screen.getByText("BOD Không Duyệt"));
   assert.ok(screen.getByText("Kinh Doanh Reject"));
@@ -98,7 +100,8 @@ test("StaffColumns never draws a return column taller than the task column", () 
           inspectionCarry: 1,
           completionCarry: 20,
           feedback: 68,
-          feedbackInternal: 41,
+          feedbackHieu: 0,
+          feedbackLead: 41,
           feedbackBod: 27,
           feedbackBusiness: 0,
         },

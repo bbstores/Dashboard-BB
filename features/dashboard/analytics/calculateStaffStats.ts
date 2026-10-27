@@ -6,6 +6,7 @@ import {
 import type {
   DashboardData,
   DateWindow,
+  FeedbackReturnSource,
 } from "../model/types";
 import type {
   ClassifiedTask,
@@ -22,15 +23,18 @@ export function calculateStaffStats(
     inWindow(item.at, dateWindow),
   );
   const feedbackCount = new Map<string, number>();
-  const sourceCounts: Record<string, Map<string, number>> = {
-    internal: new Map<string, number>(),
+  const sourceCounts: Record<FeedbackReturnSource, Map<string, number>> = {
+    hieu: new Map<string, number>(),
+    lead: new Map<string, number>(),
     bod: new Map<string, number>(),
     business: new Map<string, number>(),
   };
   for (const item of selectedFeedback) {
+    const source = feedbackReturnSource(item);
+    if (!source) continue;
     const rawNames = item.assignee || taskByCode.get(item.taskCode)?.assignee;
     if (!rawNames) continue;
-    const sourceCount = sourceCounts[feedbackReturnSource(item)];
+    const sourceCount = sourceCounts[source];
     for (const name of assigneeNames(rawNames)) {
       feedbackCount.set(name, (feedbackCount.get(name) ?? 0) + 1);
       sourceCount.set(name, (sourceCount.get(name) ?? 0) + 1);
@@ -72,7 +76,8 @@ export function calculateStaffStats(
         completionCarry: completionCarryRows.length,
         completionCarryTasks: completionCarryRows.map((row) => row.task),
         feedback: feedbackCount.get(name) ?? 0,
-        feedbackInternal: sourceCounts.internal.get(name) ?? 0,
+        feedbackHieu: sourceCounts.hieu.get(name) ?? 0,
+        feedbackLead: sourceCounts.lead.get(name) ?? 0,
         feedbackBod: sourceCounts.bod.get(name) ?? 0,
         feedbackBusiness: sourceCounts.business.get(name) ?? 0,
       };

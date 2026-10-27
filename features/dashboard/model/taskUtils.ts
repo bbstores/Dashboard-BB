@@ -42,29 +42,41 @@ export function normalizedKey(value: unknown) {
   );
 }
 
+/** Tên người không dấu, bỏ ký tự trang trí, để so khớp tài khoản Lark ổn định. */
+export function personKey(value: string | undefined) {
+  return normalizedKey(value)
+    .replace(/đ/g, "d")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 /**
- * Ba cổng reject trong quy trình: lead kiểm duyệt (nội bộ), BOD, và team kinh doanh.
- * Nhận diện theo tên người trả về vì workbook không có cột phân loại nguồn.
+ * Cổng kiểm duyệt của từng tài khoản Reject By. Thùy An và Boss BB vừa duyệt ở
+ * cấp lead vừa bấm BOD, nên phần BOD được tách bằng cột Nguồn Trả chứ không
+ * theo tên. Tài khoản ngoài danh sách (nhân sự tự bấm nhầm, ô trống) bị loại.
  */
-const FEEDBACK_SOURCE_NAMES: Array<{
-  match: string;
-  source: FeedbackReturnSource;
-}> = [
-  { match: "thuy sang", source: "business" },
-  { match: "thuy an", source: "bod" },
-];
+const FEEDBACK_SOURCE_NAMES = new Map<string, FeedbackReturnSource>([
+  ["hieu producer", "hieu"],
+  ["thuy an", "lead"],
+  ["boss bb", "lead"],
+  ["thu trang", "lead"],
+  ["thu trang content mkt", "lead"],
+  ["media planner", "lead"],
+  ["thuy sang", "business"],
+  ["thuy sang om social", "business"],
+]);
+
+export function isBodFeedback(feedback: Pick<Feedback, "source">) {
+  return normalizedKey(feedback.source) === "bod";
+}
 
 export function feedbackReturnSource(
-  feedback: Pick<Feedback, "rejectedBy">,
-): FeedbackReturnSource {
-  const rejectedBy = normalizedKey(feedback.rejectedBy)
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "");
-  return (
-    FEEDBACK_SOURCE_NAMES.find((entry) =>
-      rejectedBy.includes(entry.match),
-    )?.source ?? "internal"
-  );
+  feedback: Pick<Feedback, "rejectedBy" | "source">,
+): FeedbackReturnSource | null {
+  if (isBodFeedback(feedback)) return "bod";
+  return FEEDBACK_SOURCE_NAMES.get(personKey(feedback.rejectedBy)) ?? null;
 }
 
 export function numberValue(value: unknown) {

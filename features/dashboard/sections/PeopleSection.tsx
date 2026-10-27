@@ -151,22 +151,19 @@ export function PeopleSection({
         rows={viewModel.staffRows}
         className="groupPeople"
         onSelect={(name, metric) => {
+          const feedbackSources = {
+            feedbackHieu: { source: "hieu", label: "Hiếu Trả Về" },
+            feedbackLead: { source: "lead", label: "Lead Trả Về" },
+            feedbackBusiness: { source: "business", label: "Kinh Doanh Reject" },
+            feedbackBod: { source: "bod", label: "BOD Không Duyệt" },
+          } as const;
           if (
-            metric === "feedbackInternal" ||
-            metric === "feedbackBod" ||
-            metric === "feedbackBusiness"
+            metric === "feedbackHieu" ||
+            metric === "feedbackLead" ||
+            metric === "feedbackBusiness" ||
+            metric === "feedbackBod"
           ) {
-            const source =
-              metric === "feedbackBusiness"
-                ? "business"
-                : metric === "feedbackBod"
-                  ? "bod"
-                  : "internal";
-            const sourceLabel = {
-              business: "Kinh Doanh Reject",
-              bod: "BOD Không Duyệt",
-              internal: "Lead Trả Về",
-            }[source];
+            const { source, label: sourceLabel } = feedbackSources[metric];
             onOpenDetail({
               title: `${sourceLabel} · ${name}`,
               subtitle:

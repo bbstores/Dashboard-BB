@@ -38,6 +38,14 @@ function mediaDueDate(startDate: Date, dayOffset: number) {
   return moveToWorkingDay(dueDate);
 }
 
+/**
+ * Mốc chấm bàn giao: lần bàn giao đầu tiên, vì Ngày Kiểm Duyệt bị ghi đè khi
+ * nộp lại sau trả về. Task trước 22/09/2026 chưa có mốc này nên dùng Ngày Kiểm Duyệt.
+ */
+export function handoffAt(task: Task) {
+  return task.firstHandoffDate ?? task.inspectionDate;
+}
+
 /** Hạn bàn giao áp dụng từ KPI_START_DATE. */
 export function handoffDueDate(task: Task) {
   if (!task.startDate) return null;
@@ -61,25 +69,39 @@ export function evaluateHandoff(task: Task, asOf: Date): MilestoneEvaluation {
   if (task.startDate < KPI_START_DATE) {
     return { label: "📜 Không tính KPI", code: "excluded" };
   }
-  if (["to do", "todo"].includes(normalizedKey(task.status))) {
-    return { label: "⚪ Chưa bắt đầu", code: "notStarted" };
+  const status = normalizedKey(task.status);
+  if (isStoppedStatus(status)) {
+    return { label: "⏸ Không tính / Đã dừng", code: "excluded" };
   }
-  if (task.inspectionDate) {
-    if (task.inspectionDate < startOfDay(task.startDate)) {
+  const handedAt = handoffAt(task);
+  if (handedAt) {
+    if (handedAt < startOfDay(task.startDate)) {
       return { label: "⚠️ Sai thứ tự ngày", code: "invalid" };
     }
-    return task.inspectionDate <= handoffDueDate(task)!
+    return handedAt <= handoffDueDate(task)!
       ? { label: "✅ Bàn giao đúng hạn", code: "onTime" }
       : { label: "🔥 Bàn giao trễ hạn", code: "late" };
   }
-  if (
-    ["done", "kinh doanh done"].includes(normalizedKey(task.status))
-  ) {
+  if (["done", "kinh doanh done"].includes(status)) {
     return { label: "⚠️ Done nhưng thiếu ngày kiểm duyệt", code: "invalid" };
   }
-  return asOf > handoffDueDate(task)!
-    ? { label: "❌ Quá hạn chưa bàn giao", code: "overdue" }
-    : { label: "🟢 Đang trong hạn bàn giao", code: "ongoing" };
+  if (asOf > handoffDueDate(task)!) {
+    return { label: "❌ Quá hạn chưa bàn giao", code: "overdue" };
+  }
+  if (["to do", "todo"].includes(status)) {
+    return { label: "⚪ Chưa bắt đầu", code: "notStarted" };
+  }
+  return { label: "🟢 Đang trong hạn bàn giao", code: "ongoing" };
+}
+
+/** Task đã dừng hoặc lưu trữ: không tính vào cả hai mốc đánh giá. */
+function isStoppedStatus(status: string) {
+  return ["archived", "pending / cancel", "pending/cancel"].includes(status);
+}
+
+/** Đang trong luồng duyệt; Skip là task bỏ qua bước Hiếu, vẫn chờ lead/BOD duyệt. */
+function isInReviewStatus(status: string) {
+  return ["checking", "reviewing", "skip"].includes(status);
 }
 
 /** Trạng thái thuộc vòng lặp làm lại sau khi bị reject. */
@@ -97,9 +119,7 @@ export function evaluateOverall(task: Task, asOf: Date): MilestoneEvaluation {
     return { label: "📜 Không tính KPI", code: "excluded" };
   }
   const status = normalizedKey(task.status);
-  if (
-    ["archived", "pending / cancel", "pending/cancel"].includes(status)
-  ) {
+  if (isStoppedStatus(status)) {
     return { label: "⏸ Không tính / Đã dừng", code: "excluded" };
   }
   const dueDate = completionDueDate(task)!;
@@ -123,7 +143,7 @@ export function evaluateOverall(task: Task, asOf: Date): MilestoneEvaluation {
   if (asOf > dueDate) {
     return { label: "❌ Quá hạn hoàn thành", code: "overdue" };
   }
-  if (status === "checking") {
+  if (isInReviewStatus(status)) {
     return { label: "🟡 Đang kiểm duyệt", code: "ongoing" };
   }
   if (status === "in progress") {
@@ -133,16 +153,17 @@ export function evaluateOverall(task: Task, asOf: Date): MilestoneEvaluation {
 }
 
 export function handoffLateMinutes(task: Task) {
-  if (!task.startDate || !task.inspectionDate) return 0;
+  const handedAt = handoffAt(task);
+  if (!task.startDate || !handedAt) return 0;
   if (isSpecialMediaTask(task)) {
     const dueDate = handoffDueDate(task)!;
-    if (task.inspectionDate <= dueDate) return 0;
-    return businessMinutesBetween(dueDate, task.inspectionDate) ?? 0;
+    if (handedAt <= dueDate) return 0;
+    return businessMinutesBetween(dueDate, handedAt) ?? 0;
   }
   const anchor = nextWorkingDay(task.startDate);
   anchor.setHours(8, 30, 0, 0);
-  if (task.inspectionDate <= anchor) return 0;
-  return businessMinutesBetween(anchor, task.inspectionDate) ?? 0;
+  if (handedAt <= anchor) return 0;
+  return businessMinutesBetween(anchor, handedAt) ?? 0;
 }
 
 export function lateMinuteBucket(minutes: number) {

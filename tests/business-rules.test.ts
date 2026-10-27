@@ -40,22 +40,29 @@ function task(overrides: Partial<Task> = {}): Task {
   };
 }
 
-test("splits rejects into lead, BOD and business gates", () => {
+test("splits rejects into Hiếu, lead, business and BOD gates", () => {
   assert.equal(
     feedbackReturnSource({ rejectedBy: "Thúy Sang - OM SOCIAL" }),
     "business",
   );
-  assert.equal(feedbackReturnSource({ rejectedBy: "Thùy An" }), "bod");
+  assert.equal(feedbackReturnSource({ rejectedBy: "Hiếu - Producer" }), "hieu");
+  for (const name of ["Thùy An", "Thuỳ An", "BOSS BB 🤍", "Media Planner", "Thu Trang - Content MKT"]) {
+    assert.equal(feedbackReturnSource({ rejectedBy: name }), "lead", name);
+  }
+  // Thùy An và Boss BB cũng bấm BOD; chỉ cột Nguồn Trả mới tách được cổng này.
   assert.equal(
-    feedbackReturnSource({ rejectedBy: "Hiếu - Producer" }),
-    "internal",
+    feedbackReturnSource({ rejectedBy: "BOSS BB 🤍", source: "BOD" }),
+    "bod",
   );
-  // Tên gần giống nhau sau khi bỏ dấu không được rơi sai cổng.
   assert.equal(
-    feedbackReturnSource({ rejectedBy: "Phương Thuỳ - Media" }),
-    "internal",
+    feedbackReturnSource({ rejectedBy: "Thùy An", source: "Kiểm Duyệt" }),
+    "lead",
   );
-  assert.equal(feedbackReturnSource({ rejectedBy: "" }), "internal");
+  // Tên gần giống nhau sau khi bỏ dấu không được rơi sai cổng; reject do nhân
+  // sự tự bấm hoặc để trống bị loại.
+  for (const name of ["Phương Thuỳ - Media", "Hoàng Anh - MEDIA  PLANNER", "TRÂMM", ""]) {
+    assert.equal(feedbackReturnSource({ rejectedBy: name }), null, name);
+  }
 });
 
 test("keeps rework tasks in the open work pool", () => {

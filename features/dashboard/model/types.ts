@@ -19,6 +19,8 @@ export type Task = {
   producerPass?: boolean;
   bodApprovalDate?: Date | null;
   inspectionDate: Date | null;
+  /** Ngày Bàn Giao Lần Đầu — không bị ghi đè khi nộp lại; chỉ có dữ liệu từ 22/09/2026. */
+  firstHandoffDate?: Date | null;
   businessApprovalDate: Date | null;
   handoffRating: string;
   overallRating: string;
@@ -79,6 +81,8 @@ export type Feedback = {
   assignee: string;
   rejectedBy?: string;
   error?: string;
+  /** Cột Nguồn Trả: "BOD" khi dòng sinh ra từ BOD KHÔNG DUYỆT, còn lại "Kiểm Duyệt". */
+  source?: string;
 };
 
 /** Các cấp duyệt sau Hiếu; `hieu` là Hiếu tự mở lại task đã Done, không cộng vào tổng bị trả. */
@@ -98,7 +102,7 @@ export type ReviewerReturnEvidence = {
   ignoredFeedback: Feedback[];
 };
 
-export type FeedbackReturnSource = "business" | "bod" | "internal";
+export type FeedbackReturnSource = "hieu" | "lead" | "business" | "bod";
 
 export type PublicationPost = {
   id: string;

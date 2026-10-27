@@ -57,7 +57,8 @@ type StaffRow = {
   completionCarry: number;
   completionCarryTasks: Task[];
   feedback: number;
-  feedbackInternal: number;
+  feedbackHieu: number;
+  feedbackLead: number;
   feedbackBod: number;
   feedbackBusiness: number;
 };

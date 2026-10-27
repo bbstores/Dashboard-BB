@@ -93,6 +93,34 @@ test("evaluates handoff and completion SLA edge cases", () => {
   assert.equal(evaluateOverall(completedLate, at(22, 9)).code, "late");
 });
 
+test("aligns handoff and completion status rules with the Lark formulas", () => {
+  const cancelled = task({ status: "Pending / Cancel" });
+  assert.equal(evaluateHandoff(cancelled, at(21, 9)).code, "excluded");
+  assert.equal(evaluateOverall(cancelled, at(23, 9)).code, "excluded");
+
+  const toDo = task({ status: "To Do" });
+  assert.equal(evaluateHandoff(toDo, at(20, 17)).code, "notStarted");
+  assert.equal(evaluateHandoff(toDo, at(21, 9)).code, "overdue");
+
+  const resubmitted = task({
+    firstHandoffDate: at(20, 16),
+    inspectionDate: at(22, 10),
+  });
+  assert.equal(evaluateHandoff(resubmitted, at(22, 11)).code, "onTime");
+  assert.equal(handoffLateMinutes(resubmitted), 0);
+  assert.equal(
+    evaluateHandoff(task({ inspectionDate: at(21, 10) }), at(21, 11)).code,
+    "late",
+  );
+
+  for (const status of ["Checking", "Reviewing", "Skip"]) {
+    assert.equal(
+      evaluateOverall(task({ status }), at(20, 17)).label,
+      "🟡 Đang kiểm duyệt",
+    );
+  }
+});
+
 test("uses 14:00 media deadlines at D+2 and D+3 from the start date", () => {
   const mediaTask = task({
     stage: "Chụp",

@@ -77,8 +77,8 @@ export function dashboardHelp(title: string): DashboardHelp {
     },
     "Số task thực hiện & số lần trả về": {
       purpose: "So sánh khối lượng thực hiện và phản hồi theo từng nhân sự.",
-      calculation: "Tổng task là hợp khử trùng của task bắt đầu, carry-in bàn giao theo Ngày Kiểm Duyệt và carry-in hoàn thành theo Ngày Hoàn Thành. Phản hồi có Reject By là Thúy Sang được xếp vào Team Kinh Doanh Trả Về; tất cả trường hợp còn lại, kể cả Reject By trống, được xếp vào Nội Bộ Trả Về. Task nhiều assignee được tính cho từng người.",
-      example: "Một task của An có hai phản hồi trong kỳ: một phản hồi do Thúy Sang trả và một phản hồi do Hiếu trả → An có 1 Team Kinh Doanh Trả Về và 1 Nội Bộ Trả Về.",
+      calculation: "Tổng task là hợp khử trùng của task bắt đầu, carry-in bàn giao theo Ngày Kiểm Duyệt và carry-in hoàn thành theo Ngày Hoàn Thành. Cột trả về đếm số lần trả (mỗi dòng sheet 2.9 có Thời Điểm trong kỳ là 1 lần). Dòng có Nguồn Trả = BOD là BOD Không Duyệt; các dòng còn lại xếp theo Reject By: Hiếu → Hiếu Trả Về; Thùy An, Boss BB, Thu Trang, Media Planner → Lead Trả Về; Thúy Sang → Kinh Doanh Reject. Reject do nhân sự tự bấm hoặc để trống bị loại. Task nhiều assignee được tính cho từng người.",
+      example: "Task của An bị Hiếu trả 1 lần, Boss BB bấm BOD KHÔNG DUYỆT 1 lần rồi sau đó DUYỆT → An có 1 Hiếu Trả Về và 1 BOD Không Duyệt; lần BOD vẫn được giữ dù task đã được duyệt lại.",
     },
     "Tình trạng task": {
       purpose: "Biểu đồ cơ cấu task theo trạng thái hiện tại như In Progress, Checking, Reviewing hoặc Done.",
@@ -97,14 +97,14 @@ export function dashboardHelp(title: string): DashboardHelp {
     },
     "Tuân thủ ngày bàn giao": {
       purpose: "Đánh giá task có được chuyển sang kiểm duyệt trước hoặc đúng hạn bàn giao hay không.",
-      calculation: "Áp dụng từ 15/06/2026. Quay/Chụp có hạn 13:00 ngày thứ hai sau Ngày Bắt Đầu; nếu hạn rơi vào Chủ nhật thì chuyển sang thứ Hai. Công đoạn khác giữ hạn cuối Ngày Bắt Đầu. Mẫu số chỉ gồm task đã bàn giao đủ dữ liệu; tử số là task có Ngày Kiểm Duyệt không vượt quá hạn.",
-      example: "Task Chụp bắt đầu 01/03 có hạn bàn giao 13:00 ngày 03/03. Bàn giao lúc 13:00 là đúng hạn; 13:01 là trễ hạn.",
-      note: "Task chưa bàn giao không nằm trong mẫu số tỷ lệ đúng/trễ nhưng sẽ được phân loại quá hạn ngay khi mốc đánh giá vượt quá hạn bàn giao.",
+      calculation: "Áp dụng từ 15/06/2026. Quay/Chụp có hạn 14:00 ngày thứ hai sau Ngày Bắt Đầu; nếu hạn rơi vào Chủ nhật hoặc ngày nghỉ lễ thì chuyển sang ngày làm việc kế tiếp. Công đoạn khác giữ hạn cuối Ngày Bắt Đầu. Mốc bàn giao là Ngày Bàn Giao Lần Đầu; task chưa có mốc này (trước 22/09/2026) dùng Ngày Kiểm Duyệt. Mẫu số chỉ gồm task đã bàn giao đủ dữ liệu; tử số là task bàn giao không vượt quá hạn.",
+      example: "Task Chụp bắt đầu 01/03 có hạn bàn giao 14:00 ngày 03/03. Bàn giao lần đầu lúc 14:00 là đúng hạn; 14:01 là trễ hạn. Bị trả về rồi nộp lại sau hạn vẫn giữ kết quả đúng hạn.",
+      note: "Task chưa bàn giao không nằm trong mẫu số tỷ lệ đúng/trễ nhưng sẽ được phân loại quá hạn ngay khi mốc đánh giá vượt quá hạn bàn giao. Task Pending/Cancel và Archived không được tính.",
     },
     "Tuân thủ hạn hoàn thành": {
       purpose: "Đánh giá toàn bộ task có hoàn thành trước hạn quy trình hay không.",
-      calculation: "Quay/Chụp có hạn hoàn thành lúc 13:00, thêm một ngày sau hạn bàn giao; nếu hạn rơi vào Chủ nhật thì chuyển sang thứ Hai. Công đoạn khác giữ hạn cuối ngày làm việc kế tiếp sau Ngày Bắt Đầu. Done/Kinh Doanh Done được so với Ngày Hoàn Thành.",
-      example: "Task Quay bắt đầu 01/03 có hạn bàn giao 13:00 ngày 03/03 và hạn hoàn thành 13:00 ngày 04/03.",
+      calculation: "Quay/Chụp có hạn hoàn thành lúc 14:00 ngày thứ ba sau Ngày Bắt Đầu; nếu hạn rơi vào Chủ nhật hoặc ngày nghỉ lễ thì chuyển sang ngày làm việc kế tiếp. Công đoạn khác giữ hạn cuối ngày làm việc kế tiếp sau Ngày Bắt Đầu. Done/Kinh Doanh Done được so với Ngày Hoàn Thành.",
+      example: "Task Quay bắt đầu 01/03 có hạn bàn giao 14:00 ngày 03/03 và hạn hoàn thành 14:00 ngày 04/03.",
       note: "Kết quả toàn quy trình còn chịu ảnh hưởng của người kiểm duyệt; không dùng riêng để quy trách nhiệm cho người thực hiện.",
     },
     "Trạng thái task tồn": {

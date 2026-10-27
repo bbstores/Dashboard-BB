@@ -262,7 +262,7 @@ test("calculates dashboard cohorts, people, collections and backlog", () => {
       name: row.name,
       total: row.total,
       feedback: row.feedback,
-      feedbackInternal: row.feedbackInternal,
+      feedbackHieu: row.feedbackHieu,
       feedbackBusiness: row.feedbackBusiness,
     })),
     [
@@ -270,14 +270,14 @@ test("calculates dashboard cohorts, people, collections and backlog", () => {
         name: "An",
         total: 2,
         feedback: 1,
-        feedbackInternal: 1,
+        feedbackHieu: 1,
         feedbackBusiness: 0,
       },
       {
         name: "Binh",
         total: 2,
         feedback: 0,
-        feedbackInternal: 0,
+        feedbackHieu: 0,
         feedbackBusiness: 0,
       },
     ],
@@ -300,7 +300,7 @@ test("calculates dashboard cohorts, people, collections and backlog", () => {
   );
 });
 
-test("splits feedback returned by Thúy Sang from internal feedback", () => {
+test("counts each return once in its gate and drops unknown rejecters", () => {
   const data: DashboardData = {
     fileName: "feedback-source-fixture.xlsx",
     publications: [],
@@ -325,6 +325,20 @@ test("splits feedback returned by Thúy Sang from internal feedback", () => {
         assignee: "An",
         rejectedBy: "",
       },
+      {
+        taskCode: "T1",
+        at: date(16),
+        assignee: "An",
+        rejectedBy: "BOSS BB 🤍",
+        source: "BOD",
+      },
+      {
+        taskCode: "T1",
+        at: date(17),
+        assignee: "An",
+        rejectedBy: "BOSS BB 🤍",
+        source: "Kiểm Duyệt",
+      },
     ],
   };
 
@@ -335,9 +349,11 @@ test("splits feedback returned by Thúy Sang from internal feedback", () => {
   });
   const row = stats.staffRows.find((item) => item.name === "An");
 
-  assert.equal(row?.feedback, 3);
+  assert.equal(row?.feedback, 4);
   assert.equal(row?.feedbackBusiness, 1);
-  assert.equal(row?.feedbackInternal, 2);
+  assert.equal(row?.feedbackHieu, 1);
+  assert.equal(row?.feedbackBod, 1);
+  assert.equal(row?.feedbackLead, 1);
 });
 
 test("calculates SLA and norm metrics without React", () => {

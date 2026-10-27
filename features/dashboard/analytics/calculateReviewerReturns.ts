@@ -7,16 +7,13 @@ import type {
   ReviewerReturnSource,
   Task,
 } from "../model/types";
-import { inWindow, normalize, normalizedKey } from "../model/taskUtils";
-
-function personKey(value: string | undefined) {
-  return normalizedKey(value)
-    .replace(/đ/g, "d")
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
+import {
+  inWindow,
+  isBodFeedback,
+  normalize,
+  normalizedKey,
+  personKey,
+} from "../model/taskUtils";
 
 const HIEU_KEY = "hieu producer";
 /** Các cấp lead chỉ duyệt sau khi Hiếu đã Done. */
@@ -29,7 +26,10 @@ const LATER_REVIEWERS = new Map<string, ReviewerReturnSource>([
   ["thuy sang", "thuySang"],
   ["thuy sang om social", "thuySang"],
 ]);
-/** Mọi trạng thái BOD khác DUYỆT đều cho thấy BOD đã trả task. */
+/**
+ * Workbook cũ chưa có cột Nguồn Trả: chỉ đoán được BOD từ trạng thái hiện tại
+ * của task, nên mất các lần BOD trả rồi đã duyệt lại.
+ */
 const BOD_RETURN_STATES = new Set(["khong duyet", "dang sua", "da sua", "thuc hien lai"]);
 
 export const REVIEWER_RETURN_SOURCES: Array<{ source: ReviewerReturnSource; label: string }> = [
@@ -68,6 +68,7 @@ function isProducerApproved(task: Task) {
  * là "tự mở lại" khi nằm sau Done mới nhất; trước đó là vòng duyệt bình thường.
  */
 function buildReviewerReturns(data: DashboardData) {
+  const hasFeedbackSource = data.feedback.some((feedback) => feedback.source);
   const feedbackByTask = new Map<string, Feedback[]>();
   const seenFeedback = new Set<string>();
   for (const feedback of data.feedback) {
@@ -93,16 +94,17 @@ function buildReviewerReturns(data: DashboardData) {
     const events: ReviewerReturnEvent[] = [];
     const ignoredFeedback: Feedback[] = [];
     for (const feedback of feedbackByTask.get(taskKey) ?? []) {
-      const source = returnSourceOf(feedback.rejectedBy);
+      const source = isBodFeedback(feedback) ? "bod" : returnSourceOf(feedback.rejectedBy);
       if (!source) {
         ignoredFeedback.push(feedback);
         continue;
       }
       const at = validDate(feedback.at);
       if (source === "hieu" && !(approvedAt && at && at > approvedAt)) continue;
-      events.push({ source, at, by: normalize(feedback.rejectedBy), error: normalize(feedback.error) });
+      const by = normalize(feedback.rejectedBy);
+      events.push({ source, at, by: source === "bod" ? `BOD · ${by}` : by, error: normalize(feedback.error) });
     }
-    if (BOD_RETURN_STATES.has(personKey(task.bodApproval))) {
+    if (!hasFeedbackSource && BOD_RETURN_STATES.has(personKey(task.bodApproval))) {
       events.push({ source: "bod", at: validDate(task.bodApprovalDate), by: `BOD · ${normalize(task.bodApproval)}`, error: "" });
     }
     events.sort((a, b) => (a.at?.getTime() ?? Infinity) - (b.at?.getTime() ?? Infinity));

@@ -32,6 +32,7 @@ export function parseFeedback(
         valueAt(row, headers, FEEDBACK_COLUMNS.rejectedBy),
       ),
       error: normalize(valueAt(row, headers, FEEDBACK_COLUMNS.error)),
+      source: normalize(valueAt(row, headers, FEEDBACK_COLUMNS.source)),
     });
   }
   return feedback;

@@ -107,7 +107,7 @@ export function SlaSection({
               onClick={() =>
                 onOpenDetail({
                   title: "Bàn giao đúng hạn",
-                  subtitle: "Ngày Kiểm Duyệt không vượt quá hạn của công đoạn",
+                  subtitle: "Lần bàn giao đầu tiên không vượt quá hạn của công đoạn",
                   tasks: sla.onTimeHandoffs.map((row) => row.task),
                 })
               }
@@ -122,7 +122,7 @@ export function SlaSection({
                 onOpenDetail({
                   title: "Quá hạn chưa bàn giao",
                   subtitle:
-                    "Đã qua hạn bàn giao nhưng chưa có Ngày Kiểm Duyệt",
+                    "Đã qua hạn bàn giao nhưng chưa bàn giao lần nào",
                   tasks: sla.overdueHandoffs.map((row) => row.task),
                 })
               }

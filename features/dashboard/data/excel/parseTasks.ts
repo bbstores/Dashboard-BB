@@ -58,6 +58,10 @@ export function parseTasks(sheet: import("exceljs").Worksheet): Task[] {
         temporalValueAt(row, headers, TASK_COLUMNS.inspectionDate),
         startDate,
       ),
+      firstHandoffDate: excelDateTime(
+        temporalValueAt(row, headers, TASK_COLUMNS.firstHandoffDate),
+        startDate,
+      ),
       businessApprovalDate: excelDateTime(
         temporalValueAt(row, headers, TASK_COLUMNS.businessApprovalDate),
         startDate,

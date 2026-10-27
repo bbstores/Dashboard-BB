@@ -18,7 +18,8 @@ export function StaffColumns({
     completionCarry: number;
     completionCarryTasks?: Task[];
     feedback: number;
-    feedbackInternal: number;
+    feedbackHieu: number;
+    feedbackLead: number;
     feedbackBod: number;
     feedbackBusiness: number;
   }>;
@@ -29,13 +30,14 @@ export function StaffColumns({
       | "started"
       | "inspectionCarry"
       | "completionCarry"
-      | "feedbackInternal"
+      | "feedbackHieu"
+      | "feedbackLead"
       | "feedbackBod"
       | "feedbackBusiness",
   ) => void;
   className?: string;
 }) {
-  // Một thang đo duy nhất cho cả bảy cột. Thang riêng cho nhóm trả về từng làm
+  // Một thang đo duy nhất cho cả tám cột. Thang riêng cho nhóm trả về từng làm
   // cột trả về vẽ cao hơn cột tổng task, khiến người lướt qua hiểu nhầm là
   // nhân sự bị trả về nhiều hơn số task đã làm.
   const max = Math.max(
@@ -44,7 +46,8 @@ export function StaffColumns({
       row.started,
       row.inspectionCarry,
       row.completionCarry,
-      row.feedbackInternal,
+      row.feedbackHieu,
+      row.feedbackLead,
       row.feedbackBod,
       row.feedbackBusiness,
     ]),
@@ -62,9 +65,10 @@ export function StaffColumns({
           <span><i className="c2" />Bắt đầu trong kỳ</span>
           <span><i className="c3" />Carry-in bàn giao</span>
           <span><i className="c4" />Carry-in hoàn thành</span>
+          <span><i className="c8" />Hiếu Trả Về</span>
           <span><i className="c5" />Lead Trả Về</span>
-          <span><i className="c6" />BOD Không Duyệt</span>
           <span><i className="c7" />Kinh Doanh Reject</span>
+          <span><i className="c6" />BOD Không Duyệt</span>
           <HelpButton help={dashboardHelp("Số task thực hiện & số lần trả về")} />
         </div>
       </div>
@@ -74,18 +78,19 @@ export function StaffColumns({
             <div className="columnGroup" key={row.name}>
               <div className="columns">
                 {([
-                  ["total", row.total, "Tổng task"],
-                  ["started", row.started, "Bắt đầu trong kỳ"],
-                  ["inspectionCarry", row.inspectionCarry, "Carry-in bàn giao"],
-                  ["completionCarry", row.completionCarry, "Carry-in hoàn thành"],
-                  ["feedbackInternal", row.feedbackInternal, "Lead Trả Về"],
-                  ["feedbackBod", row.feedbackBod, "BOD Không Duyệt"],
-                  ["feedbackBusiness", row.feedbackBusiness, "Kinh Doanh Reject"],
-                ] as const).map(([metric, value, label], index) => (
+                  ["total", row.total, "Tổng task", "c1"],
+                  ["started", row.started, "Bắt đầu trong kỳ", "c2"],
+                  ["inspectionCarry", row.inspectionCarry, "Carry-in bàn giao", "c3"],
+                  ["completionCarry", row.completionCarry, "Carry-in hoàn thành", "c4"],
+                  ["feedbackHieu", row.feedbackHieu, "Hiếu Trả Về", "c8"],
+                  ["feedbackLead", row.feedbackLead, "Lead Trả Về", "c5"],
+                  ["feedbackBusiness", row.feedbackBusiness, "Kinh Doanh Reject", "c7"],
+                  ["feedbackBod", row.feedbackBod, "BOD Không Duyệt", "c6"],
+                ] as const).map(([metric, value, label, colorClass]) => (
                   <button
                     type="button"
                     key={metric}
-                    className={`column c${index + 1}`}
+                    className={`column ${colorClass}`}
                     style={{
                       height: `${Math.max(value ? 4 : 0, (value / max) * 220)}px`,
                     }}

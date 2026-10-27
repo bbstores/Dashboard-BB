@@ -68,6 +68,21 @@ test("counts unique returned tasks across later reviewers and BOD, and splits th
   assert.equal(getReviewerReturns(workbook), getReviewerReturns(workbook));
 });
 
+test("Nguồn Trả = BOD keeps BOD returns that were approved again and stops guessing from BOD state", () => {
+  const stats = calculateReviewerReturns(data([
+    task("REAPPROVED", { bodApproval: "DUYỆT" }),
+    task("STALE", { bodApproval: "ĐANG SỬA" }),
+  ], [
+    feedback("REAPPROVED", { rejectedBy: "BOSS BB 🤍", source: "BOD" }),
+    feedback("REAPPROVED", { at: at(24), rejectedBy: "BOSS BB 🤍", source: "BOD" }),
+    feedback("STALE", { rejectedBy: "Thùy An", source: "Kiểm Duyệt" }),
+  ]), window);
+  assert.deepEqual(stats.sourceTasks, { thuyAn: 1, boss: 0, thuTrang: 0, thuySang: 0, bod: 1, hieu: 0 });
+  const reapproved = stats.rows.find((row) => row.task.code === "REAPPROVED");
+  assert.deepEqual(reapproved?.events.map((event) => event.by), ["BOD · BOSS BB 🤍", "BOD · BOSS BB 🤍"]);
+  assert.equal(stats.rows.find((row) => row.task.code === "STALE")?.events.length, 1);
+});
+
 test("later-reviewer returns count even when the task was Done again afterwards", () => {
   // Thuỳ An trả ngày 21, task làm lại và Done ngày 22: Ngày Hoàn Thành đã bị ghi đè.
   const stats = calculateReviewerReturns(data([task("REDONE"), task("NO-TIME")], [

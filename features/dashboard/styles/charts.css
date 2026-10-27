@@ -222,6 +222,7 @@
 .c5 { background: var(--red); }
 .c6 { background: #7659a8; }
 .c7 { background: #cd7da4; }
+.c8 { background: #d9b44a; }
 .columnScroller { overflow-x: auto; padding: 16px 4px 2px; }
 .columnChart {
   height: 280px; display: flex; align-items: flex-end; gap: 32px;
