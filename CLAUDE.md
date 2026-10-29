@@ -44,6 +44,8 @@ Cấu trúc chính trong `features/dashboard/`:
 Tài liệu nghiệp vụ trong `docs/`:
 
 - `quy-tac-link-task-phu-thuoc.md` — **bản đầy đủ** quy tắc link Task Phụ Thuộc. Đọc trước khi link.
+- `quy-trinh-tao-task-bst.md` — quy trình tạo hàng loạt task cho BST mỗi tháng từ 1.7 Định Mức
+  (script `scripts/bst-tasks/`). **Đọc trước khi tạo task BST.**
 - `data-model.md` — mô hình dữ liệu dự kiến cho Postgres.
 - `KIEM_TRA_SAU_*.txt`, `SE_LAM_SAU_*.txt` — việc để dành cho phase sau.
 

@@ -1,0 +1,14 @@
+{
+  "month": "12.2026",
+  "bst_order": ["12.2026-Tiệc", "12.2026-Life Style", "12.2026-Gracy"],
+  "colors": {
+    "DAM01A": ["Kem", "Nâu"], "DAM02B": ["Kem"], "DAM03A": ["Trắng"], "DAM04B": ["Kem", "Nâu"],
+    "DAM05B": ["Kem"], "DAM06B": ["Kem"], "DAM07B": ["Kem", "Nâu Cam", "Đô"],
+    "AAM08T": ["Kem"], "VAM09T": ["Kem"],
+    "AAM41A": ["Kem", "Nude", "Đô"], "AAM42A": ["Kem", "Nude", "Đen", "Đô"], "AAM43T": ["Kem", "Nude", "Đô"],
+    "QAM44H": ["Kem", "Nude", "Đen", "Đô"], "AAM45N": ["Kem", "Xanh"], "VAM46N": ["Kem", "Xanh"],
+    "DAM71V": ["Kem"], "DAM72V": ["Kem"], "AAM73V": ["Kem"], "VAM74H": ["Kem"]
+  },
+  "combos": [["AAM08T", "VAM09T"], ["AAM45N", "VAM46N"], ["AAM73V", "VAM74H"]],
+  "quay_added": {"Video Teaser": 30, "Comming Soon Video": 30, "Video Trailer": 30}
+}
