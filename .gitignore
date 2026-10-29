@@ -46,3 +46,6 @@ tsc_errors.log
 
 # Workbook export từ Lark Base — chứa dữ liệu nhân sự, không commit
 /excel/
+
+# Ghi chú Claude local — chứa token Lark, không commit
+CLAUDE.local.md
