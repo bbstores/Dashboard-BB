@@ -141,4 +141,4 @@ Lần T12/2026 (TSK11517–TSK11970) tạo theo **đợt độ sâu**, nên mã 
 
 | Tháng | BST | Task | Mã TSK | Ghi chú |
 |---|---|---|---|---|
-| 12.2026 | Tiệc 188, Life Style 178, Gracy 88 | 454 (260 link) | TSK11517–TSK11970 | Tạo 29/10/2026 theo đợt độ sâu (mã không liền chuỗi). 30/10/2026: 38 Edit ảnh đưa về 1.7, 222 task giữ +10 theo luật. Cùng ngày: gắn Nền Tảng + Ngày Đăng Dự Kiến 02/12/2026 cho 172 task, sinh 314 bài 2.7 |
+| 12.2026 | Tiệc 188, Life Style 178, Gracy 88 | 454 (260 link) | TSK11517–TSK11970 | Tạo 29/10/2026 theo đợt độ sâu (mã không liền chuỗi). 30/10/2026: 38 Edit ảnh đưa về 1.7, 222 task giữ +10 theo luật. Bổ sung 70 task Tripod mẫu Thắm (TSK11986–TSK12055): mỗi cụm Voice (mã × màu) thêm 1 cặp Quay → Edit Video Tripod, tên `… <mã> <màu> - Thắm`; Quay lấy số phút bằng Quay Voice, Edit theo 1.7; 35 Edit gắn Nền Tảng, sinh 74 bài 2.7. Bộ này tách riêng với Tripod theo look. Cùng ngày team xoá 26 task cấp BST (Teaser, Trailer, BTS, Comming Soon, Shop in Shop…). Cùng ngày: gắn Nền Tảng + Ngày Đăng Dự Kiến 02/12/2026 cho 172 task, sinh 314 bài 2.7 |
