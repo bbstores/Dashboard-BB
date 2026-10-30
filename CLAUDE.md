@@ -96,6 +96,24 @@ Task bắt đầu trước kỳ nhưng kiểm duyệt/hoàn thành trong kỳ **
 sản lượng (Video/Graphic) hay tỷ lệ đúng hạn. Báo cáo carry-in thành khối riêng, chỉ đếm số
 task, ghi rõ trong phần phương pháp. Số chính dùng `startedInWindow` / `started`.
 
+### Số phút dự kiến: luật +10 phút (chốt 30/10/2026)
+Số phút gốc lấy từ **1.7 Định Mức**. Một automation của Base (người sửa hiện là "Base Assistant",
+không có trong `+workflow-list`) tự cộng +10 phút vào task mới. Luật đúng theo user:
+- **Edit video: +10** (thời gian setup).
+- **Viết Content: +10** (lên ý tưởng).
+- **Graphic: +10.** Với ảnh, phần +10 nằm ở khâu Graphic.
+- **Edit ảnh (Lookbook, 3D, Branding, Manơcanh…): KHÔNG +10**, vì đây chỉ là bước trung gian.
+  Automation vẫn cộng nhầm cho khâu này, nên phải đưa về đúng 1.7 sau khi tạo (`bst_tasks.py fix-minutes`).
+- Quay, Chụp, Viết Caption: đúng 1.7, không cộng.
+
+### Nền Tảng (task BST)
+Luật đầy đủ ở `docs/quy-trinh-tao-task-bst.md` mục 5a, code ở `platforms_for()` trong script.
+- Chỉ ấn phẩm cuối mới gắn Nền Tảng: Edit video, Graphic.
+- **Cửa hàng (31 LVS, 25 NT…) = Không Đăng Social**, vì cửa hàng không phải kênh social.
+- **Gracy**: TikTok nào cũng là Tiktok BB Store; Facebook là Facebook BBStore + Facebook Gracy.
+- Ngày Đăng Dự Kiến chỉ ghi cho task có Nền Tảng. Gắn xong, workflow tự sinh bài ở 2.7
+  (mỗi nền tảng một bài), nên phải được user đồng ý trước khi ghi.
+
 ### Task Phụ Thuộc là nguyên nhân gốc
 Cột Task Phụ Thuộc (khâu sau → khâu trước) thiếu link rất nhiều (23/10/2026: 290/7.389 task
 có link). Nó kéo theo Link Input, Deadline Cột Mốc Content và việc biết khâu sau đã sẵn sàng

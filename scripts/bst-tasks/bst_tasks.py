@@ -9,6 +9,7 @@ Chạy trong scratchpad (lark-cli ghi file .ndjson ra thư mục hiện tại):
     python3 bst_tasks.py plan   --config config.json   # sinh plan.json + in bản xem trước, không ghi Lark
     python3 bst_tasks.py apply  --config config.json [--only "12.2026-Gracy"]   # GHI LÊN LARK
     python3 bst_tasks.py verify --config config.json   # đọc lại, đối chiếu với plan
+    python3 bst_tasks.py fix-minutes --config config.json [--apply] # Edit ảnh về đúng 1.7 (bỏ +10 của automation)
     python3 bst_tasks.py platforms --config config.json [--apply]   # gắn Nền Tảng + Ngày Đăng Dự Kiến
 
 `apply` lưu key→record_id vào created_ids.json sau mỗi lô, chạy lại sẽ bỏ qua task đã tạo.
@@ -283,22 +284,55 @@ def verify(cfg, wd):
         print("Số phút", k, v)
 
 
-def platforms(cfg, wd, do_apply):
-    month, post_date = cfg["month"], cfg.get("post_date") or sys.exit("Thiếu post_date trong config (vd 2026-12-02 00:00)")
-    lark("+record-list", "--table-id", T_BST, "--field-id", "ID", "--output", "_p_bst.ndjson", "--overwrite", cwd=wd)
-    bsts = {r["record_id"]: r["ID"] for r in read_ndjson(wd / "_p_bst.ndjson") if str(r.get("ID", "")).startswith(month)}
-    lark("+record-list", "--table-id", T_DINH_MUC, "--output", "_p_dm.ndjson", "--overwrite", cwd=wd)
-    fmts = {r["record_id"]: (r.get("Tên Định Dạng") or "").strip() for r in read_ndjson(wd / "_p_dm.ndjson")}
-    f = [a for x in ["Công việc", "Tên Task", "Công đoạn", "Format Type", "Bộ Sưu Tập", "Nền Tảng", "Trạng thái"]
-         for a in ("--field-id", x)]
+def month_tasks(month, wd):
+    """Task 2.6 thuộc các BST của tháng, kèm map BST id→ID và 1.7 Định Mức id→dòng (đọc mới từ Lark)."""
+    lark("+record-list", "--table-id", T_BST, "--field-id", "ID", "--output", "_m_bst.ndjson", "--overwrite", cwd=wd)
+    bsts = {r["record_id"]: r["ID"] for r in read_ndjson(wd / "_m_bst.ndjson") if str(r.get("ID", "")).startswith(month)}
+    lark("+record-list", "--table-id", T_DINH_MUC, "--output", "_m_dm.ndjson", "--overwrite", cwd=wd)
+    dm = {r["record_id"]: r for r in read_ndjson(wd / "_m_dm.ndjson")}
+    f = [a for x in ["Công việc", "Tên Task", "Công đoạn", "Format Type", "Bộ Sưu Tập", "Nền Tảng", "Trạng thái",
+                     "Số phút dự kiến"] for a in ("--field-id", x)]
     tasks = []
     for i in range(10):
         lark("+record-list", "--table-id", T_TASK, *f, "--offset", str(i * 2000), "--limit", "2000",
-             "--output", f"_p_task_{i}.ndjson", "--overwrite", cwd=wd)
-        part = read_ndjson(wd / f"_p_task_{i}.ndjson")
+             "--output", f"_m_task_{i}.ndjson", "--overwrite", cwd=wd)
+        part = read_ndjson(wd / f"_m_task_{i}.ndjson")
         tasks += [r for r in part if any(b["id"] in bsts for b in (r.get("Bộ Sưu Tập") or []))]
         if len(part) < 2000:
             break
+    return tasks, bsts, dm
+
+
+def batch_update(upd, wd):
+    items = list(upd.items())
+    for i in range(0, len(items), 200):
+        body = json.dumps({"update_records": dict(items[i:i + 200])}, ensure_ascii=False)
+        res = json.loads(lark("+record-batch-update", "--table-id", T_TASK, "--json", body, cwd=wd))
+        if not res.get("ok"):
+            sys.exit(f"LỖI khi cập nhật lô {i}: {res}")
+        print(f"đã cập nhật {min(i + 200, len(items))}/{len(items)}")
+
+
+def fix_minutes(cfg, wd, do_apply):
+    """Edit ảnh là bước trung gian, không được +10 phút (luật 30/10/2026). Automation vẫn cộng nhầm → đưa về 1.7."""
+    tasks, _, dm = month_tasks(cfg["month"], wd)
+    upd = {}
+    for r in tasks:
+        d = dm.get((r.get("Format Type") or [{}])[0].get("id"), {})
+        base = d.get("Thời gian Edit (Phút)")
+        if ((r.get("Công đoạn") or [""])[0] == "Edit" and (d.get("Tên Định Dạng") or "").startswith("Ảnh")
+                and base and r.get("Số phút dự kiến") == base + 10):
+            upd[r["record_id"]] = {"Số phút dự kiến": base}
+            print(f"  {r['Công việc']:<9}{r['Số phút dự kiến']:>4} → {base:<4}{r['Tên Task']}")
+    print(f"Edit ảnh cần đưa về 1.7: {len(upd)}")
+    if do_apply and upd:
+        batch_update(upd, wd)
+
+
+def platforms(cfg, wd, do_apply):
+    month, post_date = cfg["month"], cfg.get("post_date") or sys.exit("Thiếu post_date trong config (vd 2026-12-02 00:00)")
+    tasks, bsts, dm = month_tasks(month, wd)
+    fmts = {k: (r.get("Tên Định Dạng") or "").strip() for k, r in dm.items()}
     upd, unknown, summary = {}, [], Counter()
     for r in tasks:
         if r.get("Nền Tảng") or (r.get("Trạng thái") or [""])[0] in ("Pending / Cancel", "Archived"):
@@ -320,25 +354,19 @@ def platforms(cfg, wd, do_apply):
     if not do_apply:
         return
     json.dump(upd, open(wd / "platform_updates.json", "w"), ensure_ascii=False, indent=1)
-    items = list(upd.items())
-    for i in range(0, len(items), 200):
-        body = json.dumps({"update_records": dict(items[i:i + 200])}, ensure_ascii=False)
-        res = json.loads(lark("+record-batch-update", "--table-id", T_TASK, "--json", body, cwd=wd))
-        if not res.get("ok"):
-            sys.exit(f"LỖI khi cập nhật lô {i}: {res}")
-        print(f"đã gắn {min(i + 200, len(items))}/{len(items)}")
+    batch_update(upd, wd)
     print("Workflow sinh bài 2.7 cần vài phút. Đọc lại để đối chiếu số bài với số nền tảng (trừ Không Đăng Social).")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["fetch", "plan", "apply", "verify", "platforms"])
+    ap.add_argument("cmd", choices=["fetch", "plan", "apply", "verify", "fix-minutes", "platforms"])
     ap.add_argument("--config", required=True)
     ap.add_argument("--only", nargs="*", help="chỉ tạo các BST này, ví dụ 12.2026-Gracy")
-    ap.add_argument("--apply", action="store_true", help="platforms: ghi lên Lark (không có cờ này chỉ xem trước)")
+    ap.add_argument("--apply", action="store_true", help="platforms / fix-minutes: ghi lên Lark (không có cờ thì chỉ xem trước)")
     a = ap.parse_args()
     cfg = json.load(open(a.config))
     wd = Path.cwd()
     {"fetch": lambda: fetch(cfg, wd), "plan": lambda: build_plan(cfg, wd),
      "apply": lambda: apply(cfg, wd, a.only), "verify": lambda: verify(cfg, wd),
-     "platforms": lambda: platforms(cfg, wd, a.apply)}[a.cmd]()
+     "fix-minutes": lambda: fix_minutes(cfg, wd, a.apply), "platforms": lambda: platforms(cfg, wd, a.apply)}[a.cmd]()

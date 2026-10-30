@@ -108,7 +108,7 @@ Làm trong scratchpad, vì lark-cli ghi file `.ndjson` ra thư mục hiện tạ
 5. **Gửi user tổng số task theo BST và công đoạn, các điểm lạ. Chờ user đồng ý.**
 6. `python3 bst_tasks.py apply --config config.json`. Có thể chạy `--only "<BST>"` để tạo thử một BST trước. `apply` tự dừng nếu BST đã có task.
 7. `python3 bst_tasks.py verify --config config.json`: đối chiếu tên, công đoạn, trạng thái, format, mã, BST, link và số phút với plan.
-8. Báo user: dải mã TSK, số task, số link, số task bị automation cộng +10 phút.
+8. Đợi khoảng 1 phút để automation +10 chạy xong, rồi chạy `python3 bst_tasks.py fix-minutes --config config.json --apply` để đưa Edit ảnh về đúng 1.7 (mục 7). Báo user: dải mã TSK, số task, số link, số phút đã chỉnh.
 9. **Hỏi user ngày đăng dự kiến**, ghi vào `post_date`. Chạy `python3 bst_tasks.py platforms --config config.json` để xem trước: số task gắn, số bài 2.7 sẽ sinh, định dạng chưa có luật. Gửi user, chờ đồng ý.
 10. `python3 bst_tasks.py platforms --config config.json --apply`. Đợi vài phút, đọc lại, đối chiếu số bài 2.7 của từng task với số nền tảng (không tính Không Đăng Social). Lần đầu áp luật mới thì nên ghi thử vài task trước.
 
@@ -124,7 +124,13 @@ Lần T12/2026 (TSK11517–TSK11970) tạo theo **đợt độ sâu**, nên mã 
 
 ## 7. Bẫy đã gặp
 
-- **Automation cộng +10 phút.** Vài giây sau khi tạo, một automation (người sửa hiện là "Base Assistant") cộng thêm 10 phút vào `Số phút dự kiến` của task Viết Content, Edit và Graphic Design. Quay, Chụp, Caption giữ nguyên. Automation này **không có trong `+workflow-list`**, và cũng chạy với task Media Planner tạo tay (TSK11499 20→30, TSK11502 60→70…). Media Planner đôi khi sửa tay về lại. Đây không phải lỗi của script; báo số lượng cho user. T12: 260 task bị +10.
+- **Automation cộng +10 phút.** Vài giây sau khi tạo, một automation (người sửa hiện là "Base Assistant") cộng thêm 10 phút vào `Số phút dự kiến` của task Viết Content, Edit và Graphic Design. Quay, Chụp, Caption giữ nguyên. Automation này **không có trong `+workflow-list`**, và cũng chạy với task Media Planner tạo tay (TSK11499 20→30, TSK11502 60→70…).
+  **Luật user chốt 30/10/2026:**
+  - Edit video +10 (setup), Viết Content +10 (lên ý tưởng), Graphic +10.
+  - **Edit ảnh không +10**, vì đây chỉ là bước trung gian; phần +10 của ảnh nằm ở Graphic.
+  - Automation cộng nhầm cho Edit ảnh, nên sau `apply` phải chạy `fix-minutes`.
+  - Cập nhật số phút qua API thì automation **không** cộng lại (đã thử trên TSK11748).
+  - T12: 38 task Edit ảnh đã đưa về 1.7. 119 Edit video, 56 Graphic và 47 Content giữ +10.
 - **Sai Số Phút** được bật True cho phần lớn task Content/Edit/Graphic ngay khi tạo, nhưng workflow "Xóa phút dự kiến khi Sai Số Phút = True" **không** xoá phút của task tạo qua API.
 - **Ngày Đăng Dự Kiến** để trống, vì workflow "Lấy ngày đăng dự kiến từ Bộ Sưu Tập" không chạy khi tạo qua API. Các BST tháng 11 cũng trống cột này.
 - **`Task Phụ Thuộc` qua API chỉ thấy một chiều** (khâu sau → khâu trước). Khi verify, so ô của task khâu sau, đừng chờ link ngược ở task khâu trước.
@@ -135,4 +141,4 @@ Lần T12/2026 (TSK11517–TSK11970) tạo theo **đợt độ sâu**, nên mã 
 
 | Tháng | BST | Task | Mã TSK | Ghi chú |
 |---|---|---|---|---|
-| 12.2026 | Tiệc 188, Life Style 178, Gracy 88 | 454 (260 link) | TSK11517–TSK11970 | Tạo 29/10/2026 theo đợt độ sâu (mã không liền chuỗi). 260 task bị automation +10 phút, user chưa quyết giữ hay đưa về 1.7. 30/10/2026: gắn Nền Tảng + Ngày Đăng Dự Kiến 02/12/2026 cho 172 task, sinh 314 bài 2.7 |
+| 12.2026 | Tiệc 188, Life Style 178, Gracy 88 | 454 (260 link) | TSK11517–TSK11970 | Tạo 29/10/2026 theo đợt độ sâu (mã không liền chuỗi). 30/10/2026: 38 Edit ảnh đưa về 1.7, 222 task giữ +10 theo luật. Cùng ngày: gắn Nền Tảng + Ngày Đăng Dự Kiến 02/12/2026 cho 172 task, sinh 314 bài 2.7 |
