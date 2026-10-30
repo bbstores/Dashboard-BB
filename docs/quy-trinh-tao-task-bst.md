@@ -64,7 +64,34 @@ Nếu 1.7 thêm hoặc bỏ một định dạng có tích BST, script dừng l�
   - Không ghi tên mẫu (Mai Chi, Phương Khánh…) khi chưa biết.
   - Tên cũ hơi lặp như `Graphic Graphic Ecom DAM01A` vẫn giữ để đồng bộ với các tháng trước, và vì quy tắc ghép link so tên sau khi bỏ chữ khâu ở đầu.
 - **Ghi:** Tên Task, Công đoạn, Format Type (link 1.7), Mã sản phẩm (link 2.3, trừ task theo BST), Bộ Sưu Tập (link 2.1), Số phút dự kiến, Trạng thái = `To Do`, Task Phụ Thuộc.
-- **Để trống cho PM:** Assignee, Nền Tảng. Nền Tảng trống thì workflow chưa sinh bài ở 2.7 Đăng Bài.
+- **Để trống cho PM:** Assignee.
+- **Nền Tảng + Ngày Đăng Dự Kiến:** gắn bằng lệnh `platforms` sau khi tạo task (mục 5a).
+
+## 5a. Nền Tảng và Ngày Đăng Dự Kiến
+
+Rút từ các BST 09–11/2026: luật khớp 865/904 task (95,7%). User chốt 30/10/2026. Code ở hàm `platforms_for()` trong script.
+
+**Chỉ ấn phẩm cuối mới gắn:** Edit của video, Graphic của ảnh/graphic. Khâu Edit ảnh (Lookbook, Manơcanh, Branding, Product) là trung gian, không gắn. Ảnh 3D, Lighbox, Content, Quay, Chụp, Caption cũng không gắn.
+
+| Định dạng | Nền Tảng |
+|---|---|
+| Video Tripod, Video Trend, Branding BST (video + ảnh), Behind the Scene, Teaser, Trailer, Comming Soon (video + graphic), Template Layout BST | Facebook BBStore + Tiktok BB Store |
+| Video MV, Graphic Ảnh Lookbook | Facebook BBStore + Tiktok BB Store |
+| Video Voice | Facebook BBStore + **Tiktok BB Công Sở** |
+| Video Manơcanh, Video Product, Graphic Ảnh Manơcanh | Facebook BBStore + Tiktok BB Dress |
+| Popup Website / Banner | Facebook BBStore + Website |
+| Graphic Ecom, Shop in Shop, **POSM, Video LCD Cửa Hàng** | Không Đăng Social |
+
+Ngoại lệ theo dòng BST:
+- **Misschic:** Voice dùng Facebook Misschic + Tiktok BB Công Sở. MV, Graphic Lookbook và Graphic Manơcanh dùng Facebook Misschic + Tiktok Misschic. Video Manơcanh dùng Facebook Misschic + Tiktok BB Dress. Các định dạng còn lại giống bảng trên.
+- **Gracy** (chốt 30/10/2026): **TikTok nào cũng đổi thành Tiktok BB Store, Facebook nào cũng đổi thành Facebook BBStore + Facebook Gracy**. Không đổi Website và Không Đăng Social. Voice cũng theo luật này: Tiktok BB Store, không dùng Công Sở; PM muốn đổi thì tự sửa.
+
+Quyết định đi kèm:
+- **Cửa hàng không phải kênh social.** Mọi ấn phẩm cho cửa hàng (31 LVS, 25 NT, cửa hàng mới sau này) đều gắn **Không Đăng Social**. Gắn option cửa hàng vẫn sinh bài 2.7 nên không dùng nữa.
+- Graphic Ảnh Branding BST: lịch sử chia đôi 7/7 giữa "chỉ Facebook" và "Facebook + Tiktok". User chọn gắn cả hai, dư thì PM xoá.
+- **Ngày Đăng Dự Kiến chỉ ghi cho task có gắn Nền Tảng.** User đưa ngày cho mỗi tháng (T12: 02/12/2026 00:00), ghi vào `post_date` trong config.
+
+**Hệ quả:** task Edit/Graphic có đủ Nền Tảng (khác Không Đăng Social) và Ngày Đăng Dự Kiến sẽ kích workflow "ĐĂNG BÀI | Tạo bài đăng từ Task theo nền tảng". Workflow sinh **mỗi nền tảng một bài** ở 2.7, mất vài phút mới xong (T12: 248/314 bài sau lần đọc đầu, 314/314 ở lần đọc sau). CLI không xoá được bài, nên phải gửi user số bài dự kiến và chờ đồng ý trước khi chạy `--apply`. Gắn qua API **không** làm workflow xoá phút chạy (đã kiểm chứng trên 454 task T12).
 
 ## 6. Quy trình chạy
 
@@ -82,6 +109,8 @@ Làm trong scratchpad, vì lark-cli ghi file `.ndjson` ra thư mục hiện tạ
 6. `python3 bst_tasks.py apply --config config.json`. Có thể chạy `--only "<BST>"` để tạo thử một BST trước. `apply` tự dừng nếu BST đã có task.
 7. `python3 bst_tasks.py verify --config config.json`: đối chiếu tên, công đoạn, trạng thái, format, mã, BST, link và số phút với plan.
 8. Báo user: dải mã TSK, số task, số link, số task bị automation cộng +10 phút.
+9. **Hỏi user ngày đăng dự kiến**, ghi vào `post_date`. Chạy `python3 bst_tasks.py platforms --config config.json` để xem trước: số task gắn, số bài 2.7 sẽ sinh, định dạng chưa có luật. Gửi user, chờ đồng ý.
+10. `python3 bst_tasks.py platforms --config config.json --apply`. Đợi vài phút, đọc lại, đối chiếu số bài 2.7 của từng task với số nền tảng (không tính Không Đăng Social). Lần đầu áp luật mới thì nên ghi thử vài task trước.
 
 `apply` lưu `created_ids.json` sau mỗi lô. Nếu bị ngắt giữa chừng, chạy lại `apply` sẽ chỉ tạo phần còn thiếu, **không chạy `fetch` lại trước đó**.
 
@@ -106,4 +135,4 @@ Lần T12/2026 (TSK11517–TSK11970) tạo theo **đợt độ sâu**, nên mã 
 
 | Tháng | BST | Task | Mã TSK | Ghi chú |
 |---|---|---|---|---|
-| 12.2026 | Tiệc 188, Life Style 178, Gracy 88 | 454 (260 link) | TSK11517–TSK11970 | Tạo 29/10/2026 theo đợt độ sâu (mã không liền chuỗi). 260 task bị automation +10 phút, user chưa quyết giữ hay đưa về 1.7 |
+| 12.2026 | Tiệc 188, Life Style 178, Gracy 88 | 454 (260 link) | TSK11517–TSK11970 | Tạo 29/10/2026 theo đợt độ sâu (mã không liền chuỗi). 260 task bị automation +10 phút, user chưa quyết giữ hay đưa về 1.7. 30/10/2026: gắn Nền Tảng + Ngày Đăng Dự Kiến 02/12/2026 cho 172 task, sinh 314 bài 2.7 |

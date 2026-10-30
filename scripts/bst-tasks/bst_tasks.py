@@ -9,8 +9,11 @@ Chạy trong scratchpad (lark-cli ghi file .ndjson ra thư mục hiện tại):
     python3 bst_tasks.py plan   --config config.json   # sinh plan.json + in bản xem trước, không ghi Lark
     python3 bst_tasks.py apply  --config config.json [--only "12.2026-Gracy"]   # GHI LÊN LARK
     python3 bst_tasks.py verify --config config.json   # đọc lại, đối chiếu với plan
+    python3 bst_tasks.py platforms --config config.json [--apply]   # gắn Nền Tảng + Ngày Đăng Dự Kiến
 
 `apply` lưu key→record_id vào created_ids.json sau mỗi lô, chạy lại sẽ bỏ qua task đã tạo.
+`platforms` đọc thẳng task trên Lark theo BST của tháng, chỉ gắn task chưa có Nền Tảng.
+Gắn xong, workflow "ĐĂNG BÀI | Tạo bài đăng từ Task theo nền tảng" sinh mỗi nền tảng một bài ở 2.7.
 """
 import argparse, json, os, subprocess, sys
 from collections import Counter
@@ -28,6 +31,44 @@ DEFAULT_GROUPS = {
                 "Comming Soon Video", "Video LCD Cửa Hàng", "Comming Soon Graphic", "Shop in Shop",
                 "Popup Website / Banner", "Ảnh Ấn Phẩm POSM", "Lighbox", "Template Layout BST"],
 }
+FB, TT, FB_MC, TT_MC = "Facebook BBStore", "Tiktok BB Store", "Facebook Misschic", "Tiktok Misschic"
+TT_CS, TT_DRESS, NO_SOCIAL, WEB = "Tiktok BB Công Sở", "Tiktok BB Dress", "Không Đăng Social", "Website"
+PHOTO_WITH_GRAPHIC = {"Ảnh Lookbook", "Ảnh Manơcanh", "Ảnh Branding BST", "Ảnh Product"}
+BST_LEVEL_SOCIAL = {"Video Branding BST", "Ảnh Branding BST", "Video Behind the Scene", "Video Teaser", "Video Trailer",
+                    "Comming Soon Video", "Comming Soon Graphic", "Template Layout BST"}
+
+
+def platforms_for(fmt, cd, line):
+    """Nền Tảng cho task BST (rút từ BST 09–11/2026, khớp 95,7%; user chốt 30/10/2026).
+    None = không gắn: chỉ ấn phẩm cuối (Edit video, Graphic) mới gắn. 'unknown' = định dạng chưa có luật."""
+    if cd not in ("Edit", "Graphic Design") or (fmt in PHOTO_WITH_GRAPHIC and cd == "Edit"):
+        return None
+    mc = line == "Misschic"
+    table = {
+        "Video Voice": (FB_MC if mc else FB, TT_CS),
+        "Video Tripod": (FB, TT), "Video Trend": (FB, TT),
+        "Video MV": (FB_MC, TT_MC) if mc else (FB, TT),
+        "Ảnh Lookbook": (FB_MC, TT_MC) if mc else (FB, TT),
+        "Video Manơcanh": (FB_MC if mc else FB, TT_DRESS),
+        "Ảnh Manơcanh": (FB_MC, TT_MC) if mc else (FB, TT_DRESS),
+        "Video Product": (FB, TT_DRESS),
+        "Popup Website / Banner": (FB, WEB),
+        # Cửa hàng (31 LVS, 25 NT…) không phải kênh social, và gắn cửa hàng vẫn sinh bài 2.7
+        "Graphic Ecom": (NO_SOCIAL,), "Shop in Shop": (NO_SOCIAL,),
+        "Ảnh Ấn Phẩm POSM": (NO_SOCIAL,), "Video LCD Cửa Hàng": (NO_SOCIAL,),
+        "Ảnh 3D": None, "Lighbox": None,
+        **{f: (FB, TT) for f in BST_LEVEL_SOCIAL},
+    }
+    if fmt not in table:
+        return "unknown"
+    out = table[fmt]
+    if out and line == "Gracy" and out != (NO_SOCIAL,):
+        # Gracy: Tiktok nào cũng là Tiktok BB Store; Facebook là Facebook BBStore + Facebook Gracy
+        out = tuple(dict.fromkeys(x for p in out for x in
+                                  ([TT] if p.startswith("Tiktok") else [FB, "Facebook Gracy"] if p.startswith("Facebook") else [p])))
+    return out
+
+
 STAGE_PREFIX = {"Viết Content": "Viết Content", "Quay": "Quay", "Chụp": "Chụp", "Edit": "Edit",
                 "Graphic Design": "Graphic", "Viết Caption": "Viết Caption"}
 
@@ -242,13 +283,62 @@ def verify(cfg, wd):
         print("Số phút", k, v)
 
 
+def platforms(cfg, wd, do_apply):
+    month, post_date = cfg["month"], cfg.get("post_date") or sys.exit("Thiếu post_date trong config (vd 2026-12-02 00:00)")
+    lark("+record-list", "--table-id", T_BST, "--field-id", "ID", "--output", "_p_bst.ndjson", "--overwrite", cwd=wd)
+    bsts = {r["record_id"]: r["ID"] for r in read_ndjson(wd / "_p_bst.ndjson") if str(r.get("ID", "")).startswith(month)}
+    lark("+record-list", "--table-id", T_DINH_MUC, "--output", "_p_dm.ndjson", "--overwrite", cwd=wd)
+    fmts = {r["record_id"]: (r.get("Tên Định Dạng") or "").strip() for r in read_ndjson(wd / "_p_dm.ndjson")}
+    f = [a for x in ["Công việc", "Tên Task", "Công đoạn", "Format Type", "Bộ Sưu Tập", "Nền Tảng", "Trạng thái"]
+         for a in ("--field-id", x)]
+    tasks = []
+    for i in range(10):
+        lark("+record-list", "--table-id", T_TASK, *f, "--offset", str(i * 2000), "--limit", "2000",
+             "--output", f"_p_task_{i}.ndjson", "--overwrite", cwd=wd)
+        part = read_ndjson(wd / f"_p_task_{i}.ndjson")
+        tasks += [r for r in part if any(b["id"] in bsts for b in (r.get("Bộ Sưu Tập") or []))]
+        if len(part) < 2000:
+            break
+    upd, unknown, summary = {}, [], Counter()
+    for r in tasks:
+        if r.get("Nền Tảng") or (r.get("Trạng thái") or [""])[0] in ("Pending / Cancel", "Archived"):
+            continue
+        line = bsts[next(b["id"] for b in r["Bộ Sưu Tập"] if b["id"] in bsts)].split("-", 1)[1]
+        fmt = ",".join(fmts.get(x["id"], "?") for x in (r.get("Format Type") or []))
+        nt = platforms_for(fmt, (r.get("Công đoạn") or [""])[0], line)
+        if nt == "unknown":
+            unknown.append((r["Công việc"], fmt, r["Tên Task"]))
+        elif nt:
+            upd[r["record_id"]] = {"Nền Tảng": list(nt), "Ngày Đăng Dự Kiến": post_date}
+            summary[(line, fmt, "/".join(nt))] += 1
+    for k, v in sorted(summary.items()):
+        print(f"  {k[0]:<12}{k[1]:<26}{v:>4}  {k[2]}")
+    posts = sum(len([p for p in u["Nền Tảng"] if p != NO_SOCIAL]) for u in upd.values())
+    print(f"Task BST {month}: {len(tasks)} | sẽ gắn: {len(upd)} | bài 2.7 sẽ sinh: {posts}")
+    if unknown:
+        print("Định dạng chưa có luật, hỏi user rồi bổ sung platforms_for():", *unknown, sep="\n  ")
+    if not do_apply:
+        return
+    json.dump(upd, open(wd / "platform_updates.json", "w"), ensure_ascii=False, indent=1)
+    items = list(upd.items())
+    for i in range(0, len(items), 200):
+        body = json.dumps({"update_records": dict(items[i:i + 200])}, ensure_ascii=False)
+        res = json.loads(lark("+record-batch-update", "--table-id", T_TASK, "--json", body, cwd=wd))
+        if not res.get("ok"):
+            sys.exit(f"LỖI khi cập nhật lô {i}: {res}")
+        print(f"đã gắn {min(i + 200, len(items))}/{len(items)}")
+    print("Workflow sinh bài 2.7 cần vài phút. Đọc lại để đối chiếu số bài với số nền tảng (trừ Không Đăng Social).")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["fetch", "plan", "apply", "verify"])
+    ap.add_argument("cmd", choices=["fetch", "plan", "apply", "verify", "platforms"])
     ap.add_argument("--config", required=True)
     ap.add_argument("--only", nargs="*", help="chỉ tạo các BST này, ví dụ 12.2026-Gracy")
+    ap.add_argument("--apply", action="store_true", help="platforms: ghi lên Lark (không có cờ này chỉ xem trước)")
     a = ap.parse_args()
     cfg = json.load(open(a.config))
     wd = Path.cwd()
     {"fetch": lambda: fetch(cfg, wd), "plan": lambda: build_plan(cfg, wd),
-     "apply": lambda: apply(cfg, wd, a.only), "verify": lambda: verify(cfg, wd)}[a.cmd]()
+     "apply": lambda: apply(cfg, wd, a.only), "verify": lambda: verify(cfg, wd),
+     "platforms": lambda: platforms(cfg, wd, a.apply)}[a.cmd]()
