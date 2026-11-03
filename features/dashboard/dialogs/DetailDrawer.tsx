@@ -38,6 +38,8 @@ type DetailColumn = {
   search?: (record: DetailRecord) => string;
 };
 
+type FilterOperator = "contains" | "notContains" | "equals" | "notEquals";
+
 const detailCollator = new Intl.Collator("vi", {
   numeric: true,
   sensitivity: "base",
@@ -722,6 +724,7 @@ export function DetailDrawer({
 }) {
   const [search, setSearch] = useState("");
   const [filterColumn, setFilterColumn] = useState("");
+  const [filterOperator, setFilterOperator] = useState<FilterOperator>("contains");
   const [filterValue, setFilterValue] = useState("");
   const [sortColumn, setSortColumn] = useState("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">(
@@ -748,13 +751,27 @@ export function DetailDrawer({
             column.search?.(record) ?? column.value(record),
           ).includes(globalNeedle),
         );
-      const matchesColumn =
-        !columnNeedle ||
-        !selectedFilter ||
-        normalizeSearch(
+      let matchesColumn = true;
+      if (columnNeedle && selectedFilter) {
+        const cell = normalizeSearch(
           selectedFilter.search?.(record) ??
             selectedFilter.value(record),
-        ).includes(columnNeedle);
+        );
+        switch (filterOperator) {
+          case "contains":
+            matchesColumn = cell.includes(columnNeedle);
+            break;
+          case "notContains":
+            matchesColumn = !cell.includes(columnNeedle);
+            break;
+          case "equals":
+            matchesColumn = cell === columnNeedle;
+            break;
+          case "notEquals":
+            matchesColumn = cell !== columnNeedle;
+            break;
+        }
+      }
       return matchesGlobal && matchesColumn;
     });
     if (!selectedSort) return matching;
@@ -776,6 +793,7 @@ export function DetailDrawer({
   }, [
     columns,
     filterColumn,
+    filterOperator,
     filterValue,
     records,
     search,
@@ -836,6 +854,7 @@ export function DetailDrawer({
   const resetTools = () => {
     setSearch("");
     setFilterColumn("");
+    setFilterOperator("contains");
     setFilterValue("");
     setSortColumn("");
     setSortDirection("asc");
@@ -898,6 +917,23 @@ export function DetailDrawer({
                   {column.label}
                 </option>
               ))}
+            </select>
+          </label>
+          <label className="detailToolField">
+            <span>Điều kiện lọc</span>
+            <select
+              value={filterOperator}
+              onChange={(event) => {
+                setFilterOperator(event.target.value as FilterOperator);
+                setPage(1);
+              }}
+              disabled={!filterColumn}
+              aria-label="Điều kiện lọc theo cột"
+            >
+              <option value="contains">Chứa (contains)</option>
+              <option value="notContains">Không chứa (does not contain)</option>
+              <option value="equals">Bằng (is)</option>
+              <option value="notEquals">Khác (is not)</option>
             </select>
           </label>
           <label className="detailToolField detailColumnFilterField">

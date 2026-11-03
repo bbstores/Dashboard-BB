@@ -11,7 +11,7 @@ export function ProgressDonut({
   done: number;
   total: number;
   unit: string;
-  onSelect?: (scope: "done" | "all") => void;
+  onSelect?: (scope: "done" | "all" | "remaining") => void;
 }) {
   const percent = total ? Math.min(100, (done / total) * 100) : 0;
   return (
@@ -29,7 +29,10 @@ export function ProgressDonut({
         aria-label={onSelect ? `${title}: xem các task đã hoàn thành` : undefined}
         onClick={() => onSelect?.("done")}
         onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") onSelect?.("done");
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onSelect?.("done");
+          }
         }}
       >
         <div>
@@ -37,12 +40,19 @@ export function ProgressDonut({
           <span>hoàn thành</span>
         </div>
       </div>
-      <button type="button" className="progressSummary" onClick={() => onSelect?.("all")}>
-        <span className="chartKicker">{title}</span>
-        <h3>
-          {formatNumber(done)} <small>/ {formatNumber(total)} {unit}</small>
-        </h3>
-      </button>
+      <div className="progressActions">
+        <button type="button" className="progressSummary" onClick={() => onSelect?.("all")}>
+          <span className="chartKicker">{title}</span>
+          <h3>
+            {formatNumber(done)} <small>/ {formatNumber(total)} {unit}</small>
+          </h3>
+        </button>
+        {onSelect && (
+          <button type="button" className="progressRemaining" onClick={() => onSelect("remaining")}>
+            Chưa Done: {formatNumber(Math.max(0, total - done))} {unit}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

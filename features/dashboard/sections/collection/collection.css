@@ -11,7 +11,7 @@
   color: white; border-color: var(--green); background: var(--green);
 }
 
-.collectionCard:has(.metricHoverGroup:hover) {
+.collectionCard:has(.metricHoverGroup:hover, .metricHoverGroup:focus-within) {
   z-index: 100;
 }
 
@@ -45,6 +45,17 @@
 
 .progressSummary:hover h3 { color: var(--lime); }
 
+.progressActions { min-width: 0; }
+
+.progressRemaining {
+  display: block; margin-top: 14px; padding: 7px 11px;
+  border: 1px solid rgba(217,255,114,.45); border-radius: 8px;
+  color: var(--lime); background: transparent; font-size: 11px;
+}
+
+.progressRemaining:hover,
+.progressRemaining:focus-visible { background: rgba(217,255,114,.12); }
+
 .progressDonut {
   flex: 0 0 auto; width: 130px; height: 130px; border-radius: 50%;
   padding: 14px;
@@ -77,7 +88,9 @@
 
 .selectPrompt p { max-width: 390px; line-height: 1.6; font-size: 13px; }
 
-.metricHoverGroup { position: relative; min-width: 0; }
+.metricHoverGroup { position: relative; min-width: 0; z-index: 0; }
+.metricHoverGroup:focus-within { z-index: 1; }
+.metricHoverGroup:hover { z-index: 2; }
 
 .metricChildren {
   position: absolute; top: calc(100% + 12px); z-index: 50;
@@ -94,7 +107,13 @@
 
 .metricHoverGroup.minutes .metricChildren { right: 0; }
 
-.metricHoverGroup:hover .metricChildren {
+/* Keep the pointer inside the panel while crossing the 12px visual gap. */
+.metricChildren::before {
+  content: ""; position: absolute; left: 0; right: 0; top: -13px; height: 13px;
+}
+
+.metricHoverGroup:hover .metricChildren,
+.metricHoverGroup:focus-within .metricChildren {
   opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto;
 }
 
@@ -148,6 +167,8 @@
   .metricChildren {
     position: static; display: none; width: 100%; margin-top: 12px;
   }
-  .metricHoverGroup:hover .metricChildren { display: block; }
+  .metricChildren::before { display: none; }
+  .metricHoverGroup:hover .metricChildren,
+  .metricHoverGroup:focus-within .metricChildren { display: block; }
   .metricChildrenGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

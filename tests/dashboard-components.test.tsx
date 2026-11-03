@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { JSDOM } from "jsdom";
 import { calculateDashboardStats } from "../features/dashboard/analytics/calculateDashboardStats";
+import { calculateCollections } from "../features/dashboard/analytics/calculateCollections";
 import { DashboardFilters } from "../features/dashboard/components/DashboardFilters";
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { DashboardKpis } from "../features/dashboard/components/DashboardKpis";
@@ -13,6 +14,7 @@ import { DetailDrawer } from "../features/dashboard/dialogs/DetailDrawer";
 import { PercentileDialog } from "../features/dashboard/dialogs/PercentileDialog";
 import { HelpProvider } from "../features/dashboard/help/HelpProvider";
 import { PostingSection } from "../features/dashboard/sections/PostingSection";
+import { CollectionSection } from "../features/dashboard/sections/CollectionSection";
 import { MediaCapacitySection } from "../features/dashboard/sections/MediaCapacitySection";
 import type {
   DashboardData,
@@ -764,6 +766,89 @@ test("KPI selection opens the matching detail data", () => {
     screen.getByRole("button", { name: "Đóng chi tiết" }),
   );
   assert.equal(closed, true);
+});
+
+test("collection details open child tasks and the complement of Done for both metrics", () => {
+  const tasks = [
+    { ...task(), code: "DONE", status: "Done", collection: "BST 11.2026 - Alpha" },
+    { ...task(), code: "BUSINESS-DONE", status: "Kinh Doanh Done", collection: "BST 11.2026 - Alpha" },
+    { ...task(), code: "CHECKING", status: "Checking", collection: "BST 11.2026 - Alpha" },
+    { ...task(), code: "SKIP", status: "Skip", collection: "BST 11.2026 - Alpha" },
+    { ...task(), code: "CANCEL", status: "Pending / Cancel", collection: "BST 11.2026 - Alpha" },
+  ];
+  const stats = calculateCollections(tasks, "11.2026");
+  const details: DetailView[] = [];
+  render(
+    <HelpProvider>
+      <CollectionSection
+        viewModel={stats}
+        collectionMonth="11.2026"
+        onCollectionMonthChange={() => undefined}
+        onOpenDetail={(detail) => details.push(detail)}
+      />
+    </HelpProvider>,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Chưa Done: 2 task" }));
+  fireEvent.click(screen.getByRole("button", { name: "Chưa Done: 120 phút" }));
+  for (const detail of details) {
+    assert.deepEqual(detail.tasks?.map((row) => row.code), ["CHECKING", "SKIP"]);
+  }
+
+  const childButtons = document.querySelectorAll<HTMLButtonElement>(".metricChild");
+  assert.equal(childButtons.length, 2);
+  fireEvent.click(childButtons[0]);
+  assert.deepEqual(details[2].tasks?.map((row) => row.code), ["DONE", "BUSINESS-DONE", "CHECKING", "SKIP"]);
+  fireEvent.click(screen.getByRole("button", { name: "THEO SỐ TASK: xem các task đã hoàn thành" }));
+  assert.deepEqual(details[3].tasks?.map((row) => row.code), ["DONE", "BUSINESS-DONE"]);
+  fireEvent.click(screen.getByRole("button", { name: /THEO SỐ TASK 2/ }));
+  assert.equal(details[4].tasks?.length, 4);
+});
+
+test("column operators exclude Done variants and combine with search, sorting and pagination", () => {
+  const tasks = [
+    { ...task(), code: "DONE", status: "Done" },
+    { ...task(), code: "BUSINESS-DONE", status: "Kinh Doanh Done" },
+    { ...task(), code: "CHECKING", status: "Checking", assignee: "Bình" },
+    { ...task(), code: "EMPTY", status: "" },
+    ...Array.from({ length: 101 }, (_, i) => ({ ...task(), code: `OPEN-${i}`, status: "In Progress" })),
+  ];
+  render(<DetailDrawer detail={{ title: "Lọc trạng thái", subtitle: "", tasks }} onClose={() => undefined} />);
+  fireEvent.click(screen.getByRole("button", { name: /Trang sau/ }));
+  fireEvent.change(screen.getByLabelText("Cột cần lọc"), { target: { value: "status" } });
+  fireEvent.change(screen.getByLabelText("Giá trị lọc theo cột"), { target: { value: " dOnE " } });
+  assert.ok(screen.getByText("DONE"));
+  assert.ok(screen.getByText("BUSINESS-DONE"));
+  assert.equal(screen.queryByText("CHECKING"), null);
+
+  fireEvent.change(screen.getByLabelText("Điều kiện lọc theo cột"), { target: { value: "notContains" } });
+  assert.equal(screen.queryByText("DONE"), null);
+  assert.equal(screen.queryByText("BUSINESS-DONE"), null);
+  assert.ok(screen.getByText("CHECKING"));
+  assert.ok(screen.getByText("EMPTY"));
+  assert.match(document.querySelector(".detailCount")?.textContent ?? "", /103\s*\/ 105 task phù hợp/);
+
+  fireEvent.click(screen.getByRole("button", { name: /Trang sau/ }));
+  fireEvent.change(screen.getByLabelText("Điều kiện lọc theo cột"), { target: { value: "equals" } });
+  assert.ok(screen.getByText("DONE"));
+  assert.equal(screen.queryByText("BUSINESS-DONE"), null);
+  assert.match(document.querySelector(".detailCount")?.textContent ?? "", /1\s*\/ 105 task phù hợp/);
+
+  fireEvent.change(screen.getByLabelText("Điều kiện lọc theo cột"), { target: { value: "notEquals" } });
+  assert.equal(screen.queryByText("DONE"), null);
+  assert.ok(screen.getByText("BUSINESS-DONE"));
+  assert.match(document.querySelector(".detailCount")?.textContent ?? "", /104\s*\/ 105 task phù hợp/);
+
+  fireEvent.change(screen.getByLabelText("Tìm trong bảng dẫn chứng"), { target: { value: "binh" } });
+  fireEvent.change(screen.getByLabelText("Sắp xếp theo cột"), { target: { value: "task" } });
+  assert.ok(screen.getByText("CHECKING"));
+  assert.match(document.querySelector(".detailCount")?.textContent ?? "", /1\s*\/ 105 task phù hợp/);
+
+  fireEvent.click(screen.getByRole("button", { name: "Đặt lại" }));
+  assert.equal((screen.getByLabelText("Điều kiện lọc theo cột") as HTMLSelectElement).value, "contains");
+  assert.ok(screen.getByText("DONE"));
+  assert.ok(screen.getByText("BUSINESS-DONE"));
+  assert.equal(document.querySelector(".detailCount strong")?.textContent, "105");
 });
 
 test("evidence tables support global search, column filters and sorting", () => {

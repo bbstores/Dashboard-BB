@@ -4,6 +4,7 @@ import { HelpButton } from "../components/HelpButton";
 import { ProgressDonut } from "../components/ProgressDonut";
 import { dashboardHelp } from "../help/helpContent";
 import type { DetailView } from "../model/types";
+import { isCollectionDone } from "../model/taskUtils";
 
 type CollectionViewModel = Pick<
   DashboardStats,
@@ -75,12 +76,18 @@ export function CollectionSection({
                       title:
                         scope === "done"
                           ? `Task Done · ${collectionMonth}`
-                          : `Tất cả task · ${collectionMonth}`,
+                          : scope === "remaining"
+                            ? `Task chưa Done · ${collectionMonth}`
+                            : `Tất cả task · ${collectionMonth}`,
                       subtitle: "Tiến độ Bộ Sưu Tập theo số lượng task",
                       tasks:
                         scope === "done"
                           ? viewModel.collectionDone
-                          : viewModel.collectionTasks,
+                          : scope === "remaining"
+                            ? viewModel.collectionTasks.filter(
+                                (task) => !isCollectionDone(task),
+                              )
+                            : viewModel.collectionTasks,
                     })
                   }
                 />
@@ -108,13 +115,19 @@ export function CollectionSection({
                       title:
                         scope === "done"
                           ? `Phút đã Done · ${collectionMonth}`
-                          : `Tổng phút · ${collectionMonth}`,
+                          : scope === "remaining"
+                            ? `Phút chưa Done · ${collectionMonth}`
+                            : `Tổng phút · ${collectionMonth}`,
                       subtitle:
                         "Danh sách task tạo nên tổng số phút dự kiến",
                       tasks:
                         scope === "done"
                           ? viewModel.collectionDone
-                          : viewModel.collectionTasks,
+                          : scope === "remaining"
+                            ? viewModel.collectionTasks.filter(
+                                (task) => !isCollectionDone(task),
+                              )
+                            : viewModel.collectionTasks,
                     })
                   }
                 />

@@ -158,7 +158,8 @@
   border-color: var(--green);
   outline: 2px solid rgba(23, 79, 61, .12);
 }
-.detailToolField input:disabled {
+.detailToolField input:disabled,
+.detailToolField select:disabled {
   cursor: not-allowed;
   opacity: .5;
 }
