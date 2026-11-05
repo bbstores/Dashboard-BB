@@ -104,7 +104,8 @@ không có trong `+workflow-list`) tự cộng +10 phút vào task mới. Luật
 - **Graphic: +10.** Với ảnh, phần +10 nằm ở khâu Graphic.
 - **Edit ảnh (Lookbook, 3D, Branding, Manơcanh…): KHÔNG +10**, vì đây chỉ là bước trung gian.
   Automation vẫn cộng nhầm cho khâu này, nên phải đưa về đúng 1.7 sau khi tạo (`bst_tasks.py fix-minutes`).
-- Quay, Chụp, Viết Caption: đúng 1.7, không cộng.
+- Quay, Chụp: đúng 1.7, không cộng.
+- **Viết Caption: luôn 15 phút**, mọi định dạng (user chốt 31/10/2026, đã đưa toàn bộ 113 task về 15).
 
 ### Nền Tảng (task BST)
 Luật đầy đủ ở `docs/quy-trinh-tao-task-bst.md` mục 5a, code ở `platforms_for()` trong script.
