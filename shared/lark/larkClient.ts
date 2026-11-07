@@ -1,7 +1,8 @@
 // Gọi Lark Open API phía server bằng tenant_access_token của một app tự tạo.
 
 const LARK_API = "https://open.larksuite.com/open-apis";
-const REQUEST_TIMEOUT_MS = 2500;
+// Ô external options chỉ được chờ 3 giây nên mặc định ngắn; workflow gọi thì truyền dài hơn.
+const DEFAULT_TIMEOUT_MS = 2500;
 
 export type FetchLike = (
   input: string,
@@ -22,6 +23,7 @@ async function callLark<T>(
   path: string,
   body?: unknown,
   accessToken?: string,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
 ): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json; charset=utf-8",
@@ -32,7 +34,7 @@ async function callLark<T>(
     method,
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   const payload = (await response.json()) as { code?: number; msg?: string };
   if (payload.code !== 0) {
@@ -46,6 +48,7 @@ export async function getTenantAccessToken(
   appSecret: string,
   fetchImpl: FetchLike = fetch,
   now: number = Date.now(),
+  timeoutMs?: number,
 ): Promise<string> {
   if (cachedToken && cachedToken.key === appId && cachedToken.expiresAt > now) {
     return cachedToken.value;
@@ -55,6 +58,8 @@ export async function getTenantAccessToken(
     "POST",
     "/auth/v3/tenant_access_token/internal",
     { app_id: appId, app_secret: appSecret },
+    undefined,
+    timeoutMs,
   );
   // Làm mới sớm 5 phút để không dùng token sắp hết hạn.
   cachedToken = {
@@ -72,6 +77,7 @@ export async function searchBaseRecords(options: {
   tableId: string;
   fieldNames: string[];
   filter?: unknown;
+  timeoutMs?: number;
 }): Promise<LarkRecord[]> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const records: LarkRecord[] = [];
@@ -88,6 +94,7 @@ export async function searchBaseRecords(options: {
       `/bitable/v1/apps/${options.baseToken}/tables/${options.tableId}/records/search?${query}`,
       { field_names: options.fieldNames, filter: options.filter },
       options.accessToken,
+      options.timeoutMs,
     );
     records.push(...(payload.data.items ?? []));
     pageToken = payload.data.has_more ? payload.data.page_token : undefined;
@@ -102,6 +109,7 @@ export async function getBaseRecord(options: {
   baseToken: string;
   tableId: string;
   recordId: string;
+  timeoutMs?: number;
 }): Promise<LarkRecord> {
   const payload = await callLark<{ data: { record: LarkRecord } }>(
     options.fetchImpl ?? fetch,
@@ -109,6 +117,7 @@ export async function getBaseRecord(options: {
     `/bitable/v1/apps/${options.baseToken}/tables/${options.tableId}/records/${options.recordId}`,
     undefined,
     options.accessToken,
+    options.timeoutMs,
   );
   return payload.data.record;
 }
@@ -120,6 +129,7 @@ export async function updateBaseRecord(options: {
   tableId: string;
   recordId: string;
   fields: Record<string, unknown>;
+  timeoutMs?: number;
 }): Promise<void> {
   await callLark(
     options.fetchImpl ?? fetch,
@@ -127,6 +137,7 @@ export async function updateBaseRecord(options: {
     `/bitable/v1/apps/${options.baseToken}/tables/${options.tableId}/records/${options.recordId}`,
     { fields: options.fields },
     options.accessToken,
+    options.timeoutMs,
   );
 }
 
@@ -135,6 +146,7 @@ export async function getApprovalInstance(options: {
   fetchImpl?: FetchLike;
   accessToken: string;
   instanceCode: string;
+  timeoutMs?: number;
 }): Promise<{ status: string; serial_number?: string; form: string }> {
   const payload = await callLark<{
     data: { status: string; serial_number?: string; form: string };
@@ -144,6 +156,7 @@ export async function getApprovalInstance(options: {
     `/approval/v4/instances/${options.instanceCode}`,
     undefined,
     options.accessToken,
+    options.timeoutMs,
   );
   return payload.data;
 }

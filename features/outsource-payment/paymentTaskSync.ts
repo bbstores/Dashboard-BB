@@ -35,6 +35,9 @@ type BudgetInfo = {
   shootNames: string[];
 };
 
+// Workflow trong Base chờ được lâu hơn ô chọn trên phiếu, nên cho mỗi lần gọi Lark tối đa 8 giây.
+const SYNC_TIMEOUT_MS = 8000;
+
 const FIELD = {
   linkApproval: "Link Approval",
   tasks: "Thuộc Task Nào",
@@ -213,8 +216,14 @@ export async function handlePaymentSyncRequest(
   }
 
   try {
-    const accessToken = await getTenantAccessToken(config.appId, config.appSecret, fetchImpl);
-    const base = { fetchImpl, accessToken, baseToken };
+    const accessToken = await getTenantAccessToken(
+      config.appId,
+      config.appSecret,
+      fetchImpl,
+      Date.now(),
+      SYNC_TIMEOUT_MS,
+    );
+    const base = { fetchImpl, accessToken, baseToken, timeoutMs: SYNC_TIMEOUT_MS };
 
     const payment = await getBaseRecord({ ...base, tableId: paymentTableId, recordId });
     const pf = payment.fields;
@@ -231,14 +240,26 @@ export async function handlePaymentSyncRequest(
     const paymentCode = decodeSourceId(cellText(sync.fields[FIELD.sourceId]));
     if (!paymentCode) return { code: 500, result: "error", msg: "không đọc được mã phiếu chi từ SourceID" };
 
-    const paymentInstance = await getApprovalInstance({ fetchImpl, accessToken, instanceCode: paymentCode });
+    const paymentInstance = await getApprovalInstance({
+      fetchImpl,
+      accessToken,
+      instanceCode: paymentCode,
+      timeoutMs: SYNC_TIMEOUT_MS,
+    });
     const budgetCodes = linkedBudgetCodes(paymentInstance.form);
     if (budgetCodes.length === 0) return skipped("phiếu chi chưa gắn phiếu dự trù");
 
     const budget = mergeBudgets(
       await Promise.all(
         budgetCodes.map(async (code) =>
-          readBudget((await getApprovalInstance({ fetchImpl, accessToken, instanceCode: code })).form),
+          readBudget((
+            await getApprovalInstance({
+              fetchImpl,
+              accessToken,
+              instanceCode: code,
+              timeoutMs: SYNC_TIMEOUT_MS,
+            })
+          ).form),
         ),
       ),
     );
