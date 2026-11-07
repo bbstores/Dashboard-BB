@@ -2,6 +2,8 @@
 // Nguồn: cột "TSK Chờ Thanh Toán" ở 2.16 Nhân Sự Ngoài (đã loại Pending/Cancel, Archived
 // và task đã có trong dòng 2.8 Outsource + Đã Thanh Toán). Tên task lấy từ 2.6 Tasklist.
 // Task đang nằm trong phiếu dự trù chưa duyệt vẫn hiện (user chốt 07/11/2026).
+// Lọc theo nhân sự: form gắn ô Tên Nhân Sự / Tài Khoản Lark vào "Dependent parameters",
+// Lark gửi giá trị qua `linkage_params`.
 
 import {
   getTenantAccessToken,
@@ -18,14 +20,21 @@ export type PendingTaskOptionsConfig = {
   requestToken: string;
 };
 
-type EditorRow = { name: string; wagePerTask: number | null; codes: string[] };
+type EditorRow = {
+  name: string;
+  // Mã open_id và tên hiển thị của Tài Khoản Lark, dùng để khớp khi form gửi ô người dùng.
+  accounts: string[];
+  wagePerTask: number | null;
+  codes: string[];
+};
 
 type ExternalOption = { id: string; value: string; label: string };
 
+type OptionData = { editors: EditorRow[]; taskNames: Map<string, string> };
+
 const CACHE_MS = 60_000;
 const TASK_NAME_MAX = 60;
-let cachedOptions: { key: string; options: ExternalOption[]; expiresAt: number } | null =
-  null;
+let cachedData: { key: string; data: OptionData; expiresAt: number } | null = null;
 
 // Ô Lark trả về nhiều dạng: chuỗi, số, mảng đoạn văn bản [{text}], công thức {value: [...]}.
 export function cellText(value: unknown): string {
@@ -47,12 +56,69 @@ function cellNumber(value: unknown): number | null {
   return cellText(value).trim() === "" || Number.isNaN(parsed) ? null : parsed;
 }
 
+function cellUsers(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((user) => {
+    if (!user || typeof user !== "object") return [];
+    const record = user as Record<string, unknown>;
+    return [record.id, record.name, record.en_name].map(cellText).filter(Boolean);
+  });
+}
+
 export function parseTaskCodes(text: string): string[] {
   const codes = text
     .split(/[,\s]+/)
     .map((code) => code.trim().toUpperCase())
     .filter((code) => /^TSK\d+$/.test(code));
   return [...new Set(codes)];
+}
+
+// So tên không phân biệt hoa thường, dấu và khoảng trắng thừa.
+function normalizeName(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[đĐ]/g, "d")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Gom mọi chuỗi trong linkage_params, kể cả chuỗi JSON lồng bên trong (dạng Lark hay gửi).
+export function linkageValues(linkage: unknown): string[] {
+  const values: string[] = [];
+  const visit = (value: unknown) => {
+    if (value == null) return;
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (/^[[{]/.test(trimmed)) {
+        try {
+          visit(JSON.parse(trimmed));
+          return;
+        } catch {
+          // Không phải JSON, giữ nguyên chuỗi.
+        }
+      }
+      if (trimmed) values.push(trimmed);
+      return;
+    }
+    if (typeof value === "number") values.push(String(value));
+    else if (Array.isArray(value)) value.forEach(visit);
+    else if (typeof value === "object") Object.values(value).forEach(visit);
+  };
+  visit(linkage);
+  return values;
+}
+
+// Chọn editor theo giá trị liên kết. Trả null khi không có giá trị nào hoặc không khớp ai,
+// để vẫn hiện toàn bộ danh sách thay vì một ô trống khó hiểu.
+export function selectEditors(editors: EditorRow[], values: string[]): EditorRow[] | null {
+  const wanted = new Set(values.map(normalizeName));
+  if (wanted.size === 0) return null;
+  const matched = editors.filter((editor) =>
+    [editor.name, ...editor.accounts].some((key) => wanted.has(normalizeName(key))),
+  );
+  return matched.length > 0 ? matched : null;
 }
 
 function formatVnd(amount: number): string {
@@ -65,7 +131,7 @@ function shorten(text: string): string {
 }
 
 export function buildPendingTaskOptions(
-  editors: EditorRow[],
+  editors: Pick<EditorRow, "name" | "wagePerTask" | "codes">[],
   taskNames: Map<string, string>,
 ): ExternalOption[] {
   const byCode = new Map<string, { names: string[]; wage: number | null }>();
@@ -114,10 +180,10 @@ export function toExternalOptionsResponse(options: ExternalOption[]) {
   };
 }
 
-async function loadPendingTaskOptions(
+async function loadOptionData(
   config: PendingTaskOptionsConfig,
   fetchImpl: FetchLike,
-): Promise<ExternalOption[]> {
+): Promise<OptionData> {
   const accessToken = await getTenantAccessToken(config.appId, config.appSecret, fetchImpl);
 
   const [staffRecords, taskRecords] = await Promise.all([
@@ -126,7 +192,13 @@ async function loadPendingTaskOptions(
       accessToken,
       baseToken: config.baseToken,
       tableId: config.staffTableId,
-      fieldNames: ["Tên Nhân Sự", "Chức Vụ", "Tiền Công/Task", "TSK Chờ Thanh Toán"],
+      fieldNames: [
+        "Tên Nhân Sự",
+        "Tài Khoản Lark",
+        "Chức Vụ",
+        "Tiền Công/Task",
+        "TSK Chờ Thanh Toán",
+      ],
       filter: {
         conjunction: "and",
         conditions: [{ field_name: "Chức Vụ", operator: "is", value: ["Editor"] }],
@@ -148,6 +220,7 @@ async function loadPendingTaskOptions(
 
   const editors: EditorRow[] = staffRecords.map((record) => ({
     name: cellText(record.fields["Tên Nhân Sự"]).trim() || "(chưa có tên)",
+    accounts: cellUsers(record.fields["Tài Khoản Lark"]),
     wagePerTask: cellNumber(record.fields["Tiền Công/Task"]),
     codes: parseTaskCodes(cellText(record.fields["TSK Chờ Thanh Toán"])),
   }));
@@ -158,7 +231,7 @@ async function loadPendingTaskOptions(
     ]),
   );
 
-  return buildPendingTaskOptions(editors, taskNames);
+  return { editors, taskNames };
 }
 
 // Xử lý một yêu cầu từ Lark Approval. Luôn trả HTTP 200: Lark chỉ đọc trường `code`.
@@ -168,22 +241,37 @@ export async function handleExternalOptionsRequest(
   fetchImpl: FetchLike = fetch,
   now: number = Date.now(),
 ) {
-  const token = cellText((body as { token?: unknown } | null)?.token);
-  if (!config.requestToken || token !== config.requestToken) {
+  const request = (body ?? {}) as { token?: unknown; linkage_params?: unknown };
+  if (!config.requestToken || cellText(request.token) !== config.requestToken) {
     return { code: 401, msg: "invalid token" };
   }
 
   const cacheKey = `${config.baseToken}:${config.staffTableId}`;
-  if (cachedOptions && cachedOptions.key === cacheKey && cachedOptions.expiresAt > now) {
-    return toExternalOptionsResponse(cachedOptions.options);
+  let data: OptionData;
+  if (cachedData && cachedData.key === cacheKey && cachedData.expiresAt > now) {
+    data = cachedData.data;
+  } else {
+    try {
+      data = await loadOptionData(config, fetchImpl);
+      cachedData = { key: cacheKey, data, expiresAt: now + CACHE_MS };
+    } catch (error) {
+      console.error("[approval-options]", error);
+      return { code: 500, msg: "Không đọc được danh sách task từ Lark Base" };
+    }
   }
 
-  try {
-    const options = await loadPendingTaskOptions(config, fetchImpl);
-    cachedOptions = { key: cacheKey, options, expiresAt: now + CACHE_MS };
-    return toExternalOptionsResponse(options);
-  } catch (error) {
-    console.error("[approval-options]", error);
-    return { code: 500, msg: "Không đọc được danh sách task từ Lark Base" };
+  const values = linkageValues(request.linkage_params);
+  const selected = selectEditors(data.editors, values);
+  if (values.length > 0) {
+    // Ghi lại dạng Lark gửi để chỉnh cách khớp nếu cần (chỉ có tên/mã người, không có bí mật).
+    console.info(
+      "[approval-options] linkage",
+      JSON.stringify(request.linkage_params),
+      selected ? `→ ${selected.map((editor) => editor.name).join(", ")}` : "→ không khớp, trả tất cả",
+    );
   }
+
+  return toExternalOptionsResponse(
+    buildPendingTaskOptions(selected ?? data.editors, data.taskNames),
+  );
 }

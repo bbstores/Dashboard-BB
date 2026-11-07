@@ -4,7 +4,9 @@ import {
   buildPendingTaskOptions,
   cellText,
   handleExternalOptionsRequest,
+  linkageValues,
   parseTaskCodes,
+  selectEditors,
   toExternalOptionsResponse,
 } from "../features/outsource-payment/pendingTaskOptions";
 
@@ -159,5 +161,74 @@ test("returns a Lark error code when Base cannot be read", async () => {
     assert.equal(response.code, 500);
   } finally {
     console.error = original;
+  }
+});
+
+test("collects linkage values from plain, nested and JSON-encoded params", () => {
+  assert.deepEqual(linkageValues({ ten: "Trần Thảo Nghi" }), ["Trần Thảo Nghi"]);
+  assert.deepEqual(linkageValues({ tk: '["ou_abc"]', x: [{ name: "Uyên Nhi" }] }), [
+    "ou_abc",
+    "Uyên Nhi",
+  ]);
+  assert.deepEqual(linkageValues(undefined), []);
+  assert.deepEqual(linkageValues({ ten: "" }), []);
+});
+
+test("matches editors by name without accents or by Lark account", () => {
+  const editors = [
+    { name: "Trần Thảo Nghi", accounts: ["ou_nghi", "Thảo nghi Trần"], wagePerTask: 70000, codes: ["TSK1"] },
+    { name: "Uyên Nhi", accounts: ["ou_nhi"], wagePerTask: 70000, codes: ["TSK2"] },
+  ];
+  assert.deepEqual(selectEditors(editors, ["tran thao nghi"])?.map((e) => e.name), ["Trần Thảo Nghi"]);
+  assert.deepEqual(selectEditors(editors, ["ou_nhi"])?.map((e) => e.name), ["Uyên Nhi"]);
+  assert.deepEqual(selectEditors(editors, ["Thảo nghi Trần"])?.map((e) => e.name), ["Trần Thảo Nghi"]);
+  assert.equal(selectEditors(editors, ["Người Lạ"]), null);
+  assert.equal(selectEditors(editors, []), null);
+});
+
+test("returns only the selected editor's tasks when the form sends linkage params", async () => {
+  const lark = fakeLark({
+    staff: [
+      {
+        record_id: "r1",
+        fields: {
+          "Tên Nhân Sự": [{ text: "Trần Thảo Nghi" }],
+          "Tài Khoản Lark": [{ id: "ou_nghi", name: "Thảo nghi Trần" }],
+          "Tiền Công/Task": 70000,
+          "TSK Chờ Thanh Toán": { type: 1, value: [{ text: "TSK1,TSK2" }] },
+        },
+      },
+      {
+        record_id: "r2",
+        fields: {
+          "Tên Nhân Sự": [{ text: "Uyên Nhi" }],
+          "Tiền Công/Task": 70000,
+          "TSK Chờ Thanh Toán": { type: 1, value: [{ text: "TSK3" }] },
+        },
+      },
+    ],
+    tasks: [[]],
+  });
+  const original = console.info;
+  console.info = () => {};
+  try {
+    const settings = config("linkage");
+    const filtered = await handleExternalOptionsRequest(
+      { token: "shared-token", linkage_params: { ten_nhan_su: "Trần Thảo Nghi" } },
+      settings,
+      lark.fetchImpl,
+    );
+    assert.ok("data" in filtered);
+    assert.deepEqual(filtered.data.result.options.map((o) => o.id), ["TSK1", "TSK2"]);
+
+    const unknown = await handleExternalOptionsRequest(
+      { token: "shared-token", linkage_params: { ten_nhan_su: "opt_xyz" } },
+      settings,
+      lark.fetchImpl,
+    );
+    assert.ok("data" in unknown);
+    assert.deepEqual(unknown.data.result.options.map((o) => o.id), ["TSK1", "TSK2", "TSK3"]);
+  } finally {
+    console.info = original;
   }
 });
