@@ -5,7 +5,9 @@ import {
   cellText,
   handleExternalOptionsRequest,
   linkageValues,
+  paginateOptions,
   parseTaskCodes,
+  searchOptions,
   selectEditors,
   toExternalOptionsResponse,
 } from "../features/outsource-payment/pendingTaskOptions";
@@ -231,4 +233,64 @@ test("returns only the selected editor's tasks when the form sends linkage param
   } finally {
     console.info = original;
   }
+});
+
+const sampleOptions = [
+  { id: "TSK1", value: "TSK1", label: "Trần Thảo Nghi · TSK1 · Edit Video Tripod · 70.000đ" },
+  { id: "TSK2", value: "TSK2", label: "Uyên Nhi · TSK2 · Edit Video Voice · 70.000đ" },
+  { id: "TSK3", value: "TSK3", label: "Uyên Nhi · TSK3 · Edit Video Tripod · 70.000đ" },
+];
+
+test("searches option labels without accents and requires every word", () => {
+  assert.deepEqual(searchOptions(sampleOptions, "uyen").map((o) => o.id), ["TSK2", "TSK3"]);
+  assert.deepEqual(searchOptions(sampleOptions, "Uyên tripod").map((o) => o.id), ["TSK3"]);
+  assert.deepEqual(searchOptions(sampleOptions, "tsk1").map((o) => o.id), ["TSK1"]);
+  assert.equal(searchOptions(sampleOptions, "  ").length, 3);
+});
+
+test("paginates with an offset token and only returns nextPageToken when more remain", () => {
+  const first = paginateOptions(sampleOptions, "", 2);
+  assert.deepEqual(first.options.map((o) => o.id), ["TSK1", "TSK2"]);
+  assert.deepEqual(first.page, { hasMore: true, nextPageToken: "2" });
+  const second = paginateOptions(sampleOptions, "2", 2);
+  assert.deepEqual(second.options.map((o) => o.id), ["TSK3"]);
+  assert.deepEqual(second.page, { hasMore: false });
+});
+
+test("V2 requests get search results with paging fields, V1 requests get everything", async () => {
+  const lark = fakeLark({
+    staff: [
+      {
+        record_id: "r1",
+        fields: {
+          "Tên Nhân Sự": [{ text: "Trần Thảo Nghi" }],
+          "Tiền Công/Task": 70000,
+          "TSK Chờ Thanh Toán": { type: 1, value: [{ text: "TSK1" }] },
+        },
+      },
+      {
+        record_id: "r2",
+        fields: {
+          "Tên Nhân Sự": [{ text: "Uyên Nhi" }],
+          "Tiền Công/Task": 70000,
+          "TSK Chờ Thanh Toán": { type: 1, value: [{ text: "TSK2,TSK3" }] },
+        },
+      },
+    ],
+    tasks: [[]],
+  });
+  const settings = config("v2");
+  const v2 = await handleExternalOptionsRequest(
+    { token: "shared-token", query: "uyen nhi", page_token: "", locale: "en_us" },
+    settings,
+    lark.fetchImpl,
+  );
+  assert.ok("data" in v2);
+  assert.deepEqual(v2.data.result.options.map((o) => o.id), ["TSK2", "TSK3"]);
+  assert.equal(v2.data.result.hasMore, false);
+
+  const v1 = await handleExternalOptionsRequest({ token: "shared-token" }, settings, lark.fetchImpl);
+  assert.ok("data" in v1);
+  assert.equal(v1.data.result.options.length, 3);
+  assert.equal("hasMore" in v1.data.result, false);
 });

@@ -3,7 +3,8 @@
 // và task đã có trong dòng 2.8 Outsource + Đã Thanh Toán). Tên task lấy từ 2.6 Tasklist.
 // Task đang nằm trong phiếu dự trù chưa duyệt vẫn hiện (user chốt 07/11/2026).
 // Lọc theo nhân sự: form gắn ô Tên Nhân Sự / Tài Khoản Lark vào "Dependent parameters",
-// Lark gửi giá trị qua `linkage_params`.
+// Lark gửi giá trị qua `linkage_params`. Bản V2 của form gửi thêm `query` (chữ người dùng gõ)
+// và `page_token`, nên gõ tên editor vào ô chọn là lọc được.
 
 import {
   getTenantAccessToken,
@@ -34,6 +35,7 @@ type OptionData = { editors: EditorRow[]; taskNames: Map<string, string> };
 
 const CACHE_MS = 60_000;
 const TASK_NAME_MAX = 60;
+const PAGE_SIZE = 50;
 let cachedData: { key: string; data: OptionData; expiresAt: number } | null = null;
 
 // Ô Lark trả về nhiều dạng: chuỗi, số, mảng đoạn văn bản [{text}], công thức {value: [...]}.
@@ -163,7 +165,9 @@ export function buildPendingTaskOptions(
     .map(({ id, value, label }) => ({ id, value, label }));
 }
 
-export function toExternalOptionsResponse(options: ExternalOption[]) {
+type PageInfo = { hasMore: boolean; nextPageToken?: string };
+
+export function toExternalOptionsResponse(options: ExternalOption[], page?: PageInfo) {
   const texts = Object.fromEntries(options.map((option) => [option.value, option.label]));
   return {
     code: 0,
@@ -175,8 +179,34 @@ export function toExternalOptionsResponse(options: ExternalOption[]) {
           { locale: "en_us", isDefault: true, texts },
           { locale: "zh_cn", isDefault: false, texts },
         ],
+        ...(page ?? {}),
       },
     },
+  };
+}
+
+// V2 (tìm kiếm + chia trang): giữ lựa chọn có chứa mọi từ khoá, so không dấu.
+export function searchOptions(options: ExternalOption[], query: string): ExternalOption[] {
+  const words = normalizeName(query).split(" ").filter(Boolean);
+  if (words.length === 0) return options;
+  return options.filter((option) => {
+    const label = normalizeName(option.label);
+    return words.every((word) => label.includes(word));
+  });
+}
+
+// page_token là vị trí bắt đầu của trang. Lark yêu cầu mỗi trang có ít nhất 10 lựa chọn.
+export function paginateOptions(
+  options: ExternalOption[],
+  pageToken: string,
+  pageSize: number = PAGE_SIZE,
+): { options: ExternalOption[]; page: PageInfo } {
+  const start = Math.max(0, Number.parseInt(pageToken, 10) || 0);
+  const end = start + pageSize;
+  const hasMore = end < options.length;
+  return {
+    options: options.slice(start, end),
+    page: hasMore ? { hasMore, nextPageToken: String(end) } : { hasMore },
   };
 }
 
@@ -241,7 +271,13 @@ export async function handleExternalOptionsRequest(
   fetchImpl: FetchLike = fetch,
   now: number = Date.now(),
 ) {
-  const request = (body ?? {}) as { token?: unknown; linkage_params?: unknown };
+  const request = (body ?? {}) as {
+    token?: unknown;
+    linkage_params?: unknown;
+    query?: unknown;
+    page_token?: unknown;
+    locale?: unknown;
+  };
   if (!config.requestToken || cellText(request.token) !== config.requestToken) {
     return { code: 401, msg: "invalid token" };
   }
@@ -271,7 +307,13 @@ export async function handleExternalOptionsRequest(
     );
   }
 
-  return toExternalOptionsResponse(
-    buildPendingTaskOptions(selected ?? data.editors, data.taskNames),
-  );
+  const options = buildPendingTaskOptions(selected ?? data.editors, data.taskNames);
+
+  // V1 không gửi các trường này và cần nhận toàn bộ danh sách trong một lần.
+  const isV2 = ["query", "page_token", "locale"].some((key) => key in request);
+  if (!isV2) return toExternalOptionsResponse(options);
+
+  const matched = searchOptions(options, cellText(request.query));
+  const { options: pageOptions, page } = paginateOptions(matched, cellText(request.page_token));
+  return toExternalOptionsResponse(pageOptions, page);
 }
