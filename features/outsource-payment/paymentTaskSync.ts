@@ -237,6 +237,12 @@ export async function handlePaymentSyncRequest(
     const category = categoryForItem(item);
     if (!category) return skipped(`khoản "${item || "trống"}" không theo dự trù`);
 
+    // Dừng sớm khi dòng 2.8 đã đủ dữ liệu, khỏi đọc phiếu Approval (bước chậm nhất).
+    const targetField = category.kind === "outsource" ? FIELD.tasks : FIELD.shoots;
+    if (linkedRecordIds(pf[targetField]).length > 0 && cellText(pf[FIELD.category])) {
+      return skipped("dòng 2.8 đã có dữ liệu, không ghi đè");
+    }
+
     const paymentCode = decodeSourceId(cellText(sync.fields[FIELD.sourceId]));
     if (!paymentCode) return { code: 500, result: "error", msg: "không đọc được mã phiếu chi từ SourceID" };
 
