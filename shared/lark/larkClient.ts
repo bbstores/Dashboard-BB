@@ -1,7 +1,7 @@
 // Gọi Lark Open API phía server bằng tenant_access_token của một app tự tạo.
 
 const LARK_API = "https://open.larksuite.com/open-apis";
-const REQUEST_TIMEOUT_MS = 2000;
+const REQUEST_TIMEOUT_MS = 2500;
 
 export type FetchLike = (
   input: string,
@@ -18,8 +18,9 @@ let cachedToken: CachedToken | null = null;
 
 async function callLark<T>(
   fetchImpl: FetchLike,
+  method: "GET" | "POST" | "PUT",
   path: string,
-  body: unknown,
+  body?: unknown,
   accessToken?: string,
 ): Promise<T> {
   const headers: Record<string, string> = {
@@ -28,14 +29,14 @@ async function callLark<T>(
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
   const response = await fetchImpl(`${LARK_API}${path}`, {
-    method: "POST",
+    method,
     headers,
-    body: JSON.stringify(body),
+    body: body === undefined ? undefined : JSON.stringify(body),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   const payload = (await response.json()) as { code?: number; msg?: string };
   if (payload.code !== 0) {
-    throw new Error(`Lark ${path} lỗi ${payload.code}: ${payload.msg}`);
+    throw new Error(`Lark ${method} ${path.split("?")[0]} lỗi ${payload.code}: ${payload.msg}`);
   }
   return payload as T;
 }
@@ -51,6 +52,7 @@ export async function getTenantAccessToken(
   }
   const payload = await callLark<{ tenant_access_token: string; expire: number }>(
     fetchImpl,
+    "POST",
     "/auth/v3/tenant_access_token/internal",
     { app_id: appId, app_secret: appSecret },
   );
@@ -82,6 +84,7 @@ export async function searchBaseRecords(options: {
       data: { items?: LarkRecord[] | null; has_more: boolean; page_token?: string };
     }>(
       fetchImpl,
+      "POST",
       `/bitable/v1/apps/${options.baseToken}/tables/${options.tableId}/records/search?${query}`,
       { field_names: options.fieldNames, filter: options.filter },
       options.accessToken,
@@ -91,4 +94,56 @@ export async function searchBaseRecords(options: {
   } while (pageToken);
 
   return records;
+}
+
+export async function getBaseRecord(options: {
+  fetchImpl?: FetchLike;
+  accessToken: string;
+  baseToken: string;
+  tableId: string;
+  recordId: string;
+}): Promise<LarkRecord> {
+  const payload = await callLark<{ data: { record: LarkRecord } }>(
+    options.fetchImpl ?? fetch,
+    "GET",
+    `/bitable/v1/apps/${options.baseToken}/tables/${options.tableId}/records/${options.recordId}`,
+    undefined,
+    options.accessToken,
+  );
+  return payload.data.record;
+}
+
+export async function updateBaseRecord(options: {
+  fetchImpl?: FetchLike;
+  accessToken: string;
+  baseToken: string;
+  tableId: string;
+  recordId: string;
+  fields: Record<string, unknown>;
+}): Promise<void> {
+  await callLark(
+    options.fetchImpl ?? fetch,
+    "PUT",
+    `/bitable/v1/apps/${options.baseToken}/tables/${options.tableId}/records/${options.recordId}`,
+    { fields: options.fields },
+    options.accessToken,
+  );
+}
+
+// Phiếu Approval: `form` là chuỗi JSON chứa danh sách ô và giá trị.
+export async function getApprovalInstance(options: {
+  fetchImpl?: FetchLike;
+  accessToken: string;
+  instanceCode: string;
+}): Promise<{ status: string; serial_number?: string; form: string }> {
+  const payload = await callLark<{
+    data: { status: string; serial_number?: string; form: string };
+  }>(
+    options.fetchImpl ?? fetch,
+    "GET",
+    `/approval/v4/instances/${options.instanceCode}`,
+    undefined,
+    options.accessToken,
+  );
+  return payload.data;
 }
