@@ -1,0 +1,94 @@
+// Gọi Lark Open API phía server bằng tenant_access_token của một app tự tạo.
+
+const LARK_API = "https://open.larksuite.com/open-apis";
+const REQUEST_TIMEOUT_MS = 2000;
+
+export type FetchLike = (
+  input: string,
+  init?: RequestInit,
+) => Promise<Response>;
+
+export type LarkRecord = {
+  record_id: string;
+  fields: Record<string, unknown>;
+};
+
+type CachedToken = { key: string; value: string; expiresAt: number };
+let cachedToken: CachedToken | null = null;
+
+async function callLark<T>(
+  fetchImpl: FetchLike,
+  path: string,
+  body: unknown,
+  accessToken?: string,
+): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json; charset=utf-8",
+  };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+  const response = await fetchImpl(`${LARK_API}${path}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  const payload = (await response.json()) as { code?: number; msg?: string };
+  if (payload.code !== 0) {
+    throw new Error(`Lark ${path} lỗi ${payload.code}: ${payload.msg}`);
+  }
+  return payload as T;
+}
+
+export async function getTenantAccessToken(
+  appId: string,
+  appSecret: string,
+  fetchImpl: FetchLike = fetch,
+  now: number = Date.now(),
+): Promise<string> {
+  if (cachedToken && cachedToken.key === appId && cachedToken.expiresAt > now) {
+    return cachedToken.value;
+  }
+  const payload = await callLark<{ tenant_access_token: string; expire: number }>(
+    fetchImpl,
+    "/auth/v3/tenant_access_token/internal",
+    { app_id: appId, app_secret: appSecret },
+  );
+  // Làm mới sớm 5 phút để không dùng token sắp hết hạn.
+  cachedToken = {
+    key: appId,
+    value: payload.tenant_access_token,
+    expiresAt: now + (payload.expire - 300) * 1000,
+  };
+  return payload.tenant_access_token;
+}
+
+export async function searchBaseRecords(options: {
+  fetchImpl?: FetchLike;
+  accessToken: string;
+  baseToken: string;
+  tableId: string;
+  fieldNames: string[];
+  filter?: unknown;
+}): Promise<LarkRecord[]> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const records: LarkRecord[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const query = new URLSearchParams({ page_size: "500" });
+    if (pageToken) query.set("page_token", pageToken);
+    const payload = await callLark<{
+      data: { items?: LarkRecord[] | null; has_more: boolean; page_token?: string };
+    }>(
+      fetchImpl,
+      `/bitable/v1/apps/${options.baseToken}/tables/${options.tableId}/records/search?${query}`,
+      { field_names: options.fieldNames, filter: options.filter },
+      options.accessToken,
+    );
+    records.push(...(payload.data.items ?? []));
+    pageToken = payload.data.has_more ? payload.data.page_token : undefined;
+  } while (pageToken);
+
+  return records;
+}
