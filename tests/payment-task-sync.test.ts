@@ -182,6 +182,25 @@ test("reads the Media fields synced from the merged payment form", () => {
   assert.equal(readMediaFields({ "Details_Thanh Toán Khoản Dự Trù": "Outsource" }).status, "legacy");
 });
 
+test("reads the form as published on 11/11/2026 (Nhóm Phiếu + Thanh Toán Khoản Ca Quay)", () => {
+  const shoot = readMediaFields({
+    "Nhóm Phiếu": "Phiếu Media",
+    "Loại Chi Phí Media": "Chi Phí Ca Quay",
+    "Thanh Toán Khoản Ca Quay": "Mẫu 2",
+    "Tên Ca Quay": "07/11 - Ca test",
+  });
+  assert.ok(shoot.status === "ok");
+  assert.equal(shoot.category.category, "Mẫu");
+
+  // Đổi về Phiếu Thường giữa chừng: giá trị Media còn sót cũng không được dùng.
+  const normal = readMediaFields({
+    "Nhóm Phiếu": "Phiếu Thường",
+    "Loại Chi Phí Media": "Chi Phí OutSource",
+    "Task Thanh Toán": ["Trung Test · TSK12232 · x · 10.000đ"],
+  });
+  assert.equal(normal.status, "skip");
+});
+
 test("reads budgets of the old two-form flow", () => {
   assert.deepEqual(linkedBudgetCodes(legacyPaymentForm), [BUDGET_CODE]);
   assert.deepEqual(readBudget(legacyBudgetForm).taskCodes, ["TSK12232", "TSK12233"]);

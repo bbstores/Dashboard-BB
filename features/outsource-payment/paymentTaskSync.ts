@@ -58,9 +58,15 @@ const FIELD = {
   sourceId: "SourceID",
   requestNo: "Request No.",
   paymentBackLink: "2.8 Đề xuất chi phí",
+  paymentGroup: "Nhóm Phiếu",
   mediaKind: "Loại Chi Phí Media",
   // Tên ô khoản qua các phiên bản form, ưu tiên bản mới nhất.
-  itemFields: ["Khoản Ca Quay", "Thanh Toán Khoản Dự Trù", "Details_Thanh Toán Khoản Dự Trù"],
+  itemFields: [
+    "Thanh Toán Khoản Ca Quay",
+    "Khoản Ca Quay",
+    "Thanh Toán Khoản Dự Trù",
+    "Details_Thanh Toán Khoản Dự Trù",
+  ],
   paidTasks: "Task Thanh Toán",
   // 2.6, 2.11
   taskCode: "Công việc",
@@ -206,6 +212,13 @@ type MediaPlan =
   | { status: "legacy"; category: ItemCategory };
 
 export function readMediaFields(fields: Record<string, unknown>): MediaPlan {
+  // Ô Nhóm Phiếu có từ 11/11/2026. Phiếu Thường thì bỏ qua, kể cả khi còn sót giá trị
+  // Loại Chi Phí Media do người lập đổi nhóm giữa chừng.
+  const group = normalize(cellText(fields[FIELD.paymentGroup]));
+  if (group && !group.includes("media")) {
+    return { status: "skip", reason: `nhóm phiếu "${cellText(fields[FIELD.paymentGroup])}" không phải Media` };
+  }
+
   const item = FIELD.itemFields.map((name) => cellText(fields[name])).find(Boolean) ?? "";
   const mediaKind = normalize(cellText(fields[FIELD.mediaKind]));
 
