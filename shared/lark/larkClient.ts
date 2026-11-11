@@ -19,7 +19,7 @@ let cachedToken: CachedToken | null = null;
 
 async function callLark<T>(
   fetchImpl: FetchLike,
-  method: "GET" | "POST" | "PUT",
+  method: "GET" | "POST" | "PUT" | "DELETE",
   path: string,
   body?: unknown,
   accessToken?: string,
@@ -136,6 +136,24 @@ export async function updateBaseRecord(options: {
     "PUT",
     `/bitable/v1/apps/${options.baseToken}/tables/${options.tableId}/records/${options.recordId}`,
     { fields: options.fields },
+    options.accessToken,
+    options.timeoutMs,
+  );
+}
+
+export async function deleteBaseRecord(options: {
+  fetchImpl?: FetchLike;
+  accessToken: string;
+  baseToken: string;
+  tableId: string;
+  recordId: string;
+  timeoutMs?: number;
+}): Promise<void> {
+  await callLark(
+    options.fetchImpl ?? fetch,
+    "DELETE",
+    `/bitable/v1/apps/${options.baseToken}/tables/${options.tableId}/records/${options.recordId}`,
+    undefined,
     options.accessToken,
     options.timeoutMs,
   );
