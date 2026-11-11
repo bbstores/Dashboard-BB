@@ -99,8 +99,13 @@ function requestNoOf(value: unknown): string {
   return cellText(value).match(/\d{12}/)?.[0] ?? "";
 }
 
-// Ô liên kết bản ghi: [{ record_ids: [...], table_id }] (API v1) hoặc [{ id }].
+// Ô liên kết bản ghi có 3 dạng: đọc từng dòng (v1) trả [{ record_ids: [...], table_id }],
+// tìm kiếm (v1 search) trả { link_record_ids: [...] }, CLI trả [{ id }].
 export function linkedRecordIds(value: unknown): string[] {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const ids = (value as { link_record_ids?: unknown }).link_record_ids;
+    return Array.isArray(ids) ? ids.map(String) : [];
+  }
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
     if (typeof item === "string") return [item];

@@ -90,7 +90,15 @@ function fakeLark(state: { payments: Row[]; syncs: Row[] }) {
       }
     }
     if (url.includes("/tables/tbl217/records/search")) {
-      return ok({ data: { has_more: false, items: [...syncs.values()] } });
+      // API tìm kiếm trả cột liên kết dạng { link_record_ids }, khác API đọc từng dòng.
+      const items = [...syncs.values()].map((row) => ({
+        record_id: row.record_id,
+        fields: {
+          ...row.fields,
+          "2.8 Đề xuất chi phí": { link_record_ids: linkedRecordIds(row.fields["2.8 Đề xuất chi phí"]) },
+        },
+      }));
+      return ok({ data: { has_more: false, items } });
     }
     if (url.includes("/tables/tbl217/records/") && recordId) {
       return ok({ data: { record: syncs.get(recordId) } });
@@ -144,6 +152,7 @@ test("decodes the payment code and the Details line from SourceID", () => {
 test("reads linked record ids in both Lark shapes", () => {
   assert.deepEqual(linkedRecordIds(link("tbl", ["rec1", "rec2"])), ["rec1", "rec2"]);
   assert.deepEqual(linkedRecordIds([{ id: "rec3" }]), ["rec3"]);
+  assert.deepEqual(linkedRecordIds({ link_record_ids: ["rec4"] }), ["rec4"]);
   assert.deepEqual(linkedRecordIds(emptyLink("tbl")), []);
 });
 
